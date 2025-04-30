@@ -1,5 +1,5 @@
 // components/common/ProfileBottomSheet.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -12,18 +12,18 @@ import {
   Platform,
   Easing,
   InteractionManager,
-} from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { theme } from '../../Theme';
+} from "react-native";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { useNavigation, CommonActions } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { theme } from "../../Theme";
 
 interface ProfileBottomSheetProps {
   visible: boolean;
   onClose: () => void;
 }
 
-const { height, width } = Dimensions.get('window');
+const { height, width } = Dimensions.get("window");
 
 const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
   visible,
@@ -63,7 +63,7 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
     if (visible) {
       // 백 버튼 처리 (Android)
       const backHandler = BackHandler.addEventListener(
-        'hardwareBackPress',
+        "hardwareBackPress",
         () => {
           if (visible) {
             handleClose(); // onClose 대신 handleClose 호출
@@ -94,13 +94,18 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
   const handleProfileChange = () => {
     handleClose(); // onClose 대신 handleClose 호출
     // 프로필 변경 화면으로 이동 (추후 구현)
-    console.log('프로필 변경 기능');
+    console.log("프로필 변경 기능");
   };
 
   const handleLogout = () => {
     handleClose(); // onClose 대신 handleClose 호출
-    // 로그아웃 처리
-    navigation.navigate('Login');
+    // 로그아웃 처리 - 네비게이션 스택을 리셋하여 뒤로가기 방지
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      })
+    );
   };
 
   // visible이 false고 완전히 닫혔을 때 null 반환
@@ -113,7 +118,8 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
         {
           opacity: opacity,
         },
-      ]}>
+      ]}
+    >
       {/* 오버레이 영역 - 터치하면 모달이 닫힘 */}
       <TouchableWithoutFeedback onPress={handleClose}>
         <View style={styles.overlayTouch} />
@@ -128,7 +134,8 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
               transform: [{ translateY: translateY }],
               paddingBottom: Math.max(20, insets.bottom),
             },
-          ]}>
+          ]}
+        >
           <View style={styles.handle} />
 
           <Text style={styles.title}>프로필 설정</Text>
@@ -160,23 +167,23 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     zIndex: 1000,
   },
   overlayTouch: {
     flex: 1,
   },
   bottomSheet: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0, // 화면 하단에 위치시킴
-    width: '80%',
-    alignSelf: 'center',
-    backgroundColor: 'white',
+    width: "80%",
+    alignSelf: "center",
+    backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -186,9 +193,9 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 5,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
     borderRadius: 3,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 20,
   },
   title: {
@@ -196,11 +203,11 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: theme.colors.text,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   option: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 16,
   },
   optionText: {
