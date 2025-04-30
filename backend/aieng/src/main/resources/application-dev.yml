@@ -1,0 +1,44 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+    defer-datasource-initialization: true
+
+  datasource:
+    url: jdbc:mariadb://localhost:3306/aieng
+    username: aieng
+    password: b104
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
+  sql:
+    init:
+      mode: always
+
+  main:
+    allow-bean-definition-overriding: true
+
+
+logging.level:
+  org.hibernate.SQL: info
+
+logging:
+  level:
+    com.zaxxer.hikari.HikariConfig: DEBUG
+    com.zaxxer.hikari: TRACE
+
+oauth:
+  kakao:
+    redirect-uri: http://localhost:5173/oauth/kakao/callback
+  google:
+    redirect-uri: http://localhost:5173/oauth/google/callback
+  naver:
+    redirect-uri: http://localhost:5173/oauth/naver/callback

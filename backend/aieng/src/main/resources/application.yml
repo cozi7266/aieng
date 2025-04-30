@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    include: secret
+    active: local
+
+  data:
+    web:
+      pageable:
+        one-indexed-parameters: true # 0이 아닌 1부터
+
+  jpa:
+    open-in-view: false
