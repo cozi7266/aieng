@@ -1,21 +1,21 @@
 // screens/LoginScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Card from '../components/common/Card';
-import Button from '../components/common/Button';
-import KakaoLoginButton from '../components/common/auth/KaKaoLoginButton';
-import { theme } from '../Theme';
-import { RootStackParamList } from '../App';
+import React from "react";
+import { View, Text, StyleSheet, Image, Dimensions } from "react-native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import Card from "../components/common/Card";
+import Button from "../components/common/Button";
+import KakaoLoginButton from "../components/common/auth/KaKaoLoginButton";
+import { theme } from "../Theme";
+import { RootStackParamList } from "../App";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 const isLandscape = width > height;
 
 // 네비게이션 타입 정의
 type LoginScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'Login'
+  "Login"
 >;
 
 const DividerWithText = ({ text }) => (
@@ -30,15 +30,26 @@ const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const handleKakaoLogin = () => {
-    console.log('카카오 로그인 시도');
+    console.log("카카오 로그인 시도");
     // 카카오 로그인 SDK 연동 로직 구현
     // 로그인 성공 시 회원가입 화면으로 이동
-    navigation.navigate('Signup');
+    navigation.navigate("Signup");
   };
 
   // 임시 홈스크린 이동 함수 추가
   const handleTempHomeNavigation = () => {
-    navigation.navigate('Home');
+    navigation.navigate("Home");
+  };
+
+  const handleLogout = () => {
+    handleTempHomeNavigation(); // onClose 대신 handleTempHomeNavigation 호출
+    // 로그아웃 처리
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      })
+    );
   };
 
   return (
@@ -48,7 +59,7 @@ const LoginScreen: React.FC = () => {
       <Card style={styles.loginCard}>
         <View style={styles.logoContainer}>
           <Image
-            source={require('../assets/images/brandlogo-slogun.png')}
+            source={require("../assets/images/brandlogo-slogun.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -82,17 +93,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
   },
   // 기존 스타일 유지
   textContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 5,
   },
   gradientOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -101,11 +112,11 @@ const styles = StyleSheet.create({
     opacity: 0.1,
   },
   loginCard: {
-    width: '40%',
+    width: "40%",
     minWidth: 500,
     maxWidth: 600,
-    alignItems: 'center',
-    backgroundColor: 'white',
+    alignItems: "center",
+    backgroundColor: "white",
     paddingVertical: 65,
     borderRadius: 30,
     elevation: 5,
@@ -115,9 +126,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   logoContainer: {
-    width: '90%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "90%",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
   },
   logoImage: {
@@ -129,18 +140,18 @@ const styles = StyleSheet.create({
     color: theme.colors.subText,
     fontSize: 20,
     marginBottom: 60,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 24,
     height: 24,
   },
   loginButtonContainer: {
-    width: '50%',
-    alignItems: 'center',
+    width: "50%",
+    alignItems: "center",
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
     marginBottom: 5,
   },
   dividerLine: {
