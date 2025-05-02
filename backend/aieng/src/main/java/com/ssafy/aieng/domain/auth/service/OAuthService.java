@@ -72,8 +72,6 @@ public class OAuthService {
         return userRepository.save(User.builder()
                 .provider(provider)
                 .providerId(userInfo.getId())
-                .profileUrl("https://res.cloudinary.com/gominsushi/image/upload/v1743145995/bird_xbfc1j.png")
-                .archeType("갓 태어난 참새")
                 .build());
     }
 

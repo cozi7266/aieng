@@ -31,9 +31,6 @@ public enum ErrorCode {
     ADDRESS_NOT_FOUND(404, "U002", "주소를 찾을 수 없습니다."),
     BIRTHDATE_INVALID(400, "U003", "유효하지 않은 생년월일입니다.");
 
-
-
-
     private final int status;
     private final String code;
     private final String message;
