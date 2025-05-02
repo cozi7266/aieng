@@ -158,6 +158,11 @@ const LearningScreen: React.FC = () => {
       total={item.progress.total}
       onPress={() => {
         console.log(`선택한 테마: ${item.title}`);
+
+        navigation.navigate("WordSelect", {
+          theme: item.title,
+          themeId: item.id,
+        });
       }}
     />
   );

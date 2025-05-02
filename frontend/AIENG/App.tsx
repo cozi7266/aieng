@@ -11,6 +11,7 @@ import HomeScreen from "./screens/HomeScreen";
 import LearningScreen from "./screens/LearningScreen";
 import SongScreen from "./screens/SongScreen";
 import WordcardScreen from "./screens/WordcardScreen";
+import WordSelectScreen from "./screens/learning/WordSelect";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { View, ActivityIndicator } from "react-native";
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   LearningScreen: undefined;
   SongScreen: undefined;
   WordcardScreen: undefined;
+  WordSelect: { theme: string; themeId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -71,6 +73,7 @@ export default function App() {
             <Stack.Screen name="LearningScreen" component={LearningScreen} />
             <Stack.Screen name="SongScreen" component={SongScreen} />
             <Stack.Screen name="WordcardScreen" component={WordcardScreen} />
+            <Stack.Screen name="WordSelect" component={WordSelectScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
