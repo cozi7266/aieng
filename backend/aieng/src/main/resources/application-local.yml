@@ -12,7 +12,7 @@ spring:
 
   datasource:
     url: jdbc:mariadb://localhost:3306/aieng
-    username: aieng
+    username: root
     password: b104B104
     driver-class-name: org.mariadb.jdbc.Driver
 
