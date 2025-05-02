@@ -1,5 +1,5 @@
 // App.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, StatusBar } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -12,6 +12,8 @@ import LearningScreen from "./screens/LearningScreen";
 import SongScreen from "./screens/SongScreen";
 import WordcardScreen from "./screens/WordcardScreen";
 import { theme } from "./Theme";
+import * as Font from "expo-font";
+import { View, ActivityIndicator } from "react-native";
 
 // 네비게이션 파라미터 타입 정의
 export type RootStackParamList = {
@@ -26,6 +28,34 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      try {
+        await Font.loadAsync({
+          "Pretendard-Bold": require("./assets/fonts/Pretendard-Bold.otf"),
+          "Pretendard-Regular": require("./assets/fonts/Pretendard-Regular.otf"),
+          "Pretendard-Medium": require("./assets/fonts/Pretendard-Medium.otf"),
+          "Pretendard-Light": require("./assets/fonts/Pretendard-Light.otf"),
+          RixInooAriDuriR: require("./assets/fonts/RixInooAriDuri_Pro Regular.otf"),
+        });
+        setFontsLoaded(true);
+      } catch (error) {
+        console.error("폰트 로딩 실패:", error);
+      }
+    }
+    loadFonts();
+  }, []);
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <AudioProvider>
       <SafeAreaProvider>
@@ -51,6 +81,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: theme.colors.background,
   },
 });

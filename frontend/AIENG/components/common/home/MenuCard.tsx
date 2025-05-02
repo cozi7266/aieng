@@ -20,7 +20,7 @@ interface MenuCardProps {
 
 const { width } = Dimensions.get("window");
 // 태블릿 화면 크기에 따른 카드 크기 계산
-const cardWidth = Math.min(width * 0.25, 350);
+const cardWidth = Math.min(width * 0.4, 300);
 const iconSize = Math.min(width * 0.09, 90);
 
 const MenuCard: React.FC<MenuCardProps> = ({ title, icon, onPress, style }) => {
