@@ -1,3 +1,6 @@
+app:
+  domain: http://localhost:5173
+
 spring:
   jpa:
     hibernate:
@@ -9,8 +12,8 @@ spring:
 
   datasource:
     url: jdbc:mariadb://localhost:3306/aieng
-    username: root
-    password: b104
+    username: aieng
+    password: b104B104
     driver-class-name: org.mariadb.jdbc.Driver
 
   data:
