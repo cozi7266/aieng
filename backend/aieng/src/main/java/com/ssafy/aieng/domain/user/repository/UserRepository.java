@@ -19,5 +19,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // 닉네임이 중복되는지(탈퇴하지 않은 사용자 기준) 확인합니다.
     boolean existsByNicknameAndDeletedAtIsNull(String nickname);
 
+    // 회원탈퇴 (Soft Delete)
+    void deleteById(Integer id);
 
 }

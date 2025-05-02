@@ -25,7 +25,14 @@ public abstract class BaseEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-//    @LastModifiedDate
-//    @Column(nullable = false)
-//    private LocalDateTime updatedAt;
+    @LastModifiedDate
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    @Column
+    private LocalDateTime deletedAt;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    private boolean deleted;
+
 }

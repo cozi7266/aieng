@@ -29,6 +29,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+
     @Value("${app.domain}")
     private String domain;
 
@@ -46,11 +47,20 @@ public class SecurityConfig {
 //                요청 URL별 인증 설정
                 .authorizeHttpRequests(authorize ->
                         authorize
+                                // 소셜 로그인 or 토큰 검증 등 비인증 허용 경로
                                 .requestMatchers(
-                                        "/api/**"
+                                        "/api/oauth/**",             // 소셜 로그인용
+                                        "/api/user/validate",        // 토큰 유효성 검사용
+                                        "/api/public/**"             // (필요 시 추가)
                                 ).permitAll()
+
+                                // 그 외 모든 /api/user/** 요청은 인증 필요
+                                .requestMatchers("/api/user/**").authenticated()
+
+                                // 나머지도 기본 인증 필요
                                 .anyRequest().authenticated()
                 )
+
 
 //                JWT 인증 필터 추가
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
