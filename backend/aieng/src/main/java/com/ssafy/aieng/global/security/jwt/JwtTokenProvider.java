@@ -77,9 +77,9 @@ public class JwtTokenProvider {
             Claims claims = extractAllClaims(token);
             return new TokenValidationResult(true, null);
         } catch (ExpiredJwtException e) {
-            return new TokenValidationResult(false, TokenError.EXPIRED);
+            return new TokenValidationResult(false, TokenError.EXPIRED_TOKEN);
         } catch (Exception e) {
-            return new TokenValidationResult(false, TokenError.INVALID);
+            return new TokenValidationResult(false, TokenError.INVALID_SIGNATURE);
         }
     }
 

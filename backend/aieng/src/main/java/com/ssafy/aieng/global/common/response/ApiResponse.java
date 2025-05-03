@@ -53,4 +53,18 @@ public class ApiResponse<T> {
                 .status(error.getStatus())
                 .body(new ApiResponse<>(false, null, new ErrorResponse(error.getCode(), message)));
     }
+
+    public static <T> ResponseEntity<ApiResponse<T>> fail(String message) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(false, null, new ErrorResponse("COMMON-400", message)));
+    }
+
+    // 선택적으로 상태코드 설정 가능
+    public static <T> ResponseEntity<ApiResponse<T>> fail(String message, HttpStatus status) {
+        return ResponseEntity
+                .status(status)
+                .body(new ApiResponse<>(false, null, new ErrorResponse("COMMON-" + status.value(), message)));
+    }
+
 }

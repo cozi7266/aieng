@@ -19,56 +19,16 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @SQLDelete(sql = "UPDATE user SET deleted_at = DATE_ADD(NOW(), INTERVAL 9 HOUR) WHERE id = ?")
-//@Where(clause = "deleted_at IS NULL")
 public class User extends BaseEntity {
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 20, nullable = false)
     @Enumerated(EnumType.STRING)
     private Provider provider;
 
-    @Column(name = "provider_id", nullable = false)
+    @Column(length = 150, nullable = false)
     private String providerId;
 
-    @Column(name = "archetype", nullable = false)
-    private String archeType;
-
-    @Column(length = 50)
+    @Column(length = 20, nullable = false)
     private String nickname;
-
-    @Column
-    @Enumerated(EnumType.STRING)
-    private Gender gender;
-
-    @Column(length = 10)
-    private String birthdate;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
-    @Column(name = "profile_url")
-    private String profileUrl;
-
-
-
-    public void updateNickname(String nickname) {
-        this.nickname = nickname;
-    }
-
-    public void updateGender(Gender gender) {
-        this.gender = gender;
-    }
-
-    public void updateBirthdate(String birthdate) {
-        this.birthdate = birthdate;
-    }
-
-    public void updateDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
-
-    public void updatedProfileUrl(String profileUrl) { this.profileUrl = profileUrl; }
-
 
 }
