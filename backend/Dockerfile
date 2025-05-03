@@ -1,7 +1,7 @@
 # Build stage
 FROM gradle:7.6.1-jdk17 AS Build 
 WORKDIR /app
-COPY . .
+COPY aieng .
 RUN chmod +x ./gradlew
 RUN ./gradlew clean build -x test
 
