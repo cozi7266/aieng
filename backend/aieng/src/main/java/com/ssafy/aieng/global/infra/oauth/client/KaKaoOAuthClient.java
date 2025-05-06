@@ -52,7 +52,12 @@ public class KaKaoOAuthClient {
 
         try (Response response = okHttpClient.newCall(request).execute()) {
             assert response.body() != null;
-            return objectMapper.readValue(response.body().string(), KakaoUserResponse.class);
+
+            String rawJson = response.body().string();
+            System.out.println("📦 Kakao Raw JSON Response: " + rawJson); // ✅ 여기에 추가
+
+            return objectMapper.readValue(rawJson, KakaoUserResponse.class);
         }
     }
+
 }

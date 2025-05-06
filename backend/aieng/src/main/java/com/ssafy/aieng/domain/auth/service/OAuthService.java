@@ -72,6 +72,10 @@ public class OAuthService {
         return userRepository.save(User.builder()
                 .provider(provider)
                 .providerId(userInfo.getId())
+                .nickname(userInfo.getNickname())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .deleted(false)
                 .build());
     }
 

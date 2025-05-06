@@ -35,4 +35,13 @@ public abstract class BaseEntity {
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private boolean deleted;
 
+    protected void softDelete() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    protected boolean isAlreadyDeleted() {
+        return this.deleted || this.deletedAt != null;
+    }
+
 }

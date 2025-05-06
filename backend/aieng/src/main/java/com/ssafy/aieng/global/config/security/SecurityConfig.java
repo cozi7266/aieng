@@ -51,7 +51,8 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         "/api/oauth/**",             // 소셜 로그인용
                                         "/api/user/validate",        // 토큰 유효성 검사용
-                                        "/api/public/**"             // (필요 시 추가)
+                                        "/api/public/**",            // (필요 시 추가)
+                                        "/oauth/kakao/**"
                                 ).permitAll()
 
                                 // 그 외 모든 /api/user/** 요청은 인증 필요
