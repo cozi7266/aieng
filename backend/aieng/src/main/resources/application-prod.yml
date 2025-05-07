@@ -31,9 +31,9 @@ spring:
     allow-bean-definition-overriding: true
 
 logging.level:
-  org.hibernate.SQL: warn
-  com.zaxxer.hikari.HikariConfig: OFF
-  com.zaxxer.hikari: OFF
+  org.hibernate.SQL: debug  # SQL 쿼리 출력
+  com.zaxxer.hikari.HikariConfig: debug  # HikariCP 설정 정보 출력
+  com.zaxxer.hikari: debug  # HikariCP 연결 상태 출력
 
 server:
   port: 80
