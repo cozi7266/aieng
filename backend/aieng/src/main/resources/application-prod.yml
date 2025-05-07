@@ -30,14 +30,10 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
-logging:
-  level:
-    root: debug  # 전체 로그 레벨을 debug로 설정 (추천)
-    com.ssafy.aieng: debug  # 또는 특정 패키지에 대해서만 debug로 설정
-
-    org.hibernate.SQL: warn
-    com.zaxxer.hikari.HikariConfig: OFF
-    com.zaxxer.hikari: OFF
+logging.level:
+  org.hibernate.SQL: debug  # SQL 쿼리 출력
+  com.zaxxer.hikari.HikariConfig: debug  # HikariCP 설정 정보 출력
+  com.zaxxer.hikari: debug  # HikariCP 연결 상태 출력
 
 server:
   port: 80
