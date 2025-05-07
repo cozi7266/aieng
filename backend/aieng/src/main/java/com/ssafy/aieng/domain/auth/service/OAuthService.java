@@ -80,8 +80,6 @@ public class OAuthService {
                 .provider(provider)
                 .providerId(userInfo.getId())
                 .nickname(nickname)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .deleted(false)
                 .build());
 
