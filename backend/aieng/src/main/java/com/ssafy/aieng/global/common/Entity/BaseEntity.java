@@ -19,21 +19,21 @@ import java.time.LocalDateTime;
 public abstract class BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    protected Integer id;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    protected LocalDateTime createdAt;
 
     @LastModifiedDate
     @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    protected LocalDateTime updatedAt;
 
     @Column
-    private LocalDateTime deletedAt;
+    protected LocalDateTime deletedAt;
 
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
-    private boolean deleted;
+    protected boolean deleted;
 
     protected void softDelete() {
         this.deleted = true;

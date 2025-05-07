@@ -74,7 +74,9 @@ public class OAuthService {
             nickname = "카카오 사용자"; // 기본 닉네임
         }
 
-        return userRepository.save(User.builder()
+
+
+        User savedUser = userRepository.save(User.builder()
                 .provider(provider)
                 .providerId(userInfo.getId())
                 .nickname(nickname)
@@ -82,6 +84,10 @@ public class OAuthService {
                 .updatedAt(LocalDateTime.now())
                 .deleted(false)
                 .build());
+
+        log.info("📌 [createUser] savedUser.createdAt = {}", savedUser.getCreatedAt());
+
+        return savedUser;
     }
 
 
