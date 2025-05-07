@@ -2,9 +2,7 @@ package com.ssafy.aieng.domain.user.entity;
 
 import com.ssafy.aieng.domain.user.enums.Gender;
 import com.ssafy.aieng.global.common.Entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -27,7 +25,9 @@ public class Child extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime birthdate;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Gender gender;
+
 
 }

@@ -69,11 +69,32 @@ public class OAuthService {
     }
 
     private User createUser(OAuthUserInfo userInfo, Provider provider) {
-        return userRepository.save(User.builder()
+        String nickname = userInfo.getNickname();
+        if (nickname == null || nickname.isBlank()) {
+            nickname = "카카오 사용자"; // 기본 닉네임
+        }
+
+        // 현재 시간으로 명시적으로 세팅 (Auditing이 적용되지 않을 경우 대비)
+        LocalDateTime now = LocalDateTime.now();
+
+        User user = User.builder()
                 .provider(provider)
                 .providerId(userInfo.getId())
-                .build());
+                .nickname(nickname)
+                .deleted(false)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        log.info("✅ savedUser.createdAt = {}", savedUser.getCreatedAt());
+        log.info("✅ savedUser.updatedAt = {}", savedUser.getUpdatedAt());
+
+        return savedUser;
     }
+
+
 
     private boolean isUserNew(User user) {
         LocalDateTime createdAt = user.getCreatedAt();

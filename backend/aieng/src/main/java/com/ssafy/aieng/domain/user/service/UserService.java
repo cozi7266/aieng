@@ -28,13 +28,18 @@ public class UserService {
 
         // 1. 사용자 인증
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED_ACCESS));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 2. 이미 탈퇴한 사용자인지 확인
         if(user.isDeleted() || user.getDeletedAt() != null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        userRepository.deleteById(userId);
+        user.markAsDeleted();
+    }
+
+    // 닉네임 중복
+    public boolean checkNickname(String nickname) {
+        return userRepository.existsByNickname(nickname);
     }
 }
