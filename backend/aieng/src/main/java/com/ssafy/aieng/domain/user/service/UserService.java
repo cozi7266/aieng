@@ -37,4 +37,9 @@ public class UserService {
 
         user.markAsDeleted();
     }
+
+    // 닉네임 중복
+    public boolean checkNickname(String nickname) {
+        return userRepository.existsByNickname(nickname);
+    }
 }
