@@ -30,13 +30,14 @@ spring:
     allow-bean-definition-overriding: true
 
 
-logging.level:
-  org.hibernate.SQL: info
-
 logging:
   level:
-    com.zaxxer.hikari.HikariConfig: DEBUG
-    com.zaxxer.hikari: TRACE
+    root: debug  # 전체 로그 레벨을 debug로 설정 (추천)
+    com.ssafy.aieng: debug  # 또는 특정 패키지에 대해서만 debug로 설정
+
+    org.hibernate.SQL: warn
+    com.zaxxer.hikari.HikariConfig: OFF
+    com.zaxxer.hikari: OFF
 
 oauth:
   kakao:
