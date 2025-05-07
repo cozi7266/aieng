@@ -4,7 +4,7 @@ app:
 spring:
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     properties:
       hibernate:
         format_sql: true
@@ -35,6 +35,7 @@ logging.level:
 
 logging:
   level:
+    root: INFO
     com.zaxxer.hikari.HikariConfig: DEBUG
     com.zaxxer.hikari: TRACE
 
