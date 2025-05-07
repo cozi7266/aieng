@@ -95,11 +95,20 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
         Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-        userService.deleteUser(userId);  // 내부에서 유저 존재 여부 등은 예외로 처리됨
+        userService.deleteUser(userId);
 
-        log.info("[User Delete] userId {} 회원 탈퇴 처리 완료 (Soft Delete)", userId);
         return ResponseEntity.noContent().build();  // 204 No Content
     }
+
+    /**
+     * 닉네임 중복확인 (회원의 닉네임 중복)
+     */
+    @GetMapping("/nickname-check")
+    public ResponseEntity<ApiResponse<Boolean>> checkNickname(@RequestParam String nickname) {
+        boolean isDuplicated = userService.checkNickname(nickname);
+        return ApiResponse.success(isDuplicated);
+    }
+
 
 
 }
