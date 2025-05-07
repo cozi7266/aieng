@@ -44,7 +44,7 @@ public class KaKaoOAuthStrategy implements OAuthStrategy {
             String email = userResponse.getKakaoAccount().getEmail();
             String nickname = (userResponse.getKakaoAccount().getProfile() != null)
                     ? userResponse.getKakaoAccount().getProfile().getNickname()
-                    : "카카오 사용자";
+                    : null;
 
             return OAuthUserInfo.builder()
                     .id(String.valueOf(userResponse.getId()))
