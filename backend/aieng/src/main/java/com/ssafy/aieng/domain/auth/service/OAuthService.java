@@ -88,8 +88,7 @@ public class OAuthService {
 
         User savedUser = userRepository.save(user);
 
-        log.info("✅ savedUser.createdAt = {}", savedUser.getCreatedAt());
-        log.info("✅ savedUser.updatedAt = {}", savedUser.getUpdatedAt());
+        log.info("CreatedAt value: {}", now);
 
         return savedUser;
     }
