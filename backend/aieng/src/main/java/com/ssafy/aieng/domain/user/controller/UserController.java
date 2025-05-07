@@ -1,6 +1,10 @@
 package com.ssafy.aieng.domain.user.controller;
 
 import com.ssafy.aieng.domain.auth.dto.TokenValidationResult;
+import com.ssafy.aieng.domain.auth.dto.response.UserInfoResponse;
+import com.ssafy.aieng.domain.user.dto.response.ChildInfoResponse;
+import com.ssafy.aieng.domain.user.dto.response.ParentInfoResponse;
+import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.service.UserService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
@@ -70,7 +74,6 @@ public class UserController {
     }
 
 
-
     /**
      * Authorization 헤더에서 Bearer 토큰 추출
      *
@@ -110,5 +113,35 @@ public class UserController {
     }
 
 
+    /**
+     * 부모 정보 조회
+     */
+    @GetMapping("/parent/info")
+    public ResponseEntity<ApiResponse<ParentInfoResponse>> findParentInfo(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        // userPrincipal에서 직접 userId 추출
+        Integer userId = userPrincipal.getId();
+
+        // 유저 정보 조회
+        ParentInfoResponse parentInfoResponse = userService.getParentInfo(userId);
+
+        // 응답 반환
+        return ApiResponse.success(parentInfoResponse);
+    }
+
+    /**
+     * 아이 정보 조회
+     */
+    @GetMapping("/child/info/{childId}")
+    public ResponseEntity<ApiResponse<ChildInfoResponse>> findChildInfo(
+            @PathVariable Integer childId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+
+        ChildInfoResponse childInfoResponse = userService.getChildInfo(userId, childId);
+
+        return ApiResponse.success(childInfoResponse);
+    }
 
 }

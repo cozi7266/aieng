@@ -54,7 +54,7 @@ public class OAuthService {
             boolean isNew = isUserNew(user);
 
             return LoginResult.of(
-                    OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user, isNew)),
+                    OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user)),
                     refreshToken
             );
         } catch (Exception e) {
@@ -139,7 +139,7 @@ public class OAuthService {
             boolean isNew = isUserNew(user);
 
             return LoginResult.of(
-                    OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user, isNew)),
+                    OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user)),
                     refreshToken
             );
         } catch (Exception e) {
