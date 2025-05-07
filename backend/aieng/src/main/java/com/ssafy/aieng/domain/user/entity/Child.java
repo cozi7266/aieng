@@ -29,5 +29,8 @@ public class Child extends BaseEntity {
     @Column(nullable = false)
     private Gender gender;
 
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private User parent;
 
 }

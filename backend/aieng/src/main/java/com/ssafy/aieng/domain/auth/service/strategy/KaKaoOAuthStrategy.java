@@ -24,23 +24,20 @@ public class KaKaoOAuthStrategy implements OAuthStrategy {
     @Override
     public OAuthUserInfo getUserInfo(String code) {
         try {
-            // 1. 액세스 토큰 요청
+            log.debug("📤 카카오 OAuth 코드 수신: {}", code);
+
             KakaoTokenResponse tokenResponse = kakaoOAuthClient.getToken(code);
             String accessToken = tokenResponse.getAccessToken();
+            log.debug("✅ 액세스 토큰 획득: {}", accessToken);
 
-            // 2. 사용자 정보 요청
             KakaoUserResponse userResponse = kakaoOAuthClient.getUserInfo(accessToken);
+            log.debug("✅ 사용자 정보 응답: {}", objectMapper.writeValueAsString(userResponse));
 
-            // 3. 전체 응답 로그 출력
-            log.debug("✅ KakaoUserResponse: {}", objectMapper.writeValueAsString(userResponse));
-
-            // 4. 필수 필드 체크
             if (userResponse == null || userResponse.getId() == null || userResponse.getKakaoAccount() == null) {
-                log.error("🚨 KakaoUserResponse null 또는 필드 누락 발생");
+                log.error("🚨 응답 필수 필드 누락");
                 throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
             }
 
-            // 5. 세부 필드 처리 (null-safe)
             String email = userResponse.getKakaoAccount().getEmail();
             String nickname = (userResponse.getKakaoAccount().getProfile() != null)
                     ? userResponse.getKakaoAccount().getProfile().getNickname()
@@ -53,7 +50,7 @@ public class KaKaoOAuthStrategy implements OAuthStrategy {
                     .build();
 
         } catch (IOException e) {
-            log.error("❌ IOException during Kakao OAuth 처리 중 예외 발생: {}", e.getMessage(), e);
+            log.error("❌ Kakao OAuth 예외 발생 - {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
         }
     }
