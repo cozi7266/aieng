@@ -31,4 +31,10 @@ public class User extends BaseEntity {
     @Column(length = 20, nullable = false)
     private String nickname;
 
+    public void markAsDeleted() {
+        if (isAlreadyDeleted()) {
+            throw new IllegalStateException("이미 탈퇴한 사용자입니다.");
+        }
+        softDelete();
+    }
 }
