@@ -18,6 +18,7 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { RootStackParamList } from "../../App";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
+import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
 import BGMToggleButton from "../../components/common/BGMToggleButton";
 import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
@@ -217,6 +218,30 @@ const WordListeningScreen: React.FC = () => {
     lockOrientation();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      // 다음 학습 단계로 이동 시에는 경고 표시 안 함
+      if (
+        e.data.action.type === "NAVIGATE" &&
+        e.data.action.payload?.name === "WordPractice"
+      ) {
+        return;
+      }
+
+      // 기본 내비게이션 방지
+      e.preventDefault();
+
+      // 경고 표시
+      NavigationWarningAlert.show({
+        onConfirm: () => {
+          navigation.dispatch(e.data.action);
+        },
+      });
+    });
+
+    return unsubscribe;
+  }, [navigation, themeId, themeName]);
+
   // 오디오 재생/정지 처리
   const handlePlayAudio = async () => {
     try {
@@ -274,7 +299,17 @@ const WordListeningScreen: React.FC = () => {
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton
+            onPress={() =>
+              NavigationWarningAlert.show({
+                onConfirm: () =>
+                  navigation.navigate("WordSelect", {
+                    themeId: themeId,
+                    theme: themeName,
+                  }),
+              })
+            }
+          />
         </View>
 
         <View style={styles.logoTitleContainer}>
@@ -507,8 +542,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.l,
   },
   cardContainer: {
-    width: "38%",
-    aspectRatio: 1.2,
+    width: "38%", // 원하는 너비로 조정
+    height: 420, // 고정 높이 설정
     marginBottom: theme.spacing.xl,
   },
   card: {

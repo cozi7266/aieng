@@ -340,7 +340,9 @@ const WordSelectScreen: React.FC = () => {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <BackButton onPress={() => navigation.goBack()} />
+              <BackButton
+                onPress={() => navigation.navigate("LearningScreen")}
+              />
             </View>
 
             <View style={styles.headerCenter}>
