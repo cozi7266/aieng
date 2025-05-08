@@ -5,6 +5,7 @@ import AudioManager from "../utils/AudioManager";
 type AudioContextType = {
   isBgmPlaying: boolean;
   toggleBgm: () => Promise<void>;
+  stopBgm: () => Promise<void>;
 };
 
 const AudioContext = createContext<AudioContextType | null>(null);
@@ -39,8 +40,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     await AudioManager.toggleSound();
   };
 
+  // 배경음악 정지 함수
+  const stopBgm = async () => {
+    if (isBgmPlaying) {
+      await AudioManager.stopSound(); // AudioManager에 추가 필요한 메소드
+      setIsBgmPlaying(false);
+    }
+  };
+
   return (
-    <AudioContext.Provider value={{ isBgmPlaying, toggleBgm }}>
+    <AudioContext.Provider value={{ isBgmPlaying, toggleBgm, stopBgm }}>
       {children}
     </AudioContext.Provider>
   );
