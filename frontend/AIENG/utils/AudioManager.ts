@@ -133,6 +133,26 @@ class AudioManager {
       console.error("오디오 정리 오류:", error);
     }
   }
+
+  async stopSound() {
+    try {
+      if (this.sound && this.soundLoaded) {
+        console.log("배경 음악 정지...");
+
+        if (this.isPlaying) {
+          await this.sound.pauseAsync();
+          this.isPlaying = false;
+
+          // 상태 변경 시 리스너에게 알림
+          if (this.statusListener) {
+            this.statusListener(false);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("배경 음악 정지 실패:", error);
+    }
+  }
 }
 
 export default AudioManager.getInstance();
