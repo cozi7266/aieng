@@ -8,8 +8,9 @@ spring:
     defer-datasource-initialization: false
 
   datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
     hikari:
-      maximum-pool-size: 30
+      maximum-pool-size: 3
       minimum-idle: 5
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -17,15 +18,16 @@ spring:
 
   data:
     redis:
-      host: ${server.address}
+      host: redis
+      port: 6379
 
   sql:
     init:
       mode: never
 
-  elasticsearch:
-    uris: "${server.address}:9200"
-    username: elastic
+  # elasticsearch:
+  #   uris: "${server.address}:9200"
+  #   username: elastic
 
   main:
     allow-bean-definition-overriding: true
@@ -46,3 +48,5 @@ oauth:
   naver:
     redirect-uri: https://www.aieng.co.kr/oauth/naver/callback
 
+app:
+  domain: http://www.aieng.co.kr
