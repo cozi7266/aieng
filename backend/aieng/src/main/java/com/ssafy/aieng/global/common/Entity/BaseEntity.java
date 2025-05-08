@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import lombok.Builder.Default;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -20,17 +21,18 @@ public abstract class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Builder.Default
+    @Default
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Builder.Default
+    @Default
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     @Column
     private LocalDateTime deletedAt;
 
+    @Default
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
     private boolean deleted = false;
 
