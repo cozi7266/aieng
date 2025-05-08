@@ -74,18 +74,13 @@ public class OAuthService {
             nickname = "카카오 사용자";
         }
 
-        LocalDateTime now = LocalDateTime.now();
-
-        log.debug("🛠️ 사용자 생성 중 - providerId: {}, nickname: {}, now: {}", userInfo.getId(), nickname, now);
-
         User user = User.builder()
                 .provider(provider)
                 .providerId(userInfo.getId())
                 .nickname(nickname)
-                .deleted(false)
-                .createdAt(now)
-                .updatedAt(now)
                 .build();
+
+        log.debug("🕵️ 생성 직후 user.getCreatedAt(): {}", user.getCreatedAt());
 
         User savedUser = userRepository.save(user);
 
@@ -93,6 +88,7 @@ public class OAuthService {
 
         return savedUser;
     }
+
 
     public TokenRefreshResponse refreshToken(String refreshToken) {
         TokenValidationResult validationResult = jwtTokenProvider.validateToken(refreshToken);
