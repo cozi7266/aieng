@@ -275,6 +275,12 @@ const WordSelectScreen: React.FC = () => {
 
       setWords(updatedWords);
       setSelectedCardId(null); // 선택 초기화
+
+      navigation.navigate("WordListening", {
+        wordId: selectedWord.id,
+        themeId: themeId,
+        theme: selectedTheme,
+      });
     } catch (error) {
       console.error("학습 시작 실패:", error);
     }
