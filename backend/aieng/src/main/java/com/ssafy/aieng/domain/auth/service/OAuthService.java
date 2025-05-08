@@ -36,12 +36,13 @@ public class OAuthService {
     public LoginResult handleOAuthLogin(Provider provider, String code) {
         OAuthStrategy strategy = oAuthStrategyMap.get(provider);
         if (strategy == null) {
+            log.error("❌ 잘못된 OAuth Provider: {}", provider);
             throw new CustomException(ErrorCode.INVALID_OAUTH_PROVIDER);
         }
 
         try {
             OAuthUserInfo userInfo = strategy.getUserInfo(code);
-            log.debug("Received user info - id: {}, email: {}", userInfo.getId(), userInfo.getEmail());
+            log.info("✅ OAuth 사용자 정보 수신: id={}, email={}", userInfo.getId(), userInfo.getEmail());
 
             User user = findOrCreateUser(provider, userInfo);
             String userId = user.getId().toString();
@@ -51,14 +52,13 @@ public class OAuthService {
 
             authRedisService.saveRefreshToken(userId, refreshToken);
 
-            boolean isNew = isUserNew(user);
-
             return LoginResult.of(
                     OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user)),
                     refreshToken
             );
         } catch (Exception e) {
-            log.error("[{}] {}", ErrorCode.OAUTH_SERVER_ERROR.name(), ErrorCode.OAUTH_SERVER_ERROR.getMessage(), e);
+            log.error("[{}] {} - {}", ErrorCode.OAUTH_SERVER_ERROR.name(),
+                    ErrorCode.OAUTH_SERVER_ERROR.getMessage(), e.getMessage(), e);
             throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
         }
     }
@@ -71,11 +71,12 @@ public class OAuthService {
     private User createUser(OAuthUserInfo userInfo, Provider provider) {
         String nickname = userInfo.getNickname();
         if (nickname == null || nickname.isBlank()) {
-            nickname = "카카오 사용자"; // 기본 닉네임
+            nickname = "카카오 사용자";
         }
 
-        // 현재 시간으로 명시적으로 세팅 (Auditing이 적용되지 않을 경우 대비)
         LocalDateTime now = LocalDateTime.now();
+
+        log.debug("🛠️ 사용자 생성 중 - providerId: {}, nickname: {}, now: {}", userInfo.getId(), nickname, now);
 
         User user = User.builder()
                 .provider(provider)
@@ -88,19 +89,9 @@ public class OAuthService {
 
         User savedUser = userRepository.save(user);
 
-        log.info("CreatedAt value: {}", now);
+        log.info("✅ 사용자 저장 완료 - ID: {}, createdAt: {}", savedUser.getId(), savedUser.getCreatedAt());
 
         return savedUser;
-    }
-
-
-
-    private boolean isUserNew(User user) {
-        LocalDateTime createdAt = user.getCreatedAt();
-        if (createdAt == null) {
-            return true;
-        }
-        return createdAt.isAfter(LocalDateTime.now().minusDays(7)); // 가입 후 7일 이내면 새 유저
     }
 
     public TokenRefreshResponse refreshToken(String refreshToken) {
@@ -123,6 +114,7 @@ public class OAuthService {
     public LoginResult handleNaverOAuthLogin(String code, String state) {
         OAuthStrategy strategy = oAuthStrategyMap.get(Provider.NAVER);
         if (!(strategy instanceof NaverOAuthStrategy naverStrategy)) {
+            log.error("❌ NAVER 전략이 아님");
             throw new CustomException(ErrorCode.INVALID_OAUTH_PROVIDER);
         }
 
@@ -136,14 +128,13 @@ public class OAuthService {
 
             authRedisService.saveRefreshToken(userId, refreshToken);
 
-            boolean isNew = isUserNew(user);
-
             return LoginResult.of(
                     OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user)),
                     refreshToken
             );
         } catch (Exception e) {
-            log.error("[{}] {}", ErrorCode.OAUTH_SERVER_ERROR.name(), ErrorCode.OAUTH_SERVER_ERROR.getMessage(), e);
+            log.error("[{}] {} - {}", ErrorCode.OAUTH_SERVER_ERROR.name(),
+                    ErrorCode.OAUTH_SERVER_ERROR.getMessage(), e.getMessage(), e);
             throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
         }
     }

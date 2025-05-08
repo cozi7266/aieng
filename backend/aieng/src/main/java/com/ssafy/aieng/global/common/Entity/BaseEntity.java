@@ -2,6 +2,7 @@ package com.ssafy.aieng.global.common.Entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -18,17 +19,20 @@ public abstract class BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     protected Integer id;
 
-    @Column(nullable = false, updatable = false)
-    protected LocalDateTime createdAt;
-
+    @Builder.Default
     @Column(nullable = false)
-    protected LocalDateTime updatedAt;
+    protected LocalDateTime createdAt = LocalDateTime.now();
+
+    @Builder.Default
+    @Column(nullable = false)
+    protected LocalDateTime updatedAt = LocalDateTime.now();
 
     @Column
     protected LocalDateTime deletedAt;
 
+    @Builder.Default
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
-    protected boolean deleted;
+    protected boolean deleted = false;
 
     protected void softDelete() {
         this.deleted = true;
@@ -39,4 +43,10 @@ public abstract class BaseEntity {
         return this.deleted || this.deletedAt != null;
     }
 
+    @PrePersist
+    public void prePersist() {
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+    }
 }
