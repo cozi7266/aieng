@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/themes")
+@RequestMapping("/api/books")
 @RequiredArgsConstructor
 public class StorybookController {
 
     private final StorybookService storybookService;
 
-    @PostMapping("/{theme_id}/books")
+    @PostMapping("/{theme_id}")
     public ResponseEntity<ApiResponse<StorybookResponse>> createStorybook(
             @PathVariable("theme_id") String themeId,
             @RequestBody StorybookCreateRequest request) {

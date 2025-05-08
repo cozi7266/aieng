@@ -81,6 +81,13 @@ VALUES
     -- 아기곰의 색깔 테마 그림책
     (3, 2, 'https://s3.amazonaws.com/aieng-bucket/storybooks/colors_cover.png', '알록달록 색깔놀이', '다양한 색깔을 영어로 배워요', NOW(), NOW(), NULL, false);
 
+-- Voice 더미 데이터
+INSERT INTO voice (id, child_id, name, description, audio_url, created_at, updated_at, deleted_at, deleted)
+VALUES
+    (1, 1, '맑은 목소리', '깨끗하고 또렷한 목소리입니다.', 'https://s3.amazonaws.com/aieng-bucket/voices/clear_voice.mp3', NOW(), NOW(), NULL, false),
+    (2, 1, '귀여운 목소리', '아기자기한 느낌의 목소리입니다.', 'https://s3.amazonaws.com/aieng-bucket/voices/cute_voice.mp3', NOW(), NOW(), NULL, false),
+    (3, 2, '밝은 목소리', '활기찬 느낌의 목소리입니다.', 'https://s3.amazonaws.com/aieng-bucket/voices/bright_voice.mp3', NOW(), NOW(), NULL, false);
+
 
 
 
