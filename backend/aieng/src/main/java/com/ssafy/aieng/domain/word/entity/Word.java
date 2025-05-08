@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.word.entity;
 
+import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.global.common.Entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,8 +18,9 @@ public class Word extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "theme_id", nullable = false)
-    private Integer themeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "theme_id", nullable = false)
+    private Theme theme;
 
     @Column(name = "word_en", nullable = false, length = 100)
     private String wordEn;
