@@ -189,7 +189,7 @@ const LearningScreen: React.FC = () => {
 
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <BackButton onPress={() => navigation.goBack()} />
+              <BackButton onPress={() => navigation.navigate("Home")} />
             </View>
 
             <View style={styles.logoTitleContainer}>

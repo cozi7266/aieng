@@ -15,9 +15,9 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { Audio } from "expo-av";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { RootStackParamList } from "../../App";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
+import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
 import BGMToggleButton from "../../components/common/BGMToggleButton";
 import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
@@ -39,8 +39,7 @@ type WordSentenceScreenRouteProp = RouteProp<
 // 단어 및 문장 데이터 타입 정의
 interface SentenceData {
   id: string;
-  english: string;
-  korean: string;
+  word: string; // 강조할 단어
   sentence: string;
   sentenceKorean: string;
   imageUrl: any;
@@ -72,8 +71,9 @@ const WordSentenceScreen: React.FC = () => {
   const sound = useRef<Audio.Sound | null>(null);
   const fillHeightAnim = useRef(new Animated.Value(0)).current;
 
-  // 플로팅 애니메이션
+  // 애니메이션 설정
   useEffect(() => {
+    // 플로팅 애니메이션
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
@@ -88,10 +88,8 @@ const WordSentenceScreen: React.FC = () => {
         }),
       ])
     ).start();
-  }, []);
 
-  // 펄스 애니메이션
-  useEffect(() => {
+    // 펄스 애니메이션
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -161,21 +159,17 @@ const WordSentenceScreen: React.FC = () => {
           ["cat", "dog", "rabbit", "bird", "fish", "lion"][
             parseInt(wordId) - 1
           ] || "cat";
-        const mockKorean =
-          ["고양이", "강아지", "토끼", "새", "물고기", "사자"][
-            parseInt(wordId) - 1
-          ] || "고양이";
+
         const mockSentence =
           mockSentences.find((item) => item.word === mockWord) ||
           mockSentences[0];
 
         setSentence({
           id: wordId,
-          english: mockWord,
-          korean: mockKorean,
+          word: mockWord,
           sentence: mockSentence.sentence,
           sentenceKorean: mockSentence.sentenceKorean,
-          imageUrl: require("../../assets/images/main_mascot.png"),
+          imageUrl: require("../../assets/images/themes/animals.png"),
           audioUrl: require("../../assets/sounds/background-music.mp3"),
         });
 
@@ -222,9 +216,10 @@ const WordSentenceScreen: React.FC = () => {
     }
   }, [isPlaying]);
 
-  // 다음 버튼 애니메이션
+  // 다음 버튼 애니메이션 및 배경 채우기 애니메이션
   useEffect(() => {
     if (hasListened) {
+      // 다음 버튼 애니메이션
       Animated.loop(
         Animated.sequence([
           Animated.timing(nextButtonAnim, {
@@ -240,7 +235,7 @@ const WordSentenceScreen: React.FC = () => {
         ])
       ).start();
 
-      // 색상이 아래에서 위로 차오름
+      // 배경 채우기 애니메이션
       Animated.timing(fillHeightAnim, {
         toValue: 1,
         duration: 800,
@@ -260,6 +255,31 @@ const WordSentenceScreen: React.FC = () => {
     };
     lockOrientation();
   }, []);
+
+  // React Navigation의 beforeRemove 이벤트 처리 (useEffect 추가)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+      // 다음 학습 단계로 이동 시에는 경고 표시 안 함
+      if (
+        e.data.action.type === "NAVIGATE" &&
+        e.data.action.payload?.name === "WordPractice"
+      ) {
+        return;
+      }
+
+      // 기본 내비게이션 방지
+      e.preventDefault();
+
+      // 경고 표시
+      NavigationWarningAlert.show({
+        onConfirm: () => {
+          navigation.dispatch(e.data.action);
+        },
+      });
+    });
+
+    return unsubscribe;
+  }, [navigation, themeId, themeName]);
 
   // 오디오 재생/정지 처리
   const handlePlayAudio = async () => {
@@ -295,6 +315,29 @@ const WordSentenceScreen: React.FC = () => {
     }
   };
 
+  // 문장에서 단어 하이라이트 처리
+  const renderHighlightedSentence = () => {
+    if (!sentence) return null;
+
+    const parts = sentence.sentence.split(
+      new RegExp(`(${sentence.word})`, "i")
+    );
+
+    return (
+      <Text style={styles.sentenceText}>
+        {parts.map((part, index) =>
+          part.toLowerCase() === sentence.word.toLowerCase() ? (
+            <Text key={index} style={styles.highlightedWord}>
+              {part}
+            </Text>
+          ) : (
+            <Text key={index}>{part}</Text>
+          )
+        )}
+      </Text>
+    );
+  };
+
   // 로딩 화면 표시
   if (isLoading || !sentence) {
     return <LoadingScreen message="문장을 불러오는 중..." />;
@@ -305,7 +348,17 @@ const WordSentenceScreen: React.FC = () => {
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <BackButton onPress={() => navigation.goBack()} />
+          <BackButton
+            onPress={() =>
+              NavigationWarningAlert.show({
+                onConfirm: () =>
+                  navigation.navigate("WordSelect", {
+                    themeId: themeId,
+                    theme: themeName,
+                  }),
+              })
+            }
+          />
         </View>
 
         <View style={styles.logoTitleContainer}>
@@ -342,7 +395,7 @@ const WordSentenceScreen: React.FC = () => {
             {
               height: fillHeightAnim.interpolate({
                 inputRange: [0, 1],
-                outputRange: ["0%", "30%"],
+                outputRange: ["0%", "25%"],
               }),
             },
           ]}
@@ -369,8 +422,7 @@ const WordSentenceScreen: React.FC = () => {
               />
             </View>
             <View style={styles.sentenceContainer}>
-              <Text style={styles.englishWord}>{sentence.english}</Text>
-              <Text style={styles.sentenceText}>{sentence.sentence}</Text>
+              {renderHighlightedSentence()}
               <Text style={styles.koreanSentence}>
                 {sentence.sentenceKorean}
               </Text>
@@ -392,12 +444,12 @@ const WordSentenceScreen: React.FC = () => {
                 onPress={handlePlayAudio}
               >
                 <FontAwesome5
-                  name={isPlaying ? "stop" : "volume-up"}
+                  name={isPlaying ? "check-circle" : "volume-up"}
                   size={32}
                   color={theme.colors.buttonText}
                 />
                 <Text style={styles.buttonText}>
-                  {isPlaying ? "멈추기" : "문장 듣기"}
+                  {isPlaying ? "완료" : "문장 듣기"}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -415,8 +467,9 @@ const WordSentenceScreen: React.FC = () => {
                 ]}
                 onPress={() =>
                   navigation.navigate("WordSelect", {
-                    theme: themeName,
+                    wordId: sentence.id,
                     themeId: themeId,
+                    theme: themeName,
                   })
                 }
               >
@@ -425,7 +478,7 @@ const WordSentenceScreen: React.FC = () => {
                   size={28}
                   color={theme.colors.buttonText}
                 />
-                <Text style={styles.buttonText}>완료하기</Text>
+                <Text style={styles.buttonText}>다음 단계</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -540,8 +593,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.l,
   },
   cardContainer: {
-    width: "60%",
-    aspectRatio: 1.8,
+    width: "70%", // 원하는 너비로 조정
+    height: 420, // 고정 높이 설정
     marginBottom: theme.spacing.xl,
   },
   card: {
@@ -549,40 +602,40 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card,
     borderRadius: 25,
     padding: theme.spacing.l,
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     ...theme.shadows.default,
     borderWidth: 2,
     borderColor: theme.colors.primary,
+    flexDirection: "row",
   },
   imageContainer: {
     width: "40%",
-    height: "60%",
+    height: "80%",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: theme.spacing.m,
   },
   image: {
     width: "90%",
     height: "90%",
   },
   sentenceContainer: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    width: "100%",
-  },
-  englishWord: {
-    ...theme.typography.largeTitle,
-    color: theme.colors.primary,
-    fontSize: 36,
-    marginBottom: 6,
+    padding: theme.spacing.m,
   },
   sentenceText: {
     ...theme.typography.title,
     color: theme.colors.secondary,
     fontSize: 30,
-    marginBottom: 8,
+    marginBottom: 16,
     textAlign: "center",
+    lineHeight: 42,
+  },
+  highlightedWord: {
+    color: theme.colors.primary,
+    fontWeight: "bold",
   },
   koreanSentence: {
     ...theme.typography.bodyMedium,
@@ -672,8 +725,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "rgba(88, 204, 2, 0.2)",
-    zIndex: -1,
+    backgroundColor: "rgba(81, 75, 242, 0.15)",
+    zIndex: 0,
   },
 });
 
