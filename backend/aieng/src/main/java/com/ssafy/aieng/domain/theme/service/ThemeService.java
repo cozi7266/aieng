@@ -4,5 +4,5 @@ import com.ssafy.aieng.domain.theme.dto.response.ThemeResponse;
 import java.util.List;
 
 public interface ThemeService {
-    List<ThemeResponse> getAllThemes();
+    List<ThemeResponse> getThemes();
 } 

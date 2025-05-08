@@ -1,27 +1,21 @@
 package com.ssafy.aieng.domain.theme.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.ssafy.aieng.domain.theme.entity.Theme;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
 @Builder
 public class ThemeResponse {
-    @JsonProperty("theme_id")
-    private String themeId;
-    
-    private String name;
-    
-    private String image;
-    
-    private String progress;
+    private String themeName;
+    private String imageUrl;
+    private Byte totalWords;
 
-    public static ThemeResponse of(String themeId, String name, String image, int completedWords, int totalWords) {
+    public static ThemeResponse from(Theme theme) {
         return ThemeResponse.builder()
-                .themeId(themeId)
-                .name(name)
-                .image(image)
-                .progress(completedWords + "/" + totalWords)
+                .themeName(theme.getThemeName())
+                .imageUrl(theme.getImageUrl())
+                .totalWords(theme.getTotalWords())
                 .build();
     }
 } 
