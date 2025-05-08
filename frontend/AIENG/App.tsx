@@ -17,6 +17,7 @@ import WordSentenceScreen from "./screens/learning/WordSentence";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { View, ActivityIndicator } from "react-native";
+import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
 
 // 네비게이션 파라미터 타입 정의
 export type RootStackParamList = {
@@ -73,26 +74,31 @@ export default function App() {
   return (
     <AudioProvider>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <StatusBar hidden />
-          <Stack.Navigator
-            initialRouteName="Login"
-            screenOptions={{ headerShown: false }}
-          >
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Signup" component={SignupScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="LearningScreen" component={LearningScreen} />
-            <Stack.Screen name="SongScreen" component={SongScreen} />
-            <Stack.Screen name="WordcardScreen" component={WordcardScreen} />
-            <Stack.Screen name="WordSelect" component={WordSelectScreen} />
-            <Stack.Screen
-              name="WordListening"
-              component={WordListeningScreen}
-            />
-            <Stack.Screen name="WordSentence" component={WordSentenceScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AlertProvider>
+          <NavigationContainer>
+            <StatusBar hidden />
+            <Stack.Navigator
+              initialRouteName="Login"
+              screenOptions={{ headerShown: false }}
+            >
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="LearningScreen" component={LearningScreen} />
+              <Stack.Screen name="SongScreen" component={SongScreen} />
+              <Stack.Screen name="WordcardScreen" component={WordcardScreen} />
+              <Stack.Screen name="WordSelect" component={WordSelectScreen} />
+              <Stack.Screen
+                name="WordListening"
+                component={WordListeningScreen}
+              />
+              <Stack.Screen
+                name="WordSentence"
+                component={WordSentenceScreen}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AlertProvider>
       </SafeAreaProvider>
     </AudioProvider>
   );
