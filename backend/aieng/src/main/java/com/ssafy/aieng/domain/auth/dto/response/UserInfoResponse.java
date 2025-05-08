@@ -19,7 +19,7 @@ public class UserInfoResponse {
         return UserInfoResponse.builder()
                 .id(user.getId().toString())
                 .nickname(user.getNickname())
-                .isNew(isNew)
+                .isNew(isNew)  // 계산된 isNew 값
                 .build();
     }
 }
