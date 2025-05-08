@@ -82,3 +82,5 @@ VALUES
     (3, 2, 'https://s3.amazonaws.com/aieng-bucket/storybooks/colors_cover.png', '알록달록 색깔놀이', '다양한 색깔을 영어로 배워요', NOW(), NOW(), NULL, false);
 
 
+
+
