@@ -1,16 +1,12 @@
 package com.ssafy.aieng.domain.user.entity;
 
-import com.ssafy.aieng.domain.user.enums.Gender;
 import com.ssafy.aieng.domain.user.enums.Provider;
 import com.ssafy.aieng.global.common.Entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
-import org.springframework.data.annotation.LastModifiedDate;
 
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user")
