@@ -9,4 +9,4 @@ import java.util.List;
 @Repository
 public interface LearningStorybookRepository extends JpaRepository<LearningStorybook, Integer> {
     List<LearningStorybook> findByStorybookIdOrderByOrder(Integer storybookId);
-} 
+}

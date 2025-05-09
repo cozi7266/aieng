@@ -13,7 +13,7 @@ import jakarta.persistence.*;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "learning_storybook")
-public class LearningStorybook extends BaseEntity {
+public class  LearningStorybook extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "storybook_id", nullable = false)
@@ -32,4 +32,4 @@ public class LearningStorybook extends BaseEntity {
         this.learning = learning;
         this.order = order;
     }
-} 
+}
