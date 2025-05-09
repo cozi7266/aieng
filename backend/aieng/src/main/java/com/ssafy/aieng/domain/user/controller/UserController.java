@@ -1,10 +1,6 @@
 package com.ssafy.aieng.domain.user.controller;
 
-import com.ssafy.aieng.domain.auth.dto.TokenValidationResult;
-import com.ssafy.aieng.domain.auth.dto.response.UserInfoResponse;
-import com.ssafy.aieng.domain.user.dto.response.ChildInfoResponse;
 import com.ssafy.aieng.domain.user.dto.response.ParentInfoResponse;
-import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.service.UserService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
@@ -14,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -108,13 +103,14 @@ public class UserController {
      */
     @GetMapping("/nickname-check")
     public ResponseEntity<ApiResponse<Boolean>> checkNickname(@RequestParam String nickname) {
+
         boolean isDuplicated = userService.checkNickname(nickname);
         return ApiResponse.success(isDuplicated);
     }
 
 
     /**
-     * 부모 정보 조회
+     * 부모 프로필 조회
      */
     @GetMapping("/parent/info")
     public ResponseEntity<ApiResponse<ParentInfoResponse>> findParentInfo(
@@ -130,18 +126,5 @@ public class UserController {
         return ApiResponse.success(parentInfoResponse);
     }
 
-    /**
-     * 아이 정보 조회
-     */
-    @GetMapping("/child/info/{childId}")
-    public ResponseEntity<ApiResponse<ChildInfoResponse>> findChildInfo(
-            @PathVariable Integer childId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        Integer userId = userPrincipal.getId();
-
-        ChildInfoResponse childInfoResponse = userService.getChildInfo(userId, childId);
-
-        return ApiResponse.success(childInfoResponse);
-    }
 
 }

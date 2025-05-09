@@ -1,4 +1,4 @@
-package com.ssafy.aieng.domain.user.dto.response;
+package com.ssafy.aieng.domain.child.dto.response;
 
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.user.entity.User;
@@ -16,7 +16,7 @@ public class ChildInfoResponse {
     private Integer childId;
     private String childName;
     private String childGender;
-    private LocalDate childBirthdate;
+    private LocalDate childBirthday;
 
     public static ChildInfoResponse of(User parentUser, Child child) {
         return new ChildInfoResponse(

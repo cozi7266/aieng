@@ -21,7 +21,7 @@ public class DictionaryResponse {
                 .wordKo(learning.getWord().getWordKo())
                 .imgUrl(learning.getWord().getImgUrl())
                 .learnedAt(learning.getLearnedAt())
-                .themeName(learning.getWord().getTheme().getName())
+                .themeName(learning.getWord().getTheme().getThemeName())
                 .build();
     }
-} 
+}
