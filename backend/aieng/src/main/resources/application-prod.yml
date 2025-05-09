@@ -1,15 +1,16 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: false
     defer-datasource-initialization: false
 
   datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
     hikari:
-      maximum-pool-size: 30
+      maximum-pool-size: 3
       minimum-idle: 5
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -17,23 +18,24 @@ spring:
 
   data:
     redis:
-      host: ${server.address}
+      host: redis
+      port: 6379
 
   sql:
     init:
       mode: never
 
-  elasticsearch:
-    uris: "${server.address}:9200"
-    username: elastic
+  # elasticsearch:
+  #   uris: "${server.address}:9200"
+  #   username: elastic
 
   main:
     allow-bean-definition-overriding: true
 
 logging.level:
-  org.hibernate.SQL: warn
-  com.zaxxer.hikari.HikariConfig: OFF
-  com.zaxxer.hikari: OFF
+  org.hibernate.SQL: debug  # SQL 쿼리 출력
+  com.zaxxer.hikari.HikariConfig: debug  # HikariCP 설정 정보 출력
+  com.zaxxer.hikari: debug  # HikariCP 연결 상태 출력
 
 server:
   port: 80
@@ -46,3 +48,5 @@ oauth:
   naver:
     redirect-uri: https://www.aieng.co.kr/oauth/naver/callback
 
+app:
+  domain: http://www.aieng.co.kr

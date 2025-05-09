@@ -25,6 +25,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final List<String> TEST_TOKENS = List.of("test", "test2", "test3", "test4", "test5");
 
+    // 운영환경 여부 확인 (운영이면 테스트 토큰 사용 불가)
+    private boolean isProd() {
+        String activeProfile = System.getProperty("spring.profiles.active");
+        return "prod".equalsIgnoreCase(activeProfile);
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -35,8 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             if (StringUtils.hasText(token)) {
-                //  테스트 계정 처리
-                if (TEST_TOKENS.contains(token)) {
+
+                if (!isProd() && TEST_TOKENS.contains(token)) {
                     Authentication authentication = TestUserMaker.getAuthentication(token);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     log.debug("[JWT Filter] 테스트 토큰 인증 완료: {}", token);
@@ -57,11 +63,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             log.error("[JWT Filter] 인증 처리 중 예외 발생", e);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 보안상 필수
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        // 다음 필터로 이동
         filterChain.doFilter(request, response);
     }
 
@@ -80,4 +85,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return path.startsWith("/api/oauth") || path.startsWith("/swagger") || path.startsWith("/v3/api-docs");
     }
 }
-

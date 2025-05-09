@@ -4,6 +4,8 @@ import com.ssafy.aieng.domain.user.entity.User;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Builder
 public class UserInfoResponse {
@@ -11,11 +13,13 @@ public class UserInfoResponse {
     private String nickname;
     private Boolean isNew;
 
-    public static UserInfoResponse of(User user, Boolean isNew) {
+    public static UserInfoResponse of(User user) {
+        Boolean isNew = user.getCreatedAt().isAfter(LocalDateTime.now().minusDays(7));
+
         return UserInfoResponse.builder()
                 .id(user.getId().toString())
                 .nickname(user.getNickname())
-                .isNew(isNew)
+                .isNew(isNew)  // 계산된 isNew 값
                 .build();
     }
 }

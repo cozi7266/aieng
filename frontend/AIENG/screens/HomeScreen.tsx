@@ -1,5 +1,5 @@
 // screens/HomeScreen.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -7,26 +7,26 @@ import {
   Dimensions,
   Text,
   Animated,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ScreenOrientation from 'expo-screen-orientation';
-import { RootStackParamList } from '../App';
-import BGMToggleButton from '../components/common/BGMToggleButton';
-import ProfileButton from '../components/common/ProfileButton';
-import ProfileBottomSheet from '../components/common/ProfileBottomSheet';
-import MenuCard from '../components/common/home/MenuCard';
-import { ProfileProvider, useProfile } from '../contexts/ProfileContext';
-import { theme } from '../Theme';
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as ScreenOrientation from "expo-screen-orientation";
+import { RootStackParamList } from "../App";
+import BGMToggleButton from "../components/common/BGMToggleButton";
+import ProfileButton from "../components/common/ProfileButton";
+import ProfileBottomSheet from "../components/common/ProfileBottomSheet";
+import MenuCard from "../components/common/home/MenuCard";
+import { ProfileProvider, useProfile } from "../contexts/ProfileContext";
+import { theme } from "../Theme";
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  'Home'
+  "Home"
 >;
 
 const HomeScreenContent: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const [dimensions, setDimensions] = useState(Dimensions.get('window'));
+  const [dimensions, setDimensions] = useState(Dimensions.get("window"));
   const { isProfileModalOpen, setProfileModalOpen } = useProfile(); // setProfileModalOpen 추가
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
@@ -70,7 +70,7 @@ const HomeScreenContent: React.FC = () => {
     lockOrientation();
 
     // 화면 크기 변경 시 dimensions 업데이트
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
       setDimensions(window);
     });
 
@@ -103,7 +103,8 @@ const HomeScreenContent: React.FC = () => {
           {
             transform: [{ scale: scaleAnim }],
           },
-        ]}>
+        ]}
+      >
         {/* 테두리 애니메이션을 위한 내부 뷰 */}
         <Animated.View
           style={[
@@ -111,12 +112,13 @@ const HomeScreenContent: React.FC = () => {
             {
               borderRadius: borderRadiusAnim,
             },
-          ]}>
+          ]}
+        >
           <View style={styles.gradientOverlay} />
 
           <View style={styles.header}>
             <Image
-              source={require('../assets/images/brandlogo-slogun.png')}
+              source={require("../assets/images/brandlogo-slogun.png")}
               style={[styles.logo, { height: logoHeight, width: logoWidth }]}
               resizeMode="contain"
             />
@@ -130,25 +132,34 @@ const HomeScreenContent: React.FC = () => {
             <Text
               style={[
                 styles.welcomeText,
-                { fontSize: dimensions.height * 0.05 },
-              ]}>
+                { fontSize: dimensions.height * 0.045 },
+              ]}
+            >
               안녕하세요! 오늘은 어떤 활동을 해볼까요?
             </Text>
-            <View style={styles.menuContainer}>
+            <View
+              style={[
+                styles.menuContainer,
+                { height: dimensions.height * 0.5 },
+              ]}
+            >
               <MenuCard
                 title="단어 학습"
                 icon="book"
-                onPress={() => navigateToScreen('LearningScreen')}
+                onPress={() => navigateToScreen("LearningScreen")}
+                style={styles.menuCardStyle}
               />
               <MenuCard
                 title="동요 듣기"
                 icon="music"
-                onPress={() => navigateToScreen('SongScreen')}
+                onPress={() => navigateToScreen("SongScreen")}
+                style={styles.menuCardStyle}
               />
               <MenuCard
                 title="단어 도감"
                 icon="book-open"
-                onPress={() => navigateToScreen('WordcardScreen')}
+                onPress={() => navigateToScreen("WordcardScreen")}
+                style={styles.menuCardStyle}
               />
             </View>
           </View>
@@ -181,19 +192,19 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   scaleContainer: {
     flex: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    overflow: 'hidden', // 라운드 모서리를 위해 필요
+    overflow: "hidden", // 라운드 모서리를 위해 필요
   },
   gradientOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -202,12 +213,12 @@ const styles = StyleSheet.create({
     opacity: 0.1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.m,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderBottomWidth: 2,
     borderBottomColor: theme.colors.accent,
     ...theme.shadows.default,
@@ -216,29 +227,32 @@ const styles = StyleSheet.create({
     // 동적으로 설정
   },
   headerButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   headerButton: {
     marginLeft: theme.spacing.m,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: theme.spacing.xl,
   },
   welcomeText: {
     ...theme.typography.largeTitle,
     color: theme.colors.primary,
     marginBottom: theme.spacing.xl,
-    textAlign: 'center',
+    textAlign: "center",
   },
   menuContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+    width: "100%",
+    paddingHorizontal: theme.spacing.xl,
+  },
+  menuCardStyle: {
+    margin: 0,
   },
 });
 
