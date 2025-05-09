@@ -28,4 +28,4 @@ public class DictionaryDetailResponse {
                 .sentence(learning.getSentence())
                 .build();
     }
-} 
+}

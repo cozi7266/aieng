@@ -24,4 +24,4 @@ public class DictionaryResponse {
                 .themeName(learning.getWord().getTheme().getThemeName())
                 .build();
     }
-} 
+}

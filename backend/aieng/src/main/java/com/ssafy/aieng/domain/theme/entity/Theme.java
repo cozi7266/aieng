@@ -21,4 +21,4 @@ public class Theme extends BaseEntity {
 
     @Column(name = "total_words", columnDefinition = "TINYINT")
     private Byte totalWords;
-} 
+}
