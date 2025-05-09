@@ -63,6 +63,13 @@ dependencies {
     implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.9.0'
 
+    // Kakao SDK BOM
+    implementation platform('com.kakao.sdk:kakao-bom:2.16.0')
+
+    // 로그인, 유저 API
+    implementation 'com.kakao.sdk:user:2.16.0'
+    implementation 'com.kakao.sdk:auth:2.16.0'
+
 
 }
 
