@@ -4,6 +4,8 @@ import com.ssafy.aieng.domain.voice.dto.request.VoiceCreateRequest;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
+import com.ssafy.aieng.global.error.ErrorCode;
+import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,21 @@ public class VoiceService {
 
         Voice savedVoice = voiceRepository.save(voice);
         return VoiceResponse.from(savedVoice);
+    }
+
+    @Transactional(readOnly = true)
+    public VoiceResponse getVoice(Integer voiceId) {
+        Voice voice = voiceRepository.findById(voiceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VOICE_FILE_NOT_FOUND));
+        return VoiceResponse.from(voice);
+    }
+
+    @Transactional(readOnly = true)
+    public List<VoiceResponse> getVoicesByChildId(Integer childId) {
+        List<Voice> voices = voiceRepository.findAllByChildIdOrderByCreatedAtDesc(childId);
+        return voices.stream()
+                .map(VoiceResponse::from)
+                .toList();
     }
 
     private void validateAudioFile(MultipartFile file) {
