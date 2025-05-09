@@ -47,12 +47,12 @@ public class StorybookServiceImpl implements StorybookService {
 
         if (completedLearnings.isEmpty()) {
             throw new IllegalStateException(
-                String.format("테마 '%s'에 대해 완료된 학습이 없습니다. 먼저 단어 학습을 완료해주세요.", theme.getThemeName())
+                String.format("테마 '%s'에 대해 완료된 학습이 없습니다. 먼저 단어 학습을 완료해주세요.", theme.getName())
             );
         }
 
         // 그림책 생성
-        String coverUrl = String.format("https://s3.amazonaws.com/aieng-bucket/storybooks/%s_cover.png", theme.getThemeName());
+        String coverUrl = String.format("https://s3.amazonaws.com/aieng-bucket/storybooks/%s_cover.png", theme.getName());
         
         Storybook storybook = Storybook.builder()
                 .childId(child.getId())

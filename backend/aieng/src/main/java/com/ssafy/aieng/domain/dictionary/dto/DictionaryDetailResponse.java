@@ -24,7 +24,7 @@ public class DictionaryDetailResponse {
                 .imgUrl(learning.getWord().getImgUrl())
                 .ttsUrl(learning.getWord().getTtsUrl())
                 .learnedAt(learning.getLearnedAt())
-                .themeName(learning.getWord().getTheme().getThemeName())
+                .themeName(learning.getWord().getTheme().getName())
                 .sentence(learning.getSentence())
                 .build();
     }
