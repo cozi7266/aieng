@@ -30,8 +30,30 @@ public enum ErrorCode {
     USER_NOT_FOUND(404, "U001", "유저를 찾을 수 없습니다."),
     ADDRESS_NOT_FOUND(404, "U002", "주소를 찾을 수 없습니다."),
     BIRTHDATE_INVALID(400, "U003", "유효하지 않은 생년월일입니다."),
-    CHILD_NOT_FOUND(404, "U0044", "아이를 찾을 수 없습니다.");
+    CHILD_NOT_FOUND(404, "U004", "아이를 찾을 수 없습니다."),
 
+    // Theme
+    THEME_NOT_FOUND(404, "T001", "테마를 찾을 수 없습니다."),
+    THEME_ALREADY_EXISTS(409, "T002", "이미 존재하는 테마입니다."),
+    THEME_INVALID_TOTAL_WORDS(400, "T003", "유효하지 않은 단어 수입니다."),
+
+    // Book (Storybook)
+    BOOK_NOT_FOUND(404, "B001", "그림책을 찾을 수 없습니다."),
+    BOOK_CREATION_FAILED(500, "B002", "그림책 생성에 실패했습니다."),
+    BOOK_NO_COMPLETED_LEARNING(400, "B003", "완료된 학습이 없어 그림책을 생성할 수 없습니다."),
+    BOOK_INVALID_THEME(400, "B004", "유효하지 않은 테마입니다."),
+
+    // Dictionary
+    DICTIONARY_WORD_NOT_FOUND(404, "DC001", "단어를 찾을 수 없습니다."),
+    DICTIONARY_NO_LEARNED_WORDS(404, "DC002", "학습한 단어가 없습니다."),
+    DICTIONARY_INVALID_CHILD(400, "DC003", "유효하지 않은 아이 정보입니다."),
+
+    // Voice
+    VOICE_FILE_NOT_FOUND(404, "V001", "음성 파일을 찾을 수 없습니다."),
+    VOICE_FILE_TOO_LARGE(400, "V002", "음성 파일이 너무 큽니다."),
+    VOICE_INVALID_FILE_FORMAT(400, "V003", "지원하지 않는 음성 파일 형식입니다."),
+    VOICE_UPLOAD_FAILED(500, "V004", "음성 파일 업로드에 실패했습니다."),
+    VOICE_FILE_TOO_SHORT(400, "V005", "음성 파일이 너무 짧습니다.");
 
     private final int status;
     private final String code;
