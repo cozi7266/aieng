@@ -13,18 +13,12 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Theme extends BaseEntity {
 
-    @Column(length = 50, nullable = false, unique = true)
-    private String themeId;
+    @Column(name = "theme_name", length = 50, nullable = false, unique = true)
+    private String themeName;
 
-    @Column(length = 50, nullable = false)
-    private String name;
-
-    @Column(nullable = false)
+    @Column(name = "image_url", length = 255)
     private String imageUrl;
 
-    @Column(nullable = false)
-    private Integer totalWords;
-
-    @Column(nullable = false)
-    private Integer completedWords;
+    @Column(name = "total_words", columnDefinition = "TINYINT")
+    private Byte totalWords;
 } 

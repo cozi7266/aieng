@@ -1,18 +1,22 @@
 package com.ssafy.aieng.global.common.util;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TagVectorService {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    // Map<UserId, Map<Tag, Score>>
+    private final ConcurrentHashMap<Integer, ConcurrentHashMap<String, Double>> userTagScores = new ConcurrentHashMap<>();
 
     private String getUserTagVectorKey(Integer userId) {
         return "user:" + userId + ":tag_vector";
@@ -21,8 +25,13 @@ public class TagVectorService {
     // 태그 점수 증가
     @Async
     public void increaseTagScore(Integer userId, String tag, double score) {
-        String key = getUserTagVectorKey(userId);
-        redisTemplate.opsForZSet().incrementScore(key, tag, score);
+        userTagScores.computeIfAbsent(userId, k -> new ConcurrentHashMap<>())
+                .compute(tag, (k, v) -> (v == null) ? score : v + score);
+    }
+
+    // Get all tag scores for a user
+    public Set<Map.Entry<String, Double>> getUserTagScores(Integer userId) {
+        return userTagScores.getOrDefault(userId, new ConcurrentHashMap<>()).entrySet();
     }
 
     public double getScoreWeight(double score) {
@@ -38,5 +47,4 @@ public class TagVectorService {
         if (score == 0.5) return -0.45;
         return 0.0; // 혹시 모를 예외 처리
     }
-
 }
