@@ -2,7 +2,7 @@ package com.ssafy.aieng.domain.learning.entity;
 
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.word.entity.Word;
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

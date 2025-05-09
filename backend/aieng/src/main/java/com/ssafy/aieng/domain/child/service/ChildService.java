@@ -1,6 +1,7 @@
 package com.ssafy.aieng.domain.child.service;
 
 import com.ssafy.aieng.domain.child.dto.request.ChildProfileCreateRequest;
+import com.ssafy.aieng.domain.child.dto.request.ChildProfileImgUpdateRequest;
 import com.ssafy.aieng.domain.child.dto.request.ChildProfileUpdateRequest;
 import com.ssafy.aieng.domain.child.dto.response.ChildInfoResponse;
 import com.ssafy.aieng.domain.child.entity.Child;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ChildService {
 
+    private static final String DEFAULT_IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Sample_User_Icon.png/480px-Sample_User_Icon.png";
+
     private final UserRepository userRepository;
     private final ChildRepository childRepository;
 
@@ -30,7 +33,12 @@ public class ChildService {
         User parentUser = userRepository.findById(parentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. 자녀 프로필 생성 및 저장
+        // 2. 이미지 URL 결정
+        String imageUrl = (request.getChildImgUrl() == null || request.getChildImgUrl().isBlank())
+                ? DEFAULT_IMAGE_URL
+                : request.getChildImgUrl();
+
+        // 3. 자녀 프로필 생성 및 저장
         Child child = Child.builder()
                 .name(request.getChildName())
                 .gender(request.getChildGender())
@@ -85,10 +93,25 @@ public class ChildService {
     }
 
     // 아이 프로필 이미지 등록, 수정, 삭제 (아이 등록 후에 사용하는 기능)
-    public void updateChildProfileImg(Integer parentId, Integer childId) {
+    public void updateChildProfileImg(Integer parentId, Integer childId, ChildProfileImgUpdateRequest request) {
 
         // 1. 자녀 조회
         Child child = childRepository.findByParentIdAndId(parentId, childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+
+        String currentImg = child.getImgUrl();
+        String newImg = request.getChildImgUrl();
+
+        // 2. null 처리 방지 && 삭제시(null or "") 디폴트 이미지 다시 저장
+        if (newImg == null || newImg.isBlank()) {
+            newImg = DEFAULT_IMAGE_URL;
+        }
+
+        // 3. 변경이 필요한 경우만 업데이트
+        if (!newImg.equals(currentImg)) {
+            child.setImgUrl(newImg);
+            childRepository.save(child);
+        }
+
     }
 }

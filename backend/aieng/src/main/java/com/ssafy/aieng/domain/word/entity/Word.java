@@ -1,7 +1,7 @@
 package com.ssafy.aieng.domain.word.entity;
 
 import com.ssafy.aieng.domain.theme.entity.Theme;
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

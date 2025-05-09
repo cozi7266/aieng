@@ -83,7 +83,7 @@ public class ChildController {
     ){
         Integer userId = parentPrincipal.getId();
 
-        childService.updateChildProfileImg(userId, childId);
+        childService.updateChildProfileImg(userId, childId, request);
 
         return ApiResponse.success(HttpStatus.OK);
     }
