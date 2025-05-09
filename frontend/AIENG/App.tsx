@@ -56,7 +56,7 @@ export default function App() {
           "Pretendard-Regular": require("./assets/fonts/Pretendard-Regular.otf"),
           "Pretendard-Medium": require("./assets/fonts/Pretendard-Medium.otf"),
           "Pretendard-Light": require("./assets/fonts/Pretendard-Light.otf"),
-          RixInooAriDuriR: require("./assets/fonts/RixInooAriDuri_Pro Regular.otf"),
+          RixInooAriDuriR: require("./assets/fonts/RixInooAriDuri_ProRegular.otf"),
         });
         setFontsLoaded(true);
       } catch (error) {
