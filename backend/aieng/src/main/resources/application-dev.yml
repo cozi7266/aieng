@@ -29,11 +29,12 @@ spring:
 
 logging:
   level:
-    root: debug
-    com.ssafy.aieng: debug
-    org.hibernate.SQL: warn
-    com.zaxxer.hikari.HikariConfig: OFF
-    com.zaxxer.hikari: OFF
+    root: info  # 전체 로그는 info 수준으로 제한
+    com.ssafy.aieng: debug  # 우리 프로젝트만 디버그 수준 유지
+
+    org.hibernate.SQL: warn  # SQL 로그 줄임
+    com.zaxxer.hikari.HikariConfig: off  # 커넥션 풀 로그 제거
+    com.zaxxer.hikari: off
 
 oauth:
   kakao:
