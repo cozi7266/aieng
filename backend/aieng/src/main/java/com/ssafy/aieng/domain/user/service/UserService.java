@@ -1,12 +1,9 @@
 package com.ssafy.aieng.domain.user.service;
 
 
-import com.ssafy.aieng.domain.auth.dto.response.UserInfoResponse;
-import com.ssafy.aieng.domain.user.dto.response.ChildInfoResponse;
 import com.ssafy.aieng.domain.user.dto.response.ParentInfoResponse;
-import com.ssafy.aieng.domain.user.entity.Child;
 import com.ssafy.aieng.domain.user.entity.User;
-import com.ssafy.aieng.domain.user.repository.ChildRepository;
+import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
@@ -61,17 +58,5 @@ public class UserService {
         return ParentInfoResponse.of(user);
     }
 
-    // 아이 정보 조회
-    public ChildInfoResponse getChildInfo(Integer userId, Integer childId) {
-        // UserId로 해당 유저의 자녀 정보를 찾기
-        User parentUser = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // userId와 childId를 기반으로 자녀 정보 조회
-        Child child = childRepository.findByParentIdAndId(userId, childId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
-
-        // 조회된 자녀 정보를 기반으로 ChildInfoResponse 반환
-        return ChildInfoResponse.of(parentUser, child);
-    }
 }
