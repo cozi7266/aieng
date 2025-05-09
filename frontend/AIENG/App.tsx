@@ -18,6 +18,7 @@ import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { View, ActivityIndicator } from "react-native";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 네비게이션 파라미터 타입 정의
 export type RootStackParamList = {
@@ -44,6 +45,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadFonts() {
@@ -61,6 +64,21 @@ export default function App() {
       }
     }
     loadFonts();
+
+    const checkAuthToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        if (token) {
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("토큰 확인 실패:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuthToken();
   }, []);
 
   if (!fontsLoaded) {
