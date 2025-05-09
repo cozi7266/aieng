@@ -7,6 +7,11 @@ import * as ScreenOrientation from "expo-screen-orientation";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import KakaoLoginButton from "../components/common/auth/KaKaoLoginButton";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { Alert } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { theme } from "../Theme";
 import { RootStackParamList } from "../App";
 
@@ -45,11 +50,56 @@ const LoginScreen: React.FC = () => {
     };
   }, []);
 
-  const handleKakaoLogin = () => {
+  const handleKakaoLogin = async () => {
     console.log("카카오 로그인 시도");
-    // 카카오 로그인 SDK 연동 로직 구현
-    // 로그인 성공 시 회원가입 화면으로 이동
-    navigation.navigate("Signup");
+    try {
+      // 카카오 인증 URL 생성
+      const REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_CLIENT_ID;
+      const REDIRECT_URI = "https://www.aieng.co.kr/oauth/kakao/callback";
+      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${REST_API_KEY}&redirect_uri=${REDIRECT_URI}&response_type=code`;
+
+      // 인증 URL 열기
+      const result = await WebBrowser.openAuthSessionAsync(
+        kakaoAuthUrl,
+        REDIRECT_URI
+      );
+
+      // 인증 결과 처리
+      if (result.type === "success") {
+        const { url } = result;
+        // URL에서 코드 추출
+        const code = url.split("code=")[1]?.split("&")[0];
+
+        if (!code) {
+          throw new Error("인증 코드를 찾을 수 없습니다");
+        }
+
+        // 서버에 인증 코드 전송
+        const response = await axios.post(
+          "https://www.aieng.co.kr/api/oauth/kakao",
+          { code }
+        );
+
+        const { success, data, error } = response.data;
+
+        if (success && data) {
+          // 액세스 토큰 저장
+          await AsyncStorage.setItem("accessToken", data.accessToken);
+
+          // isNew 값에 따라 화면 이동
+          if (data.user.isNew) {
+            navigation.navigate("Home");
+          } else {
+            navigation.navigate("Signup");
+          }
+        } else {
+          Alert.alert("로그인 오류", error || "로그인 중 오류가 발생했습니다.");
+        }
+      }
+    } catch (error) {
+      console.error("카카오 로그인 오류:", error);
+      Alert.alert("로그인 실패", "카카오 로그인 처리 중 오류가 발생했습니다.");
+    }
   };
 
   // 임시 홈스크린 이동 함수 추가
