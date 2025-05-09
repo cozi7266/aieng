@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +20,6 @@ public class ThemeServiceImpl implements ThemeService {
     public List<ThemeResponse> getThemes() {
         return themeRepository.findAll().stream()
                 .map(ThemeResponse::from)
-                .toList();
+                .collect(Collectors.toList());
     }
 } 
