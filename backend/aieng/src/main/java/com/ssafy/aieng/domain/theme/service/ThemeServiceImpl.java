@@ -1,7 +1,6 @@
 package com.ssafy.aieng.domain.theme.service;
 
 import com.ssafy.aieng.domain.theme.dto.response.ThemeResponse;
-import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,14 +17,9 @@ public class ThemeServiceImpl implements ThemeService {
     private final ThemeRepository themeRepository;
 
     @Override
-    public List<ThemeResponse> getAllThemes() {
+    public List<ThemeResponse> getThemes() {
         return themeRepository.findAll().stream()
-                .map(theme -> ThemeResponse.of(
-                        theme.getThemeId(),
-                        theme.getName(),
-                        theme.getImageUrl(),
-                        theme.getCompletedWords(),
-                        theme.getTotalWords()))
+                .map(ThemeResponse::from)
                 .collect(Collectors.toList());
     }
 } 
