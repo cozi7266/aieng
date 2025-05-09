@@ -9,9 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name =  "child")
@@ -19,6 +17,7 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+
 public class Child extends BaseEntity {
 
     @Column(length = 20, nullable = false)
@@ -50,5 +49,4 @@ public class Child extends BaseEntity {
     public void deleteChildProfile() {
         this.softDelete();
     }
-
 }
