@@ -1,6 +1,6 @@
 package com.ssafy.aieng.domain.voice.entity;
 
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;

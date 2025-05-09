@@ -6,14 +6,16 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class ParentInfoResponse {
+public class UserProfileResponse {
     private Integer userId;
     private String nickname;
+    private String imgUrl;
 
-    public static ParentInfoResponse of(User user) {
-        return ParentInfoResponse.builder()
+    public static UserProfileResponse of(User user) {
+        return UserProfileResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
+                .imgUrl(user.getImgUrl())
                 .build();
     }
 }

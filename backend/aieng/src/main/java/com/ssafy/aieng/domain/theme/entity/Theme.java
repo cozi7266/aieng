@@ -1,6 +1,6 @@
 package com.ssafy.aieng.domain.theme.entity;
 
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
