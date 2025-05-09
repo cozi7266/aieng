@@ -9,8 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserUpdateImgRequest {
+public class UserProfileCreateRequest {
 
+    private String userNickname;
     private String userImgUrl;
 
 }

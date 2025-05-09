@@ -2,7 +2,7 @@ package com.ssafy.aieng.domain.child.entity;
 
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.enums.Gender;
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -48,5 +48,9 @@ public class Child extends BaseEntity {
     // 아이 프로필 삭제 (Soft Delete)
     public void deleteChildProfile() {
         this.softDelete();
+    }
+
+    public void setImgUrl(String newImg) {
+        this.imgUrl = newImg;
     }
 }
