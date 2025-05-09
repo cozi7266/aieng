@@ -1,0 +1,14 @@
+package com.ssafy.aieng.domain.child.repository;
+
+import com.ssafy.aieng.domain.child.entity.Child;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface ChildRepository extends JpaRepository<Child, Integer> {
+
+    // 유저 아이디와 아이 아이디로 아이 프로필 조회
+    Optional<Child> findByParentIdAndId(Integer userId, Integer childId);
+}
