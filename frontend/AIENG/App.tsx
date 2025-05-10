@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AudioProvider } from "./contexts/AudioContext";
 import LoginScreen from "./screens/LoginScreen";
+import KakaoAuthCallbackScreen from "./screens/KakaoAuthCallbackScreen";
 import SignupScreen from "./screens/SignupScreen";
 import HomeScreen from "./screens/HomeScreen";
 import LearningScreen from "./screens/LearningScreen";
@@ -19,12 +20,14 @@ import * as Font from "expo-font";
 import { View, ActivityIndicator } from "react-native";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getKeyHashAndroid } from "@react-native-kakao/core";
 
 // 네비게이션 파라미터 타입 정의
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Home: undefined;
+  KakaoAuthCallback: { code?: string; provider?: string };
   LearningScreen: undefined;
   SongScreen: undefined;
   WordcardScreen: undefined;
@@ -49,6 +52,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    getKeyHashAndroid().then(console.log);
     async function loadFonts() {
       try {
         await Font.loadAsync({
@@ -81,7 +85,7 @@ export default function App() {
     checkAuthToken();
   }, []);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -95,25 +99,44 @@ export default function App() {
         <AlertProvider>
           <NavigationContainer>
             <StatusBar hidden />
-            <Stack.Navigator
-              initialRouteName="Login"
-              screenOptions={{ headerShown: false }}
-            >
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Signup" component={SignupScreen} />
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="LearningScreen" component={LearningScreen} />
-              <Stack.Screen name="SongScreen" component={SongScreen} />
-              <Stack.Screen name="WordcardScreen" component={WordcardScreen} />
-              <Stack.Screen name="WordSelect" component={WordSelectScreen} />
-              <Stack.Screen
-                name="WordListening"
-                component={WordListeningScreen}
-              />
-              <Stack.Screen
-                name="WordSentence"
-                component={WordSentenceScreen}
-              />
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              {!isAuthenticated ? (
+                // 인증되지 않은 사용자를 위한 스택
+                <>
+                  <Stack.Screen name="Login" component={LoginScreen} />
+                  <Stack.Screen name="Signup" component={SignupScreen} />
+                  <Stack.Screen
+                    name="KakaoAuthCallback"
+                    component={KakaoAuthCallbackScreen}
+                  />
+                </>
+              ) : (
+                // 인증된 사용자를 위한 스택
+                <>
+                  <Stack.Screen name="Home" component={HomeScreen} />
+                  <Stack.Screen
+                    name="LearningScreen"
+                    component={LearningScreen}
+                  />
+                  <Stack.Screen name="SongScreen" component={SongScreen} />
+                  <Stack.Screen
+                    name="WordcardScreen"
+                    component={WordcardScreen}
+                  />
+                  <Stack.Screen
+                    name="WordSelect"
+                    component={WordSelectScreen}
+                  />
+                  <Stack.Screen
+                    name="WordListening"
+                    component={WordListeningScreen}
+                  />
+                  <Stack.Screen
+                    name="WordSentence"
+                    component={WordSentenceScreen}
+                  />
+                </>
+              )}
             </Stack.Navigator>
           </NavigationContainer>
         </AlertProvider>

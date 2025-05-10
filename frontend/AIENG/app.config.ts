@@ -77,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
 
   // 딥링크 스키마 설정
-  scheme: "ieng",
+  scheme: "aieng",
 
   extra: {
     eas: {
