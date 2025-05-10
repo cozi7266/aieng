@@ -13,11 +13,15 @@ import com.ssafy.aieng.domain.user.enums.Provider;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
+import com.ssafy.aieng.global.infra.oauth.client.KaKaoOAuthClient;
+import com.ssafy.aieng.global.infra.oauth.dto.kakao.KakaoUserResponse;
 import com.ssafy.aieng.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.io.IOException;
+
 
 import java.util.Map;
 
@@ -31,6 +35,7 @@ public class OAuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthRedisService authRedisService;
+    private final KaKaoOAuthClient kakaoOAuthClient;
 
     public LoginResult handleOAuthLogin(Provider provider, String code) {
         OAuthStrategy strategy = oAuthStrategyMap.get(provider);
@@ -133,4 +138,43 @@ public class OAuthService {
             throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
         }
     }
+
+
+    public LoginResult handleKakaoLoginWithAccessToken(String accessToken) {
+        try {
+            KakaoUserResponse userResponse = kakaoOAuthClient.getUserInfo(accessToken); // <- 여기 IOException 발생 가능
+
+            if (userResponse == null || userResponse.getId() == null || userResponse.getKakaoAccount() == null) {
+                log.error("❌ 카카오 사용자 정보가 불완전함");
+                throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
+            }
+
+            OAuthUserInfo userInfo = OAuthUserInfo.builder()
+                    .id(String.valueOf(userResponse.getId()))
+                    .email("no-email@kakao.com")
+                    .nickname(userResponse.getKakaoAccount().getProfile() != null
+                            ? userResponse.getKakaoAccount().getProfile().getNickname()
+                            : "카카오 사용자")
+                    .build();
+
+            User user = findOrCreateUser(Provider.KAKAO, userInfo);
+            String userId = user.getId().toString();
+
+            String newAccessToken = jwtTokenProvider.createAccessToken(userId);
+            String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+            authRedisService.saveRefreshToken(userId, newRefreshToken);
+
+            return LoginResult.of(
+                    OAuthLoginResponse.of(newAccessToken, UserInfoResponse.of(user)),
+                    newRefreshToken
+            );
+
+        } catch (IOException e) {
+            log.error("[Kakao OAuth Error]", e);
+            throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
+        }
+    }
+
+
+
 }

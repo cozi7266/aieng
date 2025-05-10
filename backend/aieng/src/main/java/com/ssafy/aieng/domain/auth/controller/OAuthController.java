@@ -1,6 +1,7 @@
 package com.ssafy.aieng.domain.auth.controller;
 
 import com.ssafy.aieng.domain.auth.dto.LoginResult;
+import com.ssafy.aieng.domain.auth.dto.request.KakaoTokenLoginRequest;
 import com.ssafy.aieng.domain.auth.dto.request.OAuthLoginRequest;
 import com.ssafy.aieng.domain.auth.dto.response.OAuthLoginResponse;
 import com.ssafy.aieng.domain.auth.service.OAuthService;
@@ -42,6 +43,15 @@ public class OAuthController {
                 request.getState()
         );
 
+        ResponseCookie responseCookie = CookieUtil.makeRefreshTokenCookie(loginResult.getRefreshToken());
+        return ApiResponse.success(loginResult.getResponse(), responseCookie);
+    }
+
+    @PostMapping("/kakao/token")
+    public ResponseEntity<ApiResponse<OAuthLoginResponse>> kakaoLoginWithToken(
+            @RequestBody KakaoTokenLoginRequest request) {
+
+        LoginResult loginResult = oAuthService.handleKakaoLoginWithAccessToken(request.getToken());
         ResponseCookie responseCookie = CookieUtil.makeRefreshTokenCookie(loginResult.getRefreshToken());
         return ApiResponse.success(loginResult.getResponse(), responseCookie);
     }
