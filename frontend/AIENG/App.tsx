@@ -1,6 +1,12 @@
 // App.tsx
 import React, { useEffect, useState } from "react";
-import { StyleSheet, StatusBar } from "react-native";
+import {
+  StyleSheet,
+  StatusBar,
+  View,
+  ActivityIndicator,
+  AppState,
+} from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -8,6 +14,7 @@ import { AudioProvider } from "./contexts/AudioContext";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
 import HomeScreen from "./screens/HomeScreen";
+import ProfileSelectScreen from "./screens/ProfileSelectScreen";
 import LearningScreen from "./screens/LearningScreen";
 import SongScreen from "./screens/SongScreen";
 import WordcardScreen from "./screens/WordcardScreen";
@@ -16,15 +23,17 @@ import WordListeningScreen from "./screens/learning/WordListening";
 import WordSentenceScreen from "./screens/learning/WordSentence";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
-import { View, ActivityIndicator } from "react-native";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getKeyHashAndroid } from "@react-native-kakao/core";
+import LoadingScreen from "./components/common/LoadingScreen";
 
 // 네비게이션 파라미터 타입 정의
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Home: undefined;
+  ProfileSelect: undefined;
   LearningScreen: undefined;
   SongScreen: undefined;
   WordcardScreen: undefined;
@@ -45,10 +54,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // 초기값을 false로 설정
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    getKeyHashAndroid().then(console.log);
     async function loadFonts() {
       try {
         await Font.loadAsync({
@@ -56,7 +66,7 @@ export default function App() {
           "Pretendard-Regular": require("./assets/fonts/Pretendard-Regular.otf"),
           "Pretendard-Medium": require("./assets/fonts/Pretendard-Medium.otf"),
           "Pretendard-Light": require("./assets/fonts/Pretendard-Light.otf"),
-          RixInooAriDuriR: require("./assets/fonts/RixInooAriDuri_Pro Regular.otf"),
+          RixInooAriDuriR: require("./assets/fonts/RixInooAriDuri_ProRegular.otf"),
         });
         setFontsLoaded(true);
       } catch (error) {
@@ -70,23 +80,33 @@ export default function App() {
         const token = await AsyncStorage.getItem("accessToken");
         if (token) {
           setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("토큰 확인 실패:", error);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     checkAuthToken();
+
+    // 앱이 포그라운드로 돌아올 때마다 인증 상태 확인
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        checkAuthToken();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+  if (!fontsLoaded || isLoading) {
+    return <LoadingScreen message="앱을 시작하고 있어요..." />;
   }
 
   return (
@@ -95,25 +115,71 @@ export default function App() {
         <AlertProvider>
           <NavigationContainer>
             <StatusBar hidden />
-            <Stack.Navigator
-              initialRouteName="Login"
-              screenOptions={{ headerShown: false }}
-            >
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Signup" component={SignupScreen} />
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="LearningScreen" component={LearningScreen} />
-              <Stack.Screen name="SongScreen" component={SongScreen} />
-              <Stack.Screen name="WordcardScreen" component={WordcardScreen} />
-              <Stack.Screen name="WordSelect" component={WordSelectScreen} />
-              <Stack.Screen
-                name="WordListening"
-                component={WordListeningScreen}
-              />
-              <Stack.Screen
-                name="WordSentence"
-                component={WordSentenceScreen}
-              />
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              {!isAuthenticated ? (
+                // 인증되지 않은 사용자를 위한 스택
+                <>
+                  {/* <Stack.Screen name="Login" component={LoginScreen} /> */}
+                  <Stack.Screen name="Login">
+                    {(props) => (
+                      <LoginScreen
+                        {...props}
+                        setIsAuthenticated={setIsAuthenticated}
+                      />
+                    )}
+                  </Stack.Screen>
+                  {/* <Stack.Screen name="Signup" component={SignupScreen} /> */}
+                  <Stack.Screen name="Signup">
+                    {(props) => (
+                      <SignupScreen
+                        {...props}
+                        setIsAuthenticated={setIsAuthenticated}
+                      />
+                    )}
+                  </Stack.Screen>
+                </>
+              ) : (
+                // 인증된 사용자를 위한 스택
+                <>
+                  <Stack.Screen name="Home">
+                    {(props) => (
+                      <HomeScreen
+                        {...props}
+                        setIsAuthenticated={setIsAuthenticated}
+                      />
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen name="ProfileSelect">
+                    {(props) => (
+                      <ProfileSelectScreen
+                        {...props}
+                        setIsAuthenticated={setIsAuthenticated}
+                      />
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen
+                    name="LearningScreen"
+                    component={LearningScreen}
+                  />
+                  <Stack.Screen name="SongScreen" component={SongScreen} />
+                  <Stack.Screen
+                    name="WordcardScreen"
+                    component={WordcardScreen}
+                  />
+                  <Stack.Screen
+                    name="WordSelect"
+                    component={WordSelectScreen}
+                  />
+                  <Stack.Screen
+                    name="WordListening"
+                    component={WordListeningScreen}
+                  />
+                  <Stack.Screen
+                    name="WordSentence"
+                    component={WordSentenceScreen}
+                  />
+                </>
+              )}
             </Stack.Navigator>
           </NavigationContainer>
         </AlertProvider>

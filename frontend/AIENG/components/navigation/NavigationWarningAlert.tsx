@@ -1,4 +1,4 @@
-// components/common/NavigationWarningAlert.tsx
+// components/navigation/NavigationWarningAlert.tsx
 import React, { useState, useEffect } from "react";
 import {
   Modal,

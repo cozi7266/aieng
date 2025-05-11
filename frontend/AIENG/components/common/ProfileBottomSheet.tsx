@@ -17,10 +17,14 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../../Theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../App";
 
 interface ProfileBottomSheetProps {
   visible: boolean;
   onClose: () => void;
+  setIsAuthenticated: (value: boolean) => void;
 }
 
 const { height, width } = Dimensions.get("window");
@@ -28,8 +32,10 @@ const { height, width } = Dimensions.get("window");
 const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
   visible,
   onClose,
+  setIsAuthenticated,
 }) => {
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const translateY = useRef(new Animated.Value(height)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
@@ -92,20 +98,20 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
   }, [visible]);
 
   const handleProfileChange = () => {
-    handleClose(); // onClose 대신 handleClose 호출
-    // 프로필 변경 화면으로 이동 (추후 구현)
-    console.log("프로필 변경 기능");
+    handleClose(); // 먼저 바텀시트 닫기
+    navigation.navigate("ProfileSelect"); // 프로필 선택 화면으로 이동
   };
 
-  const handleLogout = () => {
-    handleClose(); // onClose 대신 handleClose 호출
-    // 로그아웃 처리 - 네비게이션 스택을 리셋하여 뒤로가기 방지
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "Login" }],
-      })
-    );
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem("accessToken");
+      handleClose();
+      // 인증 상태를 먼저 변경
+      setIsAuthenticated(false);
+      // 네비게이션은 필요 없음 - 상태 변화로 자동 처리됨
+    } catch (error) {
+      console.error("로그아웃 처리 중 오류 발생:", error);
+    }
   };
 
   // visible이 false고 완전히 닫혔을 때 null 반환
