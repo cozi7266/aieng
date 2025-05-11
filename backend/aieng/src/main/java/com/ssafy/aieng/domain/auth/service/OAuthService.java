@@ -68,8 +68,15 @@ public class OAuthService {
     }
 
     private User findOrCreateUser(Provider provider, OAuthUserInfo userInfo) {
-        return userRepository.findByProviderAndProviderIdAndDeletedAtIsNull(provider, userInfo.getId())
+        return userRepository.findByProviderAndProviderId(provider, userInfo.getId())
+                .map(user -> {
+                    if (user.isAlreadyDeleted()) {
+                        user.reactivate(); // 탈퇴했던 유저 복구
+                    }
+                    return user;
+                })
                 .orElseGet(() -> createUser(userInfo, provider));
+
     }
 
     private User createUser(OAuthUserInfo userInfo, Provider provider) {
