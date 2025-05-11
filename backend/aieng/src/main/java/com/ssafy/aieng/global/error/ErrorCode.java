@@ -32,6 +32,18 @@ public enum ErrorCode {
     BIRTHDATE_INVALID(400, "U003", "유효하지 않은 생년월일입니다."),
     CHILD_NOT_FOUND(404, "U004", "아이를 찾을 수 없습니다."),
 
+    // Child
+    FORBIDDEN_CHILD_ACCESS(403, "U005", "해당 자녀 정보에 접근할 수 없습니다."),
+
+    // Learning Session
+    SESSION_NOT_FOUND(404, "S001", "학습 세션을 찾을 수 없습니다."),
+    SESSION_CREATION_FAILED(500, "S002", "학습 세션 생성에 실패했습니다."),
+
+    // Learning Words
+    LEARNING_NOT_FOUND(404, "L001", "학습 단어 정보를 찾을 수 없습니다."),
+    LEARNING_ALREADY_EXISTS(409, "L002", "이미 학습 세션에 단어가 존재합니다."),
+    LEARNING_UPDATE_FAILED(500, "L003", "학습 정보를 업데이트하는 데 실패했습니다."),
+
     // Theme
     THEME_NOT_FOUND(404, "T001", "테마를 찾을 수 없습니다."),
     THEME_ALREADY_EXISTS(409, "T002", "이미 존재하는 테마입니다."),
