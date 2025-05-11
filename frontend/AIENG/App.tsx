@@ -14,6 +14,7 @@ import { AudioProvider } from "./contexts/AudioContext";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
 import HomeScreen from "./screens/HomeScreen";
+import ProfileSelectScreen from "./screens/ProfileSelectScreen";
 import LearningScreen from "./screens/LearningScreen";
 import SongScreen from "./screens/SongScreen";
 import WordcardScreen from "./screens/WordcardScreen";
@@ -32,6 +33,7 @@ export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   Home: undefined;
+  ProfileSelect: undefined;
   LearningScreen: undefined;
   SongScreen: undefined;
   WordcardScreen: undefined;
@@ -142,6 +144,14 @@ export default function App() {
                   <Stack.Screen name="Home">
                     {(props) => (
                       <HomeScreen
+                        {...props}
+                        setIsAuthenticated={setIsAuthenticated}
+                      />
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen name="ProfileSelect">
+                    {(props) => (
+                      <ProfileSelectScreen
                         {...props}
                         setIsAuthenticated={setIsAuthenticated}
                       />

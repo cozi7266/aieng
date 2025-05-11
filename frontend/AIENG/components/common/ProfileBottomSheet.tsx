@@ -98,9 +98,8 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
   }, [visible]);
 
   const handleProfileChange = () => {
-    handleClose(); // onClose 대신 handleClose 호출
-    // 프로필 변경 화면으로 이동 (추후 구현)
-    console.log("프로필 변경 기능");
+    handleClose(); // 먼저 바텀시트 닫기
+    navigation.navigate("ProfileSelect"); // 프로필 선택 화면으로 이동
   };
 
   const handleLogout = async () => {
