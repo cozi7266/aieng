@@ -24,7 +24,7 @@ public class StorybookController {
 
     @PostMapping("/{theme_id}")
     public ResponseEntity<ApiResponse<StorybookResponse>> createStorybook(
-            @PathVariable("theme_id") String themeId,
+            @PathVariable("theme_id") Integer themeId,
             @RequestBody StorybookCreateRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         try {

@@ -11,4 +11,7 @@ public interface ChildRepository extends JpaRepository<Child, Integer> {
 
     // 유저 아이디와 아이 아이디로 아이 프로필 조회
     Optional<Child> findByParentIdAndId(Integer userId, Integer childId);
+
+    // 부모와 이이가 매칭이 맞는지 확인
+    boolean existsByIdAndParentId(Integer childId, Integer parentId);
 }

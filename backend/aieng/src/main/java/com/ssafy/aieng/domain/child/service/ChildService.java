@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -114,4 +116,14 @@ public class ChildService {
         }
 
     }
+
+    // 부모와 자녀가 맞는지 확인
+    public void validateChildOwnership(Integer childId, Integer parentId) {
+        if (!childRepository.existsByIdAndParentId(childId, parentId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_CHILD_ACCESS)
+                    .addParameter("childId", childId)
+                    .addParameter("parentId", parentId);
+        }
+    }
+
 }
