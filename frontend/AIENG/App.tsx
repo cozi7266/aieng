@@ -21,6 +21,7 @@ import WordcardScreen from "./screens/WordcardScreen";
 import WordSelectScreen from "./screens/learning/WordSelect";
 import WordListeningScreen from "./screens/learning/WordListening";
 import WordSentenceScreen from "./screens/learning/WordSentence";
+import WordQuizScreen from "./screens/learning/WordQuiz";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
@@ -44,6 +45,11 @@ export type RootStackParamList = {
     theme: string;
   };
   WordSentence: {
+    wordId: string;
+    themeId: string;
+    theme: string;
+  };
+  WordQuiz: {
     wordId: string;
     themeId: string;
     theme: string;
@@ -178,6 +184,7 @@ export default function App() {
                     name="WordSentence"
                     component={WordSentenceScreen}
                   />
+                  <Stack.Screen name="WordQuiz" component={WordQuizScreen} />
                 </>
               )}
             </Stack.Navigator>

@@ -164,8 +164,12 @@ const LearningScreen: React.FC = () => {
           // 테마 진행도 초기화
           resetThemeProgress(item.id);
 
-          // 퀴즈 화면으로 이동 (미구현)
-          // navigation.navigate("QuizScreen", { themeId: item.id, theme: item.title });
+          // WordQuiz 화면으로 이동 - 첫 번째 단어 ID를 기본값으로 사용
+          navigation.navigate("WordQuiz", {
+            wordId: "1", // 첫 번째 단어로 시작
+            themeId: item.id,
+            theme: item.title,
+          });
         },
         onCancel: () => {
           console.log("퀴즈 탐색 취소됨");
