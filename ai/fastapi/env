@@ -1,0 +1,23 @@
+# Database
+DB_USER=aieng
+DB_PASSWORD=b104B104
+DB_HOST=43.201.251.148
+DB_PORT=3306
+DB_NAME=test
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+
+# AWS S3
+S3_ACCESS_KEY=***REMOVED***
+S3_SECRET_KEY=***REMOVED***
+S3_BUCKET_NAME=aieng
+S3_REGION=ap-northeast-2
+
+# External APIs
+OPENAI_API_KEY=S12P31B104-ed89ea42-9f01-4bd7-9b4e-b00aadc0736b
+OPENAI_BASE_URL=https://gms.p.ssafy.io/gmsapi/api.openai.com/v1
+TTS_API_KEY="tts_key.json"
+SONAUTO_API_KEY=***REMOVED***
