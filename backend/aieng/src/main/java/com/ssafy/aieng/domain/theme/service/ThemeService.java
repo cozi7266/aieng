@@ -15,9 +15,10 @@ public class ThemeService {
 
     private final ThemeRepository themeRepository;
 
+    // 삭제되지 않은 테마만 가져오기
     public List<ThemeResponse> getThemes() {
-        return themeRepository.findAll().stream()
-                .map(ThemeResponse::from)
+        return themeRepository.findAllByDeletedFalse().stream()
+                .map(ThemeResponse::from)  // DTO로 변환
                 .toList();
     }
-} 
+}

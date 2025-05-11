@@ -12,6 +12,8 @@ import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
+import com.ssafy.aieng.global.error.ErrorCode;
+import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,26 +34,26 @@ public class StorybookService {
     private final LearningRepository learningRepository;
 
     @Transactional
-    public StorybookResponse createStorybook(String themeId, StorybookCreateRequest request) {
-        // 아이와 테마 찾기
+    public StorybookResponse createStorybook(Integer themeId, StorybookCreateRequest request) {
+        // 1. 아이 조회
         Child child = childRepository.findById(request.getChildId())
-                .orElseThrow(() -> new EntityNotFoundException("Child not found with id: " + request.getChildId()));
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
 
-        Theme theme = themeRepository.findById(Long.parseLong(themeId))
-                .orElseThrow(() -> new EntityNotFoundException("Theme not found with id: " + themeId));
+        // 2. 테마 조회
+        Theme theme = themeRepository.findById(themeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
 
-        // 해당 테마에서 학습 완료된 단어들 찾기 (최대 5개)
-        List<Learning> completedLearnings = learningRepository.findTop5ByWordThemeIdAndLearnedTrueOrderByLearnedAtDesc(
-                Integer.parseInt(themeId));
+        // 3. 해당 테마에서 학습 완료된 단어 5개 조회
+        List<Learning> completedLearnings = learningRepository
+                .findTop5ByWordThemeIdAndLearnedTrueOrderByLearnedAtDesc(themeId);
 
         if (completedLearnings.isEmpty()) {
-            throw new IllegalStateException(
-                    String.format("테마 '%s'에 대해 완료된 학습이 없습니다. 먼저 단어 학습을 완료해주세요.", theme.getThemeName())
-            );
+            throw new CustomException(ErrorCode.BOOK_NO_COMPLETED_LEARNING);
         }
 
-        // 그림책 생성
-        String coverUrl = String.format("https://s3.amazonaws.com/aieng-bucket/storybooks/%s_cover.png", theme.getThemeName());
+        // 4. 그림책 생성
+        String coverUrl = String.format(
+                "https://s3.amazonaws.com/aieng-bucket/storybooks/%s_cover.png", theme.getThemeName());
 
         Storybook storybook = Storybook.builder()
                 .childId(child.getId())
@@ -60,9 +62,7 @@ public class StorybookService {
                 .description(request.getDescription())
                 .build();
 
-        storybookRepository.save(storybook);
-
-        // 학습 데이터를 기반으로 LearningStorybook 생성
+        // 5. 학습 기록과 연결
         for (int i = 0; i < completedLearnings.size(); i++) {
             Learning learning = completedLearnings.get(i);
 
@@ -75,8 +75,11 @@ public class StorybookService {
             storybook.addLearningStorybook(learningStorybook);
         }
 
+        // 6. 저장
         storybookRepository.save(storybook);
 
+        // 7. 반환
         return StorybookResponse.from(storybook);
     }
+
 }
