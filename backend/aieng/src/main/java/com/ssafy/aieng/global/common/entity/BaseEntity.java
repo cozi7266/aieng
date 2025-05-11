@@ -57,4 +57,13 @@ public abstract class BaseEntity {
     public boolean isAlreadyDeleted() {
         return this.deleted;
     }
+
+    public void reactivate() {
+        if (!this.deleted) {
+            throw new IllegalStateException("이미 활성 상태입니다.");
+        }
+        this.deleted = false;
+        this.deletedAt = null;
+    }
+
 }
