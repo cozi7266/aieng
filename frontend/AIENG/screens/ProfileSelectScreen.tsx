@@ -21,6 +21,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import BackButton from "../components/navigation/BackButton";
 import Card from "../components/common/Card";
 import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
+import axios from "axios";
+import { Alert } from "react-native";
 
 // 프로필 데이터 타입
 interface Profile {
@@ -146,26 +148,74 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
       cancelText: "취소",
       onConfirm: async () => {
         try {
-          // 실제 앱에서는 회원 탈퇴 API 호출
-          await AsyncStorage.removeItem("accessToken");
+          // JWT 토큰 가져오기
+          const token = await AsyncStorage.getItem("accessToken");
 
-          // 퇴장 애니메이션
-          Animated.parallel([
-            Animated.timing(fadeAnim, {
-              toValue: 0,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-            Animated.timing(scaleAnim, {
-              toValue: 0.95,
-              duration: 250,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            setIsAuthenticated(false);
-          });
+          if (!token) {
+            console.error("토큰이 없습니다");
+            Alert.alert(
+              "오류",
+              "로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요."
+            );
+            return;
+          }
+
+          // 로딩 상태 표시 (선택적)
+          // setLoading(true);
+
+          console.log("회원 탈퇴 API 요청 시작");
+
+          // API 요청 헤더 설정
+          const headers = {
+            Authorization: `Bearer ${token}`,
+          };
+
+          // 회원 탈퇴 API 호출
+          const response = await axios.put(
+            "https://www.aieng.co.kr/api/user/me",
+            {},
+            { headers }
+          );
+
+          console.log("API 응답 상태:", response.status);
+
+          // 성공적으로 처리됐는지 확인 (204 상태 코드)
+          if (response.status === 204) {
+            console.log("회원 탈퇴 성공");
+
+            // 토큰 삭제
+            await AsyncStorage.removeItem("accessToken");
+
+            // 퇴장 애니메이션
+            Animated.parallel([
+              Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 250,
+                useNativeDriver: true,
+              }),
+              Animated.timing(scaleAnim, {
+                toValue: 0.95,
+                duration: 250,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              // 인증 상태 업데이트하여 로그인 화면으로 이동
+              setIsAuthenticated(false);
+            });
+          } else {
+            throw new Error("예상치 못한 응답 상태: " + response.status);
+          }
         } catch (error) {
           console.error("회원 탈퇴 처리 중 오류:", error);
+
+          // 사용자에게 오류 알림
+          Alert.alert(
+            "회원 탈퇴 실패",
+            "회원 탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+          );
+        } finally {
+          // 로딩 상태 해제 (선택적)
+          // setLoading(false);
         }
       },
     });
