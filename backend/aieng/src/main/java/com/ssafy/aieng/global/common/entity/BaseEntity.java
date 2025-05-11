@@ -1,6 +1,5 @@
 package com.ssafy.aieng.global.common.entity;
 
-import com.ssafy.aieng.global.common.enums.BaseStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -27,37 +26,35 @@ public abstract class BaseEntity {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private BaseStatus status = BaseStatus.ACTIVE;
-
     @Column
     private LocalDateTime deletedAt;
 
+    @Column(nullable = false)
+    private Boolean deleted = false;
+
     @PrePersist
-    protected void onCreate() {
+    public void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.updatedAt = now;
-        if (this.status == null) this.status = BaseStatus.ACTIVE;
     }
 
     @PreUpdate
-    protected void onUpdate() {
-        if (this.status == BaseStatus.ACTIVE) {
+    public void onUpdate() {
+        if (!this.deleted) {
             this.updatedAt = LocalDateTime.now();
         }
     }
 
-    protected void softDelete() {
-        if (this.status == BaseStatus.DELETED) {
-            throw new IllegalStateException("삭제 되었습니다.");
+    public void softDelete() {
+        if (this.deleted) {
+            throw new IllegalStateException("이미 삭제된 엔티티입니다.");
         }
-        this.status = BaseStatus.DELETED;
+        this.deleted = true;
         this.deletedAt = LocalDateTime.now();
     }
 
-    protected boolean isAlreadyDeleted() {
-        return this.status == BaseStatus.DELETED;
+    public boolean isAlreadyDeleted() {
+        return this.deleted;
     }
 }

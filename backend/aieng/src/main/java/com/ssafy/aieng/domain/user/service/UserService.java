@@ -42,11 +42,12 @@ public class UserService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 2. 이미 탈퇴한 사용자인지 확인
-        if(user.getStatus() == BaseStatus.DELETED || user.getDeletedAt() != null) {
+        if (user.getDeleted() || user.getDeletedAt() != null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        user.markAsDeleted();
+        // 3. soft delete 수행
+        user.softDelete();
     }
 
     // 닉네임 중복
