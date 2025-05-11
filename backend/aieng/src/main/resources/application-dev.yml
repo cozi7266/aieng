@@ -27,6 +27,11 @@ spring:
   main:
     allow-bean-definition-overriding: true
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 logging:
   level:
     root: info  # 전체 로그는 info 수준으로 제한
