@@ -49,4 +49,16 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
                                                 @Param("wordId") Integer wordId);
 
 
+    @Query("""
+        SELECT l
+        FROM Learning l
+        JOIN l.session s
+        WHERE s.child.id = :childId
+        AND l.word.id = :wordId
+        AND l.learned = true
+    """)
+    Optional<Learning> findByChildIdAndWordIdAndLearnedTrue(
+            @Param("childId") Integer childId,
+            @Param("wordId") Integer wordId
+    );
 }
