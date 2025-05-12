@@ -3,8 +3,8 @@ from pydantic import BaseModel
 class SongRequest(BaseModel):
     childId: int
     sessionId: int
-    mood: str
-    voice: str
+    moodName: str
+    voiceName: str
 
 class SongResponse(BaseModel):
     songUrl: str

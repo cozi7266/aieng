@@ -14,7 +14,7 @@ def generate_custom_song(
     result = SonautoService(redis, s3).generate_song(
         child_id=request.childId,
         session_id=request.sessionId,
-        mood=request.mood,
-        voice=request.voice
+        mood_name=request.moodName,
+        voice_name=request.voiceName
     )
     return result
