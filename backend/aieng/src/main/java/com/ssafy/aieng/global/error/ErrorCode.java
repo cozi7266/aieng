@@ -2,6 +2,7 @@ package com.ssafy.aieng.global.error;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
 @Getter
 @AllArgsConstructor
@@ -68,7 +69,20 @@ public enum ErrorCode {
     VOICE_FILE_TOO_LARGE(400, "V002", "음성 파일이 너무 큽니다."),
     VOICE_INVALID_FILE_FORMAT(400, "V003", "지원하지 않는 음성 파일 형식입니다."),
     VOICE_UPLOAD_FAILED(500, "V004", "음성 파일 업로드에 실패했습니다."),
-    VOICE_FILE_TOO_SHORT(400, "V005", "음성 파일이 너무 짧습니다.");
+    VOICE_FILE_TOO_SHORT(400, "V005", "음성 파일이 너무 짧습니다."),
+    VOICE_NOT_FOUND(404, "V006", "Voice not found"),
+    DEFAULT_VOICES_NOT_FOUND(404, "V007", "기본 목소리 목록을 찾을 수 없습니다."),
+    DEFAULT_VOICES_LOAD_FAILED(500, "V008", "기본 목소리 목록을 불러오는데 실패했습니다."),
+
+    // Mood 관련 에러
+    MOOD_NOT_FOUND(404, "M001", "Mood not found"),
+
+    // Storybook 관련 에러
+    STORYBOOK_NOT_FOUND(404, "SB001", "그림책을 찾을 수 없습니다."),
+
+    // Song 관련 에러
+    SONG_NOT_FOUND(404, "SG001", "동요를 찾을 수 없습니다."),
+    SONG_ALREADY_DELETED(400, "SG002", "이미 삭제된 동요입니다.");
 
     private final int status;
     private final String code;

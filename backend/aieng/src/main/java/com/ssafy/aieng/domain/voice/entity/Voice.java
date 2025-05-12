@@ -9,19 +9,19 @@ import lombok.NoArgsConstructor;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "voice")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "voice")
 public class Voice extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "child_id", nullable = false)
+    @Column(name = "child_id")
     private Integer childId;
 
-    @Column(name = "name", nullable = false, length = 20)
+    @Column(name = "name", length = 20, nullable = false)
     private String name;
 
     @Column(name = "description", length = 100)
