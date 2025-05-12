@@ -1,11 +1,13 @@
 package com.ssafy.aieng.global.infra.oauth.dto.kakao;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class KakaoTokenResponse {
     @JsonProperty("access_token")
     private String accessToken;
@@ -27,4 +29,10 @@ public class KakaoTokenResponse {
 
     @JsonProperty("refresh_token_expires_in")
     private Integer refreshTokenExpiresIn;
+
+    @JsonProperty("error")
+    private String error;
+
+    @JsonProperty("error_description")
+    private String errorDescription;
 }
