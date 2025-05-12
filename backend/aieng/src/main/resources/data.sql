@@ -46,7 +46,8 @@ VALUES
 
 -- 학습 세션
 INSERT INTO session (id, created_at, updated_at, deleted, child_id, theme_id, started_at, finished_at, word_count)
-VALUES (1, NOW(), NOW(), false, 1, 1, NOW(), NOW(), 3);
+VALUES (1, NOW(), NOW(), false, 1, 1, NOW(), NOW(), 3),
+       (2, NOW(), NOW(), false, 1, 1, NOW(), NOW(), 3);
 
 -- 학습 기록
 INSERT INTO learning (id, created_at, updated_at, deleted, session_id, word_id, learned, learned_at, sentence, img_url, tts_url)

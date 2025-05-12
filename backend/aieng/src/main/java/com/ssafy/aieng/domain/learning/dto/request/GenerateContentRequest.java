@@ -1,11 +1,16 @@
 package com.ssafy.aieng.domain.learning.dto.request;
 
-import lombok.Getter;
+import lombok.*;
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class GenerateContentRequest {
+    private Integer userId;
+    private Integer sessionId;
     private Integer childId;
-    private Integer themeId;
     private Integer wordId;
     private String word;
 }
