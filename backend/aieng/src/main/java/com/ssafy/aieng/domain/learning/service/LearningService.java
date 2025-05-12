@@ -109,25 +109,36 @@ public class LearningService {
     @Transactional
     public GeneratedContentResult generateAndSaveWordContent(Integer userId, GenerateContentRequest request) {
         // 1. FastAPI 호출
-        // ⛔ 비동기라면 생략 가능, 아니면 반드시 확인
         try {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
-            restTemplate.postForEntity("https://www.aieng.co.kr/fastapi/words", entity, String.class);
+            restTemplate.postForEntity("https://www.aieng.co.kr/fastapi/words/", entity, String.class);
         } catch (Exception e) {
             log.error("❌ FastAPI 호출 실패: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 2. Redis 결과 조회
+        // 2. Redis 결과 polling (최대 10초 동안 0.5초 간격)
         String redisKey = String.format("words:%d:%d%s", request.getUserId(), request.getSessionId(), request.getWord());
         log.debug("🔍 Redis Key: {}", redisKey);
-        String redisJson = stringRedisTemplate.opsForValue().get(redisKey);
+        String redisJson = null;
+
+        int maxRetry = 20; // 최대 20회 = 10초 (500ms 간격)
+        for (int i = 0; i < maxRetry; i++) {
+            redisJson = stringRedisTemplate.opsForValue().get(redisKey);
+            if (redisJson != null) break;
+            try {
+                Thread.sleep(500); // 0.5초 대기
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+        }
 
         if (redisJson == null) {
-            log.warn("⚠️ Redis에 결과 없음 (FastAPI 응답이 아직 없음): {}", redisKey);
+            log.warn("⚠️ Redis에 결과 없음 (FastAPI 응답 없음): {}", redisKey);
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
@@ -141,6 +152,7 @@ public class LearningService {
             log.error("❌ Redis 파싱 실패: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+
         log.info("✅ Redis 파싱 결과 - sentence: {}", result.getSentence());
 
         // 4. RDB 업데이트
@@ -150,7 +162,6 @@ public class LearningService {
         Word word = wordRepository.findById(request.getWordId())
                 .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
 
-        // 핵심 복구 로직: 학습 기록이 없다면 새로 생성
         Learning learning = learningRepository.findBySessionIdAndWordId(session.getId(), word.getId())
                 .orElse(null);
 
@@ -158,14 +169,12 @@ public class LearningService {
             learning = Learning.of(session, word);
         }
 
-        // ✅ FastAPI 결과로 내용 채움
         learning.updateContent(result);
-
-        // ✅ 무조건 한 번 더 저장 (영속성 안전 확보)
         learningRepository.save(learning);
 
         return result;
     }
+
 
 
 }
