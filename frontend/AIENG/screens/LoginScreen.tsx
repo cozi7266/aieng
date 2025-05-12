@@ -1,8 +1,9 @@
 // screens/LoginScreen.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Image, Dimensions } from "react-native";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as ScreenOrientation from "expo-screen-orientation";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import KakaoLoginButton from "../components/common/auth/KaKaoLoginButton";
@@ -18,7 +19,7 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<
   "Login"
 >;
 
-const DividerWithText = ({ text }) => (
+const DividerWithText: React.FC<{ text: string }> = ({ text }) => (
   <View style={styles.dividerContainer}>
     <View style={styles.dividerLine} />
     <Text style={styles.dividerText}>{text}</Text>
@@ -28,6 +29,21 @@ const DividerWithText = ({ text }) => (
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
+
+  // 가로 모드로 화면 고정 (태블릿용)
+  useEffect(() => {
+    const lockOrientation = async () => {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE
+      );
+    };
+
+    lockOrientation();
+
+    return () => {
+      ScreenOrientation.unlockAsync();
+    };
+  }, []);
 
   const handleKakaoLogin = () => {
     console.log("카카오 로그인 시도");
@@ -65,7 +81,7 @@ const LoginScreen: React.FC = () => {
           />
         </View>
 
-        <Text style={styles.subText} includeFontPadding={false}>
+        <Text style={styles.subText}>
           즐거운 영어 동요로 학습을 시작해볼까요?
         </Text>
 

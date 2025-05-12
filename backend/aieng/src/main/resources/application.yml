@@ -2,7 +2,6 @@ spring:
   profiles:
     include: secret
     active: dev
-
   data:
     web:
       pageable:

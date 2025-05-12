@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserUpdateImgRequest {
 
-    private String imgurl;
+    private String userImgUrl;
 
 }

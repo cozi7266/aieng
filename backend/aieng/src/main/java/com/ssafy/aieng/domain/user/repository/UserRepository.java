@@ -22,4 +22,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // 회원탈퇴 (Soft Delete)
     void deleteById(Integer id);
 
+    // 닉네임 중복확인
+    boolean existsByNickname(String nickname);
+
+    Optional<User> findByProviderAndProviderId(Provider provider, String providerId);
 }
