@@ -1,6 +1,8 @@
 package com.ssafy.aieng.domain.learning.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.aieng.domain.child.service.ChildService;
+import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
@@ -8,18 +10,22 @@ import com.ssafy.aieng.domain.learning.service.LearningService;
 import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
+import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -53,6 +59,7 @@ public class LearningController {
         return ApiResponse.success(progressPage);
     }
 
+    // 테마 젒혹 후 단어 조회
     @GetMapping("/{childId}/theme/{themeId}/words")
     public ResponseEntity<ApiResponse<CustomPage<LearningWordResponse>>> getLearningWordsByTheme(
             @PathVariable Integer childId,
@@ -80,5 +87,46 @@ public class LearningController {
 
         return ApiResponse.success(result);
     }
+
+    // 아이의 문장과 문장 이미지를 생성하기 위한 기능
+    @PostMapping("/generate")
+    public ResponseEntity<ApiResponse<GeneratedContentResult>> generateWordContent(
+            @RequestBody GenerateContentRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        // 1. FastAPI 호출
+        String fastApiUrl = "http://fastapi-server:8000/generate";  // 실제 주소로 교체
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
+
+        try {
+            restTemplate.postForEntity(fastApiUrl, entity, String.class);
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        // 2. Redis 결과 조회
+        String redisKey = String.format("words:%d:%d:%d", request.getChildId(), request.getThemeId(), request.getWordId());
+
+        Object redisData = redisTemplate.opsForValue().get(redisKey);
+        if (redisData == null) {
+            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            GeneratedContentResult result = objectMapper.readValue(redisData.toString(), GeneratedContentResult.class);
+            return ApiResponse.success(result);
+        } catch (Exception e) {
+            return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+
 
 }
