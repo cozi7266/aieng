@@ -10,6 +10,7 @@ import lombok.*;
 public class GenerateContentRequest {
     private Integer userId;
     private Integer sessionId;
+    private Integer childId;
     private Integer wordId;
     private String word;
 }
