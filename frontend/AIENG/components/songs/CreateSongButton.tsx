@@ -1,37 +1,32 @@
 import React from "react";
-import { TouchableOpacity, StyleSheet, Text } from "react-native";
+import { TouchableOpacity, StyleSheet } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { theme } from "../../Theme";
 
 interface CreateSongButtonProps {
   onPress: () => void;
+  style?: any;
+  scaleFactor?: number;
 }
 
-const CreateSongButton: React.FC<CreateSongButtonProps> = ({ onPress }) => {
+const CreateSongButton: React.FC<CreateSongButtonProps> = ({
+  onPress,
+  style,
+  scaleFactor = 1,
+}) => {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
-      <FontAwesome5 name="plus" size={20} color="white" style={styles.icon} />
-      <Text style={styles.text}>동요 만들기</Text>
+    <TouchableOpacity style={[styles.button, style]} onPress={onPress}>
+      <FontAwesome5 name="cog" size={32} color={theme.colors.primary} />
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.m,
+    backgroundColor: "white",
     borderRadius: theme.borderRadius.pill,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: theme.spacing.m,
-    paddingHorizontal: theme.spacing.l,
     ...theme.shadows.default,
-  },
-  icon: {
-    marginRight: theme.spacing.s,
-  },
-  text: {
-    ...theme.typography.button,
-    color: "white",
   },
 });
 
