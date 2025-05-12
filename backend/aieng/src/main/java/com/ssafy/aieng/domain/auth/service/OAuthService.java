@@ -101,6 +101,7 @@ public class OAuthService {
     }
 
 
+
     public TokenRefreshResponse refreshToken(String refreshToken) {
         TokenValidationResult validationResult = jwtTokenProvider.validateToken(refreshToken);
         if (!validationResult.isValid()) {
@@ -146,7 +147,7 @@ public class OAuthService {
         }
     }
 
-
+    // 안드로이드 앱 OAuth 로그인 (바로 access token 받아오기)
     public LoginResult handleKakaoLoginWithAccessToken(String accessToken) {
         try {
             KakaoUserResponse userResponse = kakaoOAuthClient.getUserInfo(accessToken); // <- 여기 IOException 발생 가능
