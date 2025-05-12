@@ -108,13 +108,18 @@ public class LearningService {
 
     @Transactional
     public GeneratedContentResult generateAndSaveWordContent(Integer userId, GenerateContentRequest request) {
+        log.info("📥 [요청 시작] generateAndSaveWordContent - userId: {}, sessionId: {}, word: {}", userId, request.getSessionId(), request.getWord());
+
         // 1. FastAPI 호출
         try {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
-            restTemplate.postForEntity("https://www.aieng.co.kr/fastapi/words/", entity, String.class);
+
+            log.info("📡 FastAPI 요청 전송: {}", entity.getBody());
+            var response = restTemplate.postForEntity("https://www.aieng.co.kr/fastapi/words/", entity, String.class);
+            log.info("📬 FastAPI 응답 상태 코드: {}, Body: {}", response.getStatusCode(), response.getBody());
         } catch (Exception e) {
             log.error("❌ FastAPI 호출 실패: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -122,15 +127,20 @@ public class LearningService {
 
         // 2. Redis 결과 polling (최대 10초 동안 0.5초 간격)
         String redisKey = String.format("words:%d:%d%s", request.getUserId(), request.getSessionId(), request.getWord());
-        log.debug("🔍 Redis Key: {}", redisKey);
-        String redisJson = null;
+        log.debug("🔍 Redis 키 생성됨: {}", redisKey);
 
-        int maxRetry = 20; // 최대 20회 = 10초 (500ms 간격)
+        String redisJson = null;
+        int maxRetry = 20;
+
         for (int i = 0; i < maxRetry; i++) {
             redisJson = stringRedisTemplate.opsForValue().get(redisKey);
-            if (redisJson != null) break;
+            if (redisJson != null) {
+                log.info("📦 Redis 값 발견 ({}회 시도): {}", i + 1, redisJson);
+                break;
+            }
+            log.debug("⏳ Redis에 아직 값 없음 ({}회 시도)", i + 1);
             try {
-                Thread.sleep(500); // 0.5초 대기
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -138,7 +148,7 @@ public class LearningService {
         }
 
         if (redisJson == null) {
-            log.warn("⚠️ Redis에 결과 없음 (FastAPI 응답 없음): {}", redisKey);
+            log.warn("⚠️ Redis에서 결과를 찾지 못함: {}", redisKey);
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
@@ -148,32 +158,32 @@ public class LearningService {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
             result = objectMapper.readValue(redisJson, GeneratedContentResult.class);
+            log.info("✅ Redis 파싱 성공 - 단어: {}, 문장: {}", result.getWord(), result.getSentence());
         } catch (Exception e) {
-            log.error("❌ Redis 파싱 실패: {}", e.getMessage(), e);
+            log.error("❌ Redis JSON 파싱 실패: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
-
-        log.info("✅ Redis 파싱 결과 - sentence: {}", result.getSentence());
 
         // 4. RDB 업데이트
         Session session = sessionRepository.findById(request.getSessionId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-
         Word word = wordRepository.findById(request.getWordId())
                 .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
 
         Learning learning = learningRepository.findBySessionIdAndWordId(session.getId(), word.getId())
                 .orElse(null);
-
         if (learning == null) {
+            log.info("🆕 학습 엔티티가 없어 새로 생성합니다.");
             learning = Learning.of(session, word);
         }
 
         learning.updateContent(result);
         learningRepository.save(learning);
+        log.info("📝 학습 데이터 저장 완료 - wordId: {}, sentence: {}", word.getId(), result.getSentence());
 
         return result;
     }
+
 
 
 
