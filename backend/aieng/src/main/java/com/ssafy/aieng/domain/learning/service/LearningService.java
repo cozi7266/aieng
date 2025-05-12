@@ -115,7 +115,7 @@ public class LearningService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
-            // restTemplate.postForEntity("http://localhost:8000/words", entity, String.class);
+            restTemplate.postForEntity("https://www.aieng.co.kr/words", entity, String.class);
         } catch (Exception e) {
             log.error("❌ FastAPI 호출 실패: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
