@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY . /app
 
-COPY var/jenkins_home/secrets/tts_key.json /app/tts_key.json
-
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
