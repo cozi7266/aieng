@@ -29,7 +29,7 @@ class SonautoService:
 
         return sentences
 
-    def generate_song(self, child_id: int, session_id: int, mood: str, voice: str) -> dict:
+    def generate_song(self, child_id: int, session_id: int, mood_name: str, voice_name: str) -> dict:
         # 1. Redis에서 문장 수집
         sentences = self.get_sentences_from_redis(child_id, session_id)
         if not sentences:
@@ -38,16 +38,29 @@ class SonautoService:
         lyrics = "\n".join(sentences)
 
         # 2. 프롬프트 구성
-        prompt = (
-            "Create a fun, catchy children's song in English for kids aged 7 to 8 years old. "
-            "The lyrics must be based mostly on the following 5 simple English sentences sequentially, designed for language learning. "
-            "Repeat these sentences in a melodic and natural way, like how educational children's songs work. "
-            "You may add short and simple connecting sentences, sounds, or phrases if needed, "
-            "but keep the added content minimal. "
-            "The final song should sound playful, repetitive, and help children memorize these phrases easily.\n\n"
-            "song example: Baby Shark, Twinkle Twinkle Little Star/"
-            "<sentences>\n" + "\n".join(lyrics)
-        )
+        prompt = f"""
+        Create a fun and catchy children's song in English for kids aged 7 to 8.
+
+        🔹 Style: Use a playful, repetitive melody similar to "Baby Shark" or "If You’re Happy and You Know It".
+        🔹 Purpose: Language learning – help kids memorize and pronounce the following 5 simple English sentences.
+        🔹 Structure: 
+        - Repeat each sentence clearly 2–3 times in each verse.
+        - Keep each line rhythmically short and singable.
+        - Add very minimal connecting phrases or fun interjections like “la la la”, “yeah!” if needed.
+        - Ensure the lyrics and melody match naturally.
+
+        🎵 Use a cheerful children's music mood with xylophones, claps, and simple percussion.
+        🎤 Voice should be clear, slow, and friendly, suitable for early learners (like a kids' TV show voice).
+
+        <sentences>
+        {chr(10).join(lyrics)}
+
+        <mood>
+        {mood_name}
+
+        <voice>
+        {voice_name}
+        """
 
         # 3. Sonauto 요청
         response = requests.post(
