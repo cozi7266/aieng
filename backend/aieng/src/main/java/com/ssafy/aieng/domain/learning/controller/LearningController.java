@@ -59,7 +59,7 @@ public class LearningController {
         return ApiResponse.success(progressPage);
     }
 
-    // 테마 젒혹 후 단어 조회
+    // 테마 접속 후 단어 조회
     @GetMapping("/{childId}/theme/{themeId}/words")
     public ResponseEntity<ApiResponse<CustomPage<LearningWordResponse>>> getLearningWordsByTheme(
             @PathVariable Integer childId,
@@ -94,36 +94,13 @@ public class LearningController {
             @RequestBody GenerateContentRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        // 1. FastAPI 호출
-        String fastApiUrl = "http://fastapi-server:8000/generate";  // 실제 주소로 교체
-
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
-
-        try {
-            restTemplate.postForEntity(fastApiUrl, entity, String.class);
-        } catch (Exception e) {
-            return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
-
-        // 2. Redis 결과 조회
-        String redisKey = String.format("words:%d:%d:%d", request.getChildId(), request.getThemeId(), request.getWordId());
-
-        Object redisData = redisTemplate.opsForValue().get(redisKey);
-        if (redisData == null) {
-            return ApiResponse.error(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            GeneratedContentResult result = objectMapper.readValue(redisData.toString(), GeneratedContentResult.class);
-            return ApiResponse.success(result);
-        } catch (Exception e) {
-            return ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
-        }
+        // 유저 검증 또는 요청에 포함된 유저 ID 대조 가능
+        GeneratedContentResult result = learningService.generateAndSaveWordContent(
+                userPrincipal.getId(), request
+        );
+        return ApiResponse.success(result);
     }
+
 
 
 
