@@ -126,7 +126,8 @@ public class LearningService {
         }
 
         // 2. Redis 결과 polling (최대 10초 동안 0.5초 간격)
-        String redisKey = String.format("words:%d:%d%s", request.getUserId(), request.getSessionId(), request.getWord());
+        String redisKey = String.format("word:%d:%d:%s", request.getUserId(), request.getSessionId(), request.getWord());
+
         log.debug("🔍 Redis 키 생성됨: {}", redisKey);
 
         String redisJson = null;
