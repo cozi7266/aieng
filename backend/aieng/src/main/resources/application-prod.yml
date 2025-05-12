@@ -42,7 +42,7 @@ server:
 
 oauth:
   kakao:
-    redirect-uri: aieng://oauth/kakao/callback
+    redirect-uri: https://www.aieng.co.kr/oauth/kakao/callback
   google:
     redirect-uri: https://www.aieng.co.kr/oauth/google/callback
   naver:
