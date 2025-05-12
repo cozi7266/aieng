@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 
 class SongRequest(BaseModel):
-    user_id: int
+    childId: int
+    sessionId: int
     mood: str
     voice: str
 
 class SongResponse(BaseModel):
-    song_url: str
+    songUrl: str
     lyrics: str

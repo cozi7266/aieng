@@ -6,7 +6,7 @@ from app.config import settings
 
 class SonautoService:
     def __init__(self, redis, s3):
-        self.redis = redis.client
+        self.redis = redis.get_client()
         self.s3 = s3
         self.base_url = "https://api.sonauto.ai/v1"
         self.headers = {
@@ -14,8 +14,8 @@ class SonautoService:
             "Content-Type": "application/json"
         }
 
-    def get_sentences_from_redis(self, user_id: int) -> list[str]:
-        pattern = f"learning:{user_id}:*"
+    def get_sentences_from_redis(self, child_id: int, session_id: int) -> list[str]:
+        pattern = f"word:{child_id}:{session_id}*"
         keys = self.redis.keys(pattern)
         sentences = []
 
@@ -29,9 +29,9 @@ class SonautoService:
 
         return sentences
 
-    def generate_song(self, user_id: int, mood: str, voice: str) -> dict:
+    def generate_song(self, child_id: int, session_id: int, mood: str, voice: str) -> dict:
         # 1. Redis에서 문장 수집
-        sentences = self.get_sentences_from_redis(user_id)
+        sentences = self.get_sentences_from_redis(child_id, session_id)
         if not sentences:
             raise ValueError("No sentences found in Redis for this user.")
 
@@ -39,10 +39,14 @@ class SonautoService:
 
         # 2. 프롬프트 구성
         prompt = (
-            f"Create a {mood} children's song using a {voice} voice. "
-            f"Use the following lines as the main lyrics, but you may add simple, catchy English lines. "
-            f"Target age: 3–6. Melody should be like 'Baby Shark'.\n\n"
-            f"<lyrics>\n{lyrics}"
+            "Create a fun, catchy children's song in English for kids aged 7 to 8 years old. "
+            "The lyrics must be based mostly on the following 5 simple English sentences sequentially, designed for language learning. "
+            "Repeat these sentences in a melodic and natural way, like how educational children's songs work. "
+            "You may add short and simple connecting sentences, sounds, or phrases if needed, "
+            "but keep the added content minimal. "
+            "The final song should sound playful, repetitive, and help children memorize these phrases easily.\n\n"
+            "song example: Baby Shark, Twinkle Twinkle Little Star/"
+            "<sentences>\n" + "\n".join(lyrics)
         )
 
         # 3. Sonauto 요청
@@ -75,7 +79,7 @@ class SonautoService:
         song_data = requests.get(song_url)
         song_data.raise_for_status()
 
-        filename = f"song_{user_id}_{uuid.uuid4().hex}.ogg"
+        filename = f"song_{child_id}_{session_id}_{uuid.uuid4().hex}.ogg"
 
         with open(filename, "wb") as f:
             f.write(song_data.content)
@@ -83,7 +87,7 @@ class SonautoService:
 
         s3_url = self.s3.upload(song_data.content, filename)
 
-        redis_key = f"song:{user_id}"
+        redis_key = f"song:{child_id}:{session_id}"
         redis_value = {
             "song_url": s3_url,
             "lyrics": lyrics_result,
@@ -93,6 +97,6 @@ class SonautoService:
         self.redis.expire(redis_key, 3600)  # TTL: 1시간
 
         return {
-            "song_url": s3_url,
+            "songUrl": s3_url,
             "lyrics": lyrics_result
         }
