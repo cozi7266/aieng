@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Pageable;
 
-
 import java.util.List;
 import java.util.Optional;
 
@@ -35,9 +34,10 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
 """)
     Page<ThemeProgressResponse> findThemeProgressByChildId(@Param("childId") Integer childId, Pageable pageable);
 
-
     Page<Learning> findAllBySessionId(Integer id, Pageable pageable);
 
+    @Query("SELECT l FROM Learning l JOIN l.session s WHERE s.child.id = :childId AND l.learned = true ORDER BY l.learnedAt DESC")
+    List<Learning> findAllByChildIdAndLearnedTrueOrderByLearnedAtDesc(@Param("childId") Integer childId);
 
     Optional<Learning> findBySessionAndWord(Session session, Word word);
 
