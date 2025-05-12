@@ -21,6 +21,7 @@ interface MusicPlayerProps {
   onPrevious: () => void;
   onNext: () => void;
   onRepeat: () => void;
+  onToggleFavorite: () => void;
   scaleFactor: number;
 }
 
@@ -32,6 +33,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   onPrevious,
   onNext,
   onRepeat,
+  onToggleFavorite,
   scaleFactor = 1,
 }) => {
   const [currentTime, setCurrentTime] = useState(0);
@@ -146,11 +148,14 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.controlButton}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={onToggleFavorite}
+        >
           <FontAwesome5
-            name="volume-up"
+            name={song.favorite ? "star" : "star"}
             size={24}
-            color={theme.colors.primary}
+            color={song.favorite ? "gold" : theme.colors.primary}
           />
         </TouchableOpacity>
       </View>

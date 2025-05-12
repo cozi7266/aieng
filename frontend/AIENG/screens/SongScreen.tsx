@@ -39,6 +39,7 @@ interface Song {
   audioUrl: any;
   duration: number;
   lyrics?: string;
+  favorite: boolean;
 }
 
 const SongScreen: React.FC = () => {
@@ -76,6 +77,7 @@ const SongScreen: React.FC = () => {
       duration: 180,
       lyrics:
         "Twinkle, twinkle, little star\nHow I wonder what you are\nUp above the world so high\nLike a diamond in the sky\nTwinkle, twinkle, little star\nHow I wonder what you are",
+      favorite: false,
     },
     // 나머지 노래 데이터는 그대로 유지
     {
@@ -87,6 +89,7 @@ const SongScreen: React.FC = () => {
       duration: 210,
       lyrics:
         "Old MacDonald had a farm, E-I-E-I-O\nAnd on his farm he had a cow, E-I-E-I-O\nWith a moo moo here and a moo moo there\nHere a moo, there a moo, everywhere a moo moo\nOld MacDonald had a farm, E-I-E-I-O",
+      favorite: false,
     },
     {
       id: "3",
@@ -97,6 +100,7 @@ const SongScreen: React.FC = () => {
       duration: 195,
       lyrics:
         "The wheels on the bus go round and round\nRound and round, round and round\nThe wheels on the bus go round and round\nAll through the town",
+      favorite: false,
     },
     {
       id: "4",
@@ -107,6 +111,7 @@ const SongScreen: React.FC = () => {
       duration: 165,
       lyrics:
         "The itsy bitsy spider went up the water spout\nDown came the rain and washed the spider out\nOut came the sun and dried up all the rain\nAnd the itsy bitsy spider went up the spout again",
+      favorite: false,
     },
     {
       id: "5",
@@ -117,6 +122,7 @@ const SongScreen: React.FC = () => {
       duration: 150,
       lyrics:
         "Baa, baa, black sheep, have you any wool?\nYes sir, yes sir, three bags full\nOne for the master, one for the dame\nAnd one for the little boy who lives down the lane",
+      favorite: false,
     },
     {
       id: "6",
@@ -127,6 +133,7 @@ const SongScreen: React.FC = () => {
       duration: 140,
       lyrics:
         "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
+      favorite: false,
     },
     {
       id: "7",
@@ -137,6 +144,7 @@ const SongScreen: React.FC = () => {
       duration: 140,
       lyrics:
         "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
+      favorite: true,
     },
   ];
 
@@ -198,8 +206,26 @@ const SongScreen: React.FC = () => {
     console.log("Navigate to song creation");
   };
 
+  const handleToggleFavorite = () => {
+    if (!currentSong) return;
+
+    // 즐겨찾기 상태 토글
+    setSongs((prevSongs) =>
+      prevSongs.map((song) =>
+        song.id === currentSong.id
+          ? { ...song, favorite: !song.favorite }
+          : song
+      )
+    );
+
+    // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
+    setCurrentSong((prevSong) =>
+      prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
+    );
+  };
+
   const filteredSongs =
-    activeTab === "all" ? songs : songs.filter((_, index) => index % 2 === 0); // 즐겨찾기 예시
+    activeTab === "all" ? songs : songs.filter((song) => song.favorite);
 
   // 동적 스타일 생성
   const dynamicStyles = {
@@ -368,6 +394,7 @@ const SongScreen: React.FC = () => {
                 onPrevious={handlePrevious}
                 onNext={handleNext}
                 onRepeat={handleRepeat}
+                onToggleFavorite={handleToggleFavorite}
                 scaleFactor={scaleFactor}
               />
             </>
