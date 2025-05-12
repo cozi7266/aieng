@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface VoiceRepository extends JpaRepository<Voice, Integer> {
     List<Voice> findAllByChildIdOrderByCreatedAtDesc(Integer childId);
+    List<Voice> findAllByChildIdIsNullOrderByCreatedAtDesc();
 } 
