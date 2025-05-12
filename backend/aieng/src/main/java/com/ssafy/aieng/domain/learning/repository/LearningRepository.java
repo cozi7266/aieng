@@ -2,6 +2,8 @@ package com.ssafy.aieng.domain.learning.repository;
 
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
+import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.word.entity.Word;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LearningRepository extends JpaRepository<Learning, Integer> {
@@ -34,4 +37,14 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
 
 
     Page<Learning> findAllBySessionId(Integer id, Pageable pageable);
+
+
+    Optional<Learning> findBySessionAndWord(Session session, Word word);
+
+    @Query("""
+        SELECT l FROM Learning l
+        WHERE l.session.id = :sessionId AND l.word.id = :wordId
+        """)
+    Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
+                                                @Param("wordId") Integer wordId);
 }

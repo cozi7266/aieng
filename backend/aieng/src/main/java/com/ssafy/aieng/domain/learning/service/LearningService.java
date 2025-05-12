@@ -1,8 +1,12 @@
 package com.ssafy.aieng.domain.learning.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.child.service.ChildService;
+import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
+import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
@@ -19,18 +23,23 @@ import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LearningService {
 
     private final RedisService redisService;
@@ -40,6 +49,7 @@ public class LearningService {
     private final ThemeRepository themeRepository;
     private final WordRepository wordRepository;
     private final ChildRepository childRepository;
+    private final StringRedisTemplate stringRedisTemplate;
 
     //  테마별 진행률 조회
     public CustomPage<ThemeProgressResponse> getThemeProgressByChildIdForParent(Integer childId, Integer parentId, Pageable pageable) {
@@ -95,4 +105,68 @@ public class LearningService {
         return new CustomPage<>(new PageImpl<>(dtoList, pageable, page.getTotalElements()));
     }
 
+
+    @Transactional
+    public GeneratedContentResult generateAndSaveWordContent(Integer userId, GenerateContentRequest request) {
+        // 1. FastAPI 호출
+        // ⛔ 비동기라면 생략 가능, 아니면 반드시 확인
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
+            restTemplate.postForEntity("https://www.aieng.co.kr/words", entity, String.class);
+        } catch (Exception e) {
+            log.error("❌ FastAPI 호출 실패: {}", e.getMessage(), e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        // 2. Redis 결과 조회
+        String redisKey = String.format("words:%d:%d%s", request.getUserId(), request.getSessionId(), request.getWord());
+        log.debug("🔍 Redis Key: {}", redisKey);
+        String redisJson = stringRedisTemplate.opsForValue().get(redisKey);
+
+        if (redisJson == null) {
+            log.warn("⚠️ Redis에 결과 없음 (FastAPI 응답이 아직 없음): {}", redisKey);
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        // 3. JSON → DTO 파싱
+        GeneratedContentResult result;
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+            result = objectMapper.readValue(redisJson, GeneratedContentResult.class);
+        } catch (Exception e) {
+            log.error("❌ Redis 파싱 실패: {}", e.getMessage(), e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        log.info("✅ Redis 파싱 결과 - sentence: {}", result.getSentence());
+
+        // 4. RDB 업데이트
+        Session session = sessionRepository.findById(request.getSessionId())
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        Word word = wordRepository.findById(request.getWordId())
+                .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
+
+        // 핵심 복구 로직: 학습 기록이 없다면 새로 생성
+        Learning learning = learningRepository.findBySessionIdAndWordId(session.getId(), word.getId())
+                .orElse(null);
+
+        if (learning == null) {
+            learning = Learning.of(session, word);
+        }
+
+        // ✅ FastAPI 결과로 내용 채움
+        learning.updateContent(result);
+
+        // ✅ 무조건 한 번 더 저장 (영속성 안전 확보)
+        learningRepository.save(learning);
+
+        return result;
+    }
+
+
 }
+
