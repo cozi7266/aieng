@@ -17,6 +17,8 @@ interface SongCardProps {
   isActive: boolean;
   isPlaying: boolean;
   onPress: () => void;
+  style?: any;
+  scaleFactor: number;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
@@ -24,10 +26,19 @@ const SongCard: React.FC<SongCardProps> = ({
   isActive,
   isPlaying,
   onPress,
+  style,
+  scaleFactor = 1,
 }) => {
   return (
     <TouchableOpacity
-      style={[styles.card, isActive && styles.activeCard]}
+      style={[
+        styles.card,
+        isActive && styles.activeCard,
+        style,
+        {
+          borderRadius: theme.borderRadius.medium * scaleFactor,
+        },
+      ]}
       onPress={onPress}
     >
       <View style={styles.imageContainer}>
@@ -63,9 +74,8 @@ const SongCard: React.FC<SongCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    width: 220,
-    height: 250,
-    margin: theme.spacing.m,
+    margin: theme.spacing.s,
+    marginBottom: theme.spacing.l,
     borderRadius: theme.borderRadius.medium,
     backgroundColor: "white",
     ...theme.shadows.default,

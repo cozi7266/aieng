@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
-import Slider from "@react-native-community/slider";
+import { Slider } from "@miblanchard/react-native-slider";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { theme } from "../../Theme";
 
@@ -21,6 +21,7 @@ interface MusicPlayerProps {
   onPrevious: () => void;
   onNext: () => void;
   onRepeat: () => void;
+  scaleFactor: number;
 }
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({
@@ -31,9 +32,16 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   onPrevious,
   onNext,
   onRepeat,
+  scaleFactor = 1,
 }) => {
-  const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [sliderValue, setSliderValue] = useState<number[]>([0]);
+
+  // 노래가 변경될 때 상태 초기화
+  useEffect(() => {
+    setCurrentTime(0);
+    setSliderValue([0]);
+  }, [song.id]);
 
   // 노래 재생 시뮬레이션
   useEffect(() => {
@@ -43,9 +51,19 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       interval = setInterval(() => {
         setCurrentTime((prev) => {
           if (prev >= song.duration) {
-            return 0;
+            if (isRepeat) {
+              // 반복 재생 시 처음부터 다시 시작
+              return 0;
+            } else {
+              // 반복 재생이 아닐 경우 정지
+              setTimeout(() => onPlayPause(), 0);
+              return prev;
+            }
           }
-          return prev + 1;
+          const newTime = prev + 1;
+          // 슬라이더 값도 함께 업데이트 (배열 형태로)
+          setSliderValue([newTime / song.duration]);
+          return newTime;
         });
       }, 1000);
     }
@@ -53,12 +71,18 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, song]);
+  }, [isPlaying, song, isRepeat, onPlayPause]);
 
-  // 진행 상태 업데이트
-  useEffect(() => {
-    setProgress(currentTime / song.duration);
-  }, [currentTime, song.duration]);
+  // 슬라이더 값 변경 핸들러
+  const handleSliderValueChange = (values: number[]) => {
+    // values는 배열이므로 첫 번째 요소 사용
+    const value = values[0];
+    setSliderValue(values);
+
+    // 음악 위치도 업데이트
+    const newTime = value * song.duration;
+    setCurrentTime(newTime);
+  };
 
   // 시간 포맷팅 (초 -> MM:SS)
   const formatTime = (seconds: number) => {
@@ -73,8 +97,9 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
         <Slider
           style={styles.progressBar}
-          value={progress}
-          onValueChange={(value) => setProgress(value)}
+          containerStyle={{ width: "70%", paddingHorizontal: 10 }}
+          value={sliderValue} // 배열 값 사용
+          onValueChange={handleSliderValueChange}
           minimumValue={0}
           maximumValue={1}
           minimumTrackTintColor={theme.colors.primary}
@@ -107,7 +132,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         <TouchableOpacity style={styles.playButton} onPress={onPlayPause}>
           <FontAwesome5
             name={isPlaying ? "pause" : "play"}
-            size={32}
+            size={32 * Math.min(1, scaleFactor)}
             color="white"
             style={isPlaying ? {} : { marginLeft: 4 }}
           />
@@ -139,21 +164,25 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.large,
     ...theme.shadows.default,
+    marginBottom: theme.spacing.l,
   },
   timeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: theme.spacing.m,
+    marginBottom: theme.spacing.xs,
     width: "100%",
+    // paddingHorizontal: 0,
   },
   progressBar: {
     flex: 1,
     height: 40,
+    width: "100%",
   },
   timeText: {
     ...theme.typography.caption,
     color: theme.colors.subText,
-    minWidth: 50,
+    minWidth: 30,
+    marginHorizontal: 10,
     textAlign: "center",
   },
   buttonsContainer: {
@@ -164,7 +193,6 @@ const styles = StyleSheet.create({
   controlButton: {
     padding: theme.spacing.m,
     borderRadius: theme.borderRadius.pill,
-    marginHorizontal: theme.spacing.m,
   },
   playButton: {
     backgroundColor: theme.colors.primary,

@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.ssafy.ieng'
+    namespace 'com.ssafy.aieng'
     defaultConfig {
-        applicationId 'com.ssafy.ieng'
+        applicationId 'com.ssafy.aieng'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

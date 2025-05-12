@@ -4,13 +4,21 @@ import { theme } from "../../Theme";
 
 interface SongLyricsProps {
   lyrics: string;
+  scaleFactor: number;
 }
 
-const SongLyrics: React.FC<SongLyricsProps> = ({ lyrics }) => {
+const SongLyrics: React.FC<SongLyricsProps> = ({ lyrics, scaleFactor = 1 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>가사</Text>
-      <ScrollView style={styles.lyricsScrollView}>
+      {/* <Text style={styles.heading}>가사</Text> */}
+      <ScrollView
+        style={styles.lyricsScrollView}
+        contentContainerStyle={{
+          paddingBottom: theme.spacing.xl,
+          flexGrow: 1,
+        }}
+        showsVerticalScrollIndicator={true}
+      >
         <Text style={styles.lyricsText}>{lyrics}</Text>
       </ScrollView>
     </View>

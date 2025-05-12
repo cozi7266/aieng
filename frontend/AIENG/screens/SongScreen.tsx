@@ -5,9 +5,11 @@ import {
   StyleSheet,
   Text,
   Image,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
   FlatList,
+  Platform,
+  SafeAreaView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -33,7 +35,7 @@ interface Song {
   id: string;
   title: string;
   artist: string;
-  imageUrl: any; // 로컬 이미지와 URI 문자열 모두 수용
+  imageUrl: any;
   audioUrl: any;
   duration: number;
   lyrics?: string;
@@ -41,12 +43,24 @@ interface Song {
 
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
-  const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+  const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
+
+  // 반응형 레이아웃을 위한 계산
+  const isLandscape = width > height;
+  const isTablet = width > 768; // 태블릿 기준 화면 너비
+
+  // 화면 크기에 따른 그리드 열 수 계산
+  const numColumns = 3;
+
+  // 동적 스타일을 위한 계산 값
+  const scaleFactor = Math.min(width / 2000, height / 1200);
+
+  const songCardWidth = (width * 0.6 - theme.spacing.m * 8) / numColumns;
 
   // 오디오 컨텍스트
   const { toggleBgm, stopBgm } = useAudio();
@@ -63,6 +77,7 @@ const SongScreen: React.FC = () => {
       lyrics:
         "Twinkle, twinkle, little star\nHow I wonder what you are\nUp above the world so high\nLike a diamond in the sky\nTwinkle, twinkle, little star\nHow I wonder what you are",
     },
+    // 나머지 노래 데이터는 그대로 유지
     {
       id: "2",
       title: "Old MacDonald Had a Farm",
@@ -113,6 +128,16 @@ const SongScreen: React.FC = () => {
       lyrics:
         "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
     },
+    {
+      id: "7",
+      title: "Row Row Row Your Boat",
+      artist: "Traditional",
+      imageUrl: require("../assets/icon.png"),
+      audioUrl: require("../assets/sounds/background-music.mp3"),
+      duration: 140,
+      lyrics:
+        "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
+    },
   ];
 
   useEffect(() => {
@@ -131,13 +156,7 @@ const SongScreen: React.FC = () => {
       setCurrentSong(mockSongs[0]);
     }
 
-    // 화면 크기 변화 감지
-    const subscription = Dimensions.addEventListener("change", ({ window }) => {
-      setDimensions(window);
-    });
-
     return () => {
-      subscription.remove();
       ScreenOrientation.unlockAsync();
       stopBgm();
     };
@@ -182,27 +201,59 @@ const SongScreen: React.FC = () => {
   const filteredSongs =
     activeTab === "all" ? songs : songs.filter((_, index) => index % 2 === 0); // 즐겨찾기 예시
 
+  // 동적 스타일 생성
+  const dynamicStyles = {
+    header: {
+      paddingVertical: theme.spacing.m * scaleFactor,
+      paddingHorizontal: theme.spacing.xl * scaleFactor,
+    },
+    headerTitle: {
+      fontSize: theme.typography.title.fontSize * scaleFactor,
+    },
+    tabButton: {
+      paddingVertical: theme.spacing.s * scaleFactor,
+      paddingHorizontal: theme.spacing.l * scaleFactor,
+    },
+    tabText: {
+      fontSize: theme.typography.button.fontSize * scaleFactor,
+    },
+    contentPadding: {
+      padding: theme.spacing.l * scaleFactor,
+    },
+    songCardSize: {
+      width: songCardWidth,
+      height: songCardWidth * 1.3, // 높이도 비율에 맞게 설정
+    },
+  };
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* 헤더 */}
-      <View style={styles.header}>
+      <View style={[styles.header, dynamicStyles.header]}>
         <View style={styles.headerLeft}>
           <BackButton
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           />
-          <Text style={styles.headerTitle}>나의 동요 모음</Text>
+          <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
+            나의 동요 모음
+          </Text>
         </View>
 
         {/* 탭 선택기 */}
         <View style={styles.tabSelector}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "all" && styles.activeTab]}
+            style={[
+              styles.tab,
+              dynamicStyles.tabButton,
+              activeTab === "all" && styles.activeTab,
+            ]}
             onPress={() => setActiveTab("all")}
           >
             <Text
               style={[
                 styles.tabText,
+                dynamicStyles.tabText,
                 activeTab === "all" && styles.activeTabText,
               ]}
             >
@@ -210,12 +261,17 @@ const SongScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === "favorites" && styles.activeTab]}
+            style={[
+              styles.tab,
+              dynamicStyles.tabButton,
+              activeTab === "favorites" && styles.activeTab,
+            ]}
             onPress={() => setActiveTab("favorites")}
           >
             <Text
               style={[
                 styles.tabText,
+                dynamicStyles.tabText,
                 activeTab === "favorites" && styles.activeTabText,
               ]}
             >
@@ -225,24 +281,30 @@ const SongScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRight}>
-          <CreateSongButton onPress={handleCreateSong} />
+          <CreateSongButton
+            onPress={handleCreateSong}
+            scaleFactor={scaleFactor}
+          />
         </View>
       </View>
 
       {/* 메인 컨텐츠 */}
       <View style={styles.contentContainer}>
         {/* 왼쪽 - 노래 그리드 */}
-        <View style={styles.leftContainer}>
+        <View style={[styles.leftContainer, dynamicStyles.contentPadding]}>
           <FlatList
             data={filteredSongs}
             keyExtractor={(item) => item.id}
-            numColumns={3}
+            numColumns={numColumns}
+            columnWrapperStyle={{ justifyContent: "flex-start" }} // 왼쪽 정렬 추가
             renderItem={({ item }) => (
               <SongCard
                 song={item}
                 isActive={currentSong?.id === item.id}
                 isPlaying={isPlaying && currentSong?.id === item.id}
                 onPress={() => handleSongPress(item)}
+                style={dynamicStyles.songCardSize}
+                scaleFactor={scaleFactor}
               />
             )}
             contentContainerStyle={styles.songGrid}
@@ -250,28 +312,52 @@ const SongScreen: React.FC = () => {
         </View>
 
         {/* 오른쪽 - 현재 노래 및 플레이어 */}
-        <View style={styles.rightContainer}>
+        <View style={[styles.rightContainer, dynamicStyles.contentPadding]}>
           {currentSong ? (
             <>
               {/* 현재 노래 정보 */}
               <View style={styles.currentSongContainer}>
                 <Image
                   source={currentSong.imageUrl}
-                  style={styles.currentSongImage}
+                  style={[
+                    styles.currentSongImage,
+                    {
+                      width: 120 * scaleFactor,
+                      height: 120 * scaleFactor,
+                      borderRadius: theme.borderRadius.medium * scaleFactor,
+                    },
+                  ]}
                   defaultSource={require("../assets/icon.png")}
                 />
                 <View style={styles.currentSongInfo}>
-                  <Text style={styles.currentSongTitle}>
+                  <Text
+                    style={[
+                      styles.currentSongTitle,
+                      {
+                        fontSize: theme.typography.title.fontSize * scaleFactor,
+                      },
+                    ]}
+                  >
                     {currentSong.title}
                   </Text>
-                  <Text style={styles.currentSongArtist}>
+                  <Text
+                    style={[
+                      styles.currentSongArtist,
+                      {
+                        fontSize: theme.typography.body.fontSize * scaleFactor,
+                      },
+                    ]}
+                  >
                     {currentSong.artist}
                   </Text>
                 </View>
               </View>
 
               {/* 가사 */}
-              <SongLyrics lyrics={currentSong.lyrics || "가사가 없습니다"} />
+              <SongLyrics
+                lyrics={currentSong.lyrics || "가사가 없습니다"}
+                scaleFactor={scaleFactor}
+              />
 
               {/* 뮤직 플레이어 */}
               <MusicPlayer
@@ -282,32 +368,39 @@ const SongScreen: React.FC = () => {
                 onPrevious={handlePrevious}
                 onNext={handleNext}
                 onRepeat={handleRepeat}
+                scaleFactor={scaleFactor}
               />
             </>
           ) : (
             <View style={styles.noSongContainer}>
-              <Text style={styles.noSongText}>
+              <Text
+                style={[
+                  styles.noSongText,
+                  {
+                    fontSize: theme.typography.subTitle.fontSize * scaleFactor,
+                  },
+                ]}
+              >
                 재생할 동요를 선택해 주세요.
               </Text>
             </View>
           )}
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginBottom: -theme.spacing.s,
     backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.m,
     backgroundColor: "white",
     borderBottomWidth: 2,
     borderBottomColor: theme.colors.accent,
@@ -331,8 +424,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   tab: {
-    paddingVertical: theme.spacing.s,
-    paddingHorizontal: theme.spacing.l,
     borderRadius: theme.borderRadius.pill,
   },
   activeTab: {
@@ -355,18 +446,17 @@ const styles = StyleSheet.create({
   },
   leftContainer: {
     flex: 1.5,
-    padding: theme.spacing.l,
   },
   rightContainer: {
     flex: 1,
-    padding: theme.spacing.l,
     backgroundColor: "white",
     margin: theme.spacing.l,
     borderRadius: theme.borderRadius.large,
     ...theme.shadows.default,
   },
   songGrid: {
-    paddingVertical: theme.spacing.m,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.m,
   },
   currentSongContainer: {
     flexDirection: "row",
@@ -374,9 +464,6 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.l,
   },
   currentSongImage: {
-    width: 120,
-    height: 120,
-    borderRadius: theme.borderRadius.medium,
     marginRight: theme.spacing.l,
   },
   currentSongInfo: {
