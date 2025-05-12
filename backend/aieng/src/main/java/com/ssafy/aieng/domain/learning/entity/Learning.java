@@ -51,4 +51,13 @@ public class Learning extends BaseEntity {
                 .build();
     }
 
+    public void updateContent(GeneratedContentResult result) {
+        this.sentence = result.getSentence();
+        this.ttsUrl = result.getAudioUrl();
+        this.imgUrl = result.getImageUrl();
+        this.learned = true;
+        this.learnedAt = LocalDateTime.now();
+    }
+
+
 } 
