@@ -91,8 +91,8 @@ public class LearningController {
     // 아이의 문장과 문장 이미지를 생성하기 위한 기능
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<GeneratedContentResult>> generateWordContent(
-            @RequestBody GenerateContentRequest request,
-            @AuthenticationPrincipal UserPrincipal userPrincipal
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody GenerateContentRequest request
     ) {
         // 유저 검증 또는 요청에 포함된 유저 ID 대조 가능
         GeneratedContentResult result = learningService.generateAndSaveWordContent(
@@ -101,9 +101,16 @@ public class LearningController {
         return ApiResponse.success(result);
     }
 
-
-
-
+    // 아이가 생성한 문장의 tts 듣기
+    @GetMapping("/children/{childId}/words/{wordId}/sentence/tts")
+    public ResponseEntity<ApiResponse<String>> getSentenceTTS(
+            @PathVariable Integer childId,
+            @PathVariable Integer wordId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        String audioUrl = learningService.getSentenceAudioUrl(userPrincipal.getId(), childId, wordId);
+        return ApiResponse.success(audioUrl);
+    }
 
 
 }

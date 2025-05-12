@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface SessionRepository extends JpaRepository<Session, Integer> {
 
     Optional<Session> findByChildIdAndThemeId(Integer childId, Integer themeId);
+
+    Optional<Session> findTopByChildIdOrderByCreatedAtDesc(Integer childId);
 }

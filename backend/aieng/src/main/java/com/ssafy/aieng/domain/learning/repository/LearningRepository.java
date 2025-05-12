@@ -47,4 +47,6 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
         """)
     Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
                                                 @Param("wordId") Integer wordId);
+
+
 }
