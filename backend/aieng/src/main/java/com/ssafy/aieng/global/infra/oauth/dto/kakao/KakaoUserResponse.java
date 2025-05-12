@@ -16,6 +16,7 @@ public class KakaoUserResponse {
 
     @Getter
     @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class KakaoAccount {
 
         private String email;
@@ -23,6 +24,7 @@ public class KakaoUserResponse {
 
         @Getter
         @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
         public static class Profile {
             private String nickname;
         }
