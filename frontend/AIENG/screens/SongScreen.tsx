@@ -74,7 +74,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 180,
+      duration: 228,
       lyrics:
         "Twinkle, twinkle, little star\nHow I wonder what you are\nUp above the world so high\nLike a diamond in the sky\nTwinkle, twinkle, little star\nHow I wonder what you are",
       favorite: false,
@@ -86,7 +86,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 210,
+      duration: 180,
       lyrics:
         "Old MacDonald had a farm, E-I-E-I-O\nAnd on his farm he had a cow, E-I-E-I-O\nWith a moo moo here and a moo moo there\nHere a moo, there a moo, everywhere a moo moo\nOld MacDonald had a farm, E-I-E-I-O",
       favorite: false,
@@ -97,7 +97,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 195,
+      duration: 228,
       lyrics:
         "The wheels on the bus go round and round\nRound and round, round and round\nThe wheels on the bus go round and round\nAll through the town",
       favorite: false,
@@ -108,7 +108,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 165,
+      duration: 180,
       lyrics:
         "The itsy bitsy spider went up the water spout\nDown came the rain and washed the spider out\nOut came the sun and dried up all the rain\nAnd the itsy bitsy spider went up the spout again",
       favorite: false,
@@ -119,7 +119,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 150,
+      duration: 228,
       lyrics:
         "Baa, baa, black sheep, have you any wool?\nYes sir, yes sir, three bags full\nOne for the master, one for the dame\nAnd one for the little boy who lives down the lane",
       favorite: false,
@@ -130,7 +130,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 140,
+      duration: 180,
       lyrics:
         "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
       favorite: false,
@@ -141,7 +141,7 @@ const SongScreen: React.FC = () => {
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
       audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 140,
+      duration: 228,
       lyrics:
         "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
       favorite: true,
