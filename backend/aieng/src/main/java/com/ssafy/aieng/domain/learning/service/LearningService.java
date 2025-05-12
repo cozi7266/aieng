@@ -59,12 +59,9 @@ public class LearningService {
 
     //  아이가 테마에 진입할 때: 단어 랜덤 생성 및 학습 상태 유지
     @Transactional
-    public CustomPage<LearningWordResponse> getOrCreateLearningSession(
-            Integer childId,
-            Integer themeId,
-            Integer userId,
-            Pageable pageable
-    ) {
+    public CustomPage<LearningWordResponse> getOrCreateLearningSession(Integer childId, Integer themeId, Integer userId, Pageable pageable) {
+        List<Word> words = wordRepository.findAllByThemeId(themeId);
+
         // 1. Session 조회 (없으면 생성)
         Session session = sessionRepository.findByChildIdAndThemeId(childId, themeId)
                 .orElseGet(() -> {
@@ -74,38 +71,21 @@ public class LearningService {
                     Theme theme = themeRepository.findById(themeId)
                             .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
 
-                    Session newSession = Session.builder()
-                            .child(child)
-                            .theme(theme)
-                            .startedAt(LocalDateTime.now())
-                            .wordCount(0)
-                            .build();
-
+                    Session newSession = Session.of(child, theme);
                     sessionRepository.save(newSession);
 
-                    // 랜덤 단어 저장
-                    List<Word> words = wordRepository.findAllByThemeId(themeId);
-                    Collections.shuffle(words);
-
-                    List<Learning> learnings = new ArrayList<>();
-                    for (Word word : words) {
-                        Learning learning = Learning.builder()
-                                .session(newSession)
-                                .word(word)
-                                .sentence("") // 문장이 있다면 넣기
-                                .imgUrl(word.getImgUrl())
-                                .ttsUrl(word.getTtsUrl())
-                                .learned(false)
-                                .build();
-                        learnings.add(learning);
-                    }
+                    List<Learning> learnings = words.stream()
+                            .map(word -> Learning.of(newSession, word))
+                            .toList();
 
                     learningRepository.saveAll(learnings);
+
                     newSession.setWordCount(learnings.size());
+
                     return newSession;
                 });
 
-        // 2. 해당 세션의 단어 목록 페이징 조회
+        // 2. 해당 세션의 학습 단어 목록 페이징 조회
         Page<Learning> page = learningRepository.findAllBySessionId(session.getId(), pageable);
 
         List<LearningWordResponse> dtoList = page.getContent().stream()
@@ -114,4 +94,5 @@ public class LearningService {
 
         return new CustomPage<>(new PageImpl<>(dtoList, pageable, page.getTotalElements()));
     }
+
 }

@@ -37,4 +37,13 @@ public class Session extends BaseEntity {
     public void setWordCount(int count) {
         this.wordCount = count;
     }
+
+    public static Session of(Child child, Theme theme) {
+        return Session.builder()
+                .child(child)
+                .theme(theme)
+                .startedAt(LocalDateTime.now())
+                .wordCount(0)
+                .build();
+    }
 } 
