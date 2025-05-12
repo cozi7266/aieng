@@ -39,6 +39,14 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
     @Query("SELECT l FROM Learning l JOIN l.session s WHERE s.child.id = :childId AND l.learned = true ORDER BY l.learnedAt DESC")
     List<Learning> findAllByChildIdAndLearnedTrueOrderByLearnedAtDesc(@Param("childId") Integer childId);
 
-    @Query("SELECT l FROM Learning l JOIN l.session s WHERE s.child.id = :childId AND l.word.id = :wordId AND l.learned = true")
-    Optional<Learning> findByChildIdAndWordIdAndLearnedTrue(@Param("childId") Integer childId, @Param("wordId") Integer wordId);
+    Optional<Learning> findBySessionAndWord(Session session, Word word);
+
+    @Query("""
+        SELECT l FROM Learning l
+        WHERE l.session.id = :sessionId AND l.word.id = :wordId
+        """)
+    Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
+                                                @Param("wordId") Integer wordId);
+
+
 }

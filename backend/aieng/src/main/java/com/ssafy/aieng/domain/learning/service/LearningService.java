@@ -15,13 +15,14 @@ import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.learning.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
+import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,7 +36,9 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -185,8 +188,39 @@ public class LearningService {
         return result;
     }
 
+    // 아이가 생성한 문장의 tts 듣기
+    @Transactional(readOnly = true)
+    public String getSentenceAudioUrl(Integer userId, Integer childId, Integer wordId) {
+        String redisKey = String.format("word:%d:%d:%d:tts", userId, childId, wordId);
+        String ttsUrl = stringRedisTemplate.opsForValue().get(redisKey);
+
+        if (ttsUrl != null) {
+            log.info("📦 Redis hit - key: {}, url: {}", redisKey, ttsUrl);
+            return ttsUrl;
+        }
+
+        // Redis에 없으면 RDB에서 조회
+        Session session = sessionRepository.findTopByChildIdOrderByCreatedAtDesc(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        Learning learning = learningRepository.findBySessionIdAndWordId(session.getId(), wordId)
+                .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
+
+        if (learning.getTtsUrl() == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        ttsUrl = learning.getTtsUrl();
+
+        // Redis에 캐싱 (선택적으로 만료 시간 설정 가능)
+        stringRedisTemplate.opsForValue().set(redisKey, ttsUrl);
+        log.info("💾 Redis 저장 - key: {}, url: {}", redisKey, ttsUrl);
+
+        return ttsUrl;
+    }
+
+
 
 
 
 }
-
