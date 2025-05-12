@@ -73,7 +73,7 @@ const SongScreen: React.FC = () => {
       title: "Twinkle Twinkle Little Star",
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
+      audioUrl: require("../assets/sounds/sample.mp3"),
       duration: 180,
       lyrics:
         "Twinkle, twinkle, little star\nHow I wonder what you are\nUp above the world so high\nLike a diamond in the sky\nTwinkle, twinkle, little star\nHow I wonder what you are",
@@ -96,7 +96,7 @@ const SongScreen: React.FC = () => {
       title: "The Wheels on the Bus",
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
+      audioUrl: require("../assets/sounds/sample.mp3"),
       duration: 195,
       lyrics:
         "The wheels on the bus go round and round\nRound and round, round and round\nThe wheels on the bus go round and round\nAll through the town",
@@ -118,7 +118,7 @@ const SongScreen: React.FC = () => {
       title: "Baa Baa Black Sheep",
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
+      audioUrl: require("../assets/sounds/sample.mp3"),
       duration: 150,
       lyrics:
         "Baa, baa, black sheep, have you any wool?\nYes sir, yes sir, three bags full\nOne for the master, one for the dame\nAnd one for the little boy who lives down the lane",
@@ -140,7 +140,7 @@ const SongScreen: React.FC = () => {
       title: "Row Row Row Your Boat",
       artist: "Traditional",
       imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
+      audioUrl: require("../assets/sounds/sample.mp3"),
       duration: 140,
       lyrics:
         "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
@@ -261,9 +261,9 @@ const SongScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           />
-          <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
+          {/* <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
             나의 동요 모음
-          </Text>
+          </Text> */}
         </View>
 
         {/* 탭 선택기 */}
