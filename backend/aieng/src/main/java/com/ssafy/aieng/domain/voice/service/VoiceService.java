@@ -2,6 +2,7 @@ package com.ssafy.aieng.domain.voice.service;
 
 import com.ssafy.aieng.domain.voice.dto.request.VoiceCreateRequest;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
+import com.ssafy.aieng.domain.voice.dto.VoiceResponseDto;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -89,5 +91,13 @@ public class VoiceService {
         } catch (Exception e) {
             throw new RuntimeException("파일 업로드에 실패했습니다.", e);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<VoiceResponseDto> getDefaultVoices() {
+        return voiceRepository.findAllByChildIdIsNullOrderByCreatedAtDesc()
+                .stream()
+                .map(VoiceResponseDto::from)
+                .collect(Collectors.toList());
     }
 } 
