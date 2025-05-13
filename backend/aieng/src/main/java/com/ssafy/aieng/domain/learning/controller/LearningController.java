@@ -1,16 +1,13 @@
 package com.ssafy.aieng.domain.learning.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
-import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.service.LearningService;
 import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
-import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +44,7 @@ public class LearningController {
         String cacheKey = "themeProgress:" + userPrincipal.getId() + ":" + childId + ":" + pageable.getPageNumber() + ":" + pageable.getPageSize();
 
         // 캐시가 있으면 그거 리턴
+        @SuppressWarnings("unchecked")
         CustomPage<ThemeProgressResponse> cached = (CustomPage<ThemeProgressResponse>) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
             return ApiResponse.success(cached);
@@ -72,6 +70,7 @@ public class LearningController {
                 pageable.getPageNumber(), pageable.getPageSize());
 
         // Redis 캐시 확인
+        @SuppressWarnings("unchecked")
         CustomPage<LearningWordResponse> cached =
                 (CustomPage<LearningWordResponse>) redisTemplate.opsForValue().get(cacheKey);
 
@@ -101,16 +100,9 @@ public class LearningController {
         return ApiResponse.success(result);
     }
 
-    // 아이가 생성한 문장의 tts 듣기
-    @GetMapping("/children/{childId}/words/{wordId}/sentence/tts")
-    public ResponseEntity<ApiResponse<String>> getSentenceTTS(
-            @PathVariable Integer childId,
-            @PathVariable Integer wordId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal
-    ) {
-        String audioUrl = learningService.getSentenceAudioUrl(userPrincipal.getId(), childId, wordId);
-        return ApiResponse.success(audioUrl);
-    }
+
+
+
 
 
 }
