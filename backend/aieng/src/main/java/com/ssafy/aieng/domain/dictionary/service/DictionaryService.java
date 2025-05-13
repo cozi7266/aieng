@@ -59,7 +59,7 @@ public class DictionaryService {
         }
 
         // 2. 특정 단어의 학습 정보 조회
-        Optional<Learning> learningOpt = learningRepository.findByChildIdAndWordIdAndLearnedTrue(childId, wordId);
+        Optional<Learning> learningOpt = learningRepository.findBySession_Child_IdAndWord_IdAndLearnedTrue(childId, wordId);
         log.info("[DictionaryService] Learning record found: {}", learningOpt.isPresent());
         
         if (learningOpt.isEmpty()) {

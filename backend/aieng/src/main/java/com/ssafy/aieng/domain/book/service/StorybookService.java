@@ -56,7 +56,7 @@ public class StorybookService {
                 "https://s3.amazonaws.com/aieng-bucket/storybooks/%s_cover.png", theme.getThemeName());
 
         Storybook storybook = Storybook.builder()
-                .childId(child.getId())
+                .child(child)
                 .coverUrl(coverUrl)
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -69,7 +69,7 @@ public class StorybookService {
             LearningStorybook learningStorybook = LearningStorybook.builder()
                     .storybook(storybook)
                     .learning(learning)
-                    .order(i + 1)
+                    .pageOrder(i + 1)
                     .build();
 
             storybook.addLearningStorybook(learningStorybook);

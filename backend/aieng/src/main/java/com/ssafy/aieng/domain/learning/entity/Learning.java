@@ -3,9 +3,9 @@ package com.ssafy.aieng.domain.learning.entity;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.*;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
@@ -21,34 +21,41 @@ public class Learning extends BaseEntity {
     private Session session;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private SessionGroup sessionGroup;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "word_id", nullable = false)
     private Word word;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String sentence;
 
-    @Column(name = "tts_url")
+    @Column(name = "tts_url", nullable = true)
     private String ttsUrl;
 
-    @Column(name = "img_url")
+    @Column(name = "img_url", nullable = true)
     private String imgUrl;
 
     @Column(name = "learned_at")
     private LocalDateTime learnedAt;
 
+    @Column(name = "page_order")
+    private Integer pageOrder;
+
     @Column(nullable = false)
     private boolean learned;
 
-    public static Learning of(Session session, Word word) {
-        return Learning.builder()
-                .session(session)
-                .word(word)
-                .sentence(null)
-                .ttsUrl(null)
-                .imgUrl(null)
-                .learned(false)
-                .learnedAt(null)
-                .build();
+    public boolean isLearned() {
+        return learned;
+    }
+
+    public void setSession(Session session) {
+        this.session = session;
+    }
+
+    public void setSessionGroup(SessionGroup group) {
+        this.sessionGroup = group;
     }
 
     public void updateContent(GeneratedContentResult result) {
@@ -59,5 +66,11 @@ public class Learning extends BaseEntity {
         this.learnedAt = LocalDateTime.now();
     }
 
-
-} 
+    public static Learning of(Session session, Word word) {
+        return Learning.builder()
+                .session(session)
+                .word(word)
+                .learned(false)
+                .build();
+    }
+}
