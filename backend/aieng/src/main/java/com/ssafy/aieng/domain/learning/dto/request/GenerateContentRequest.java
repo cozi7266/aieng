@@ -8,9 +8,8 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class GenerateContentRequest {
-    private Integer userId;
     private Integer sessionId;
-    private Integer childId;
+    private String theme;
     private Integer wordId;
     private String word;
 }

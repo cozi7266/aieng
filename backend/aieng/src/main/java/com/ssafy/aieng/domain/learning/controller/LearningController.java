@@ -1,17 +1,15 @@
 package com.ssafy.aieng.domain.learning.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
 import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
-import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.service.LearningService;
 import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
-import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -19,9 +17,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
-import com.ssafy.aieng.domain.learning.dto.request.SaveHistorytRequest;
-import org.springframework.web.client.RestTemplate;
 
 
 @RestController
@@ -33,6 +28,8 @@ public class LearningController {
     private final ChildService childService;
     private final AuthenticationUtil authenticationUtil;
     private final RedisTemplate<String, Object> redisTemplate;
+
+
 
     // 아이별 테마 조회(학습한 단어수도 같이 조회)
     @GetMapping("/{childId}/theme-progress")
@@ -83,18 +80,43 @@ public class LearningController {
         return ApiResponse.success(result);
     }
 
-    // 아이의 문장과 문장 이미지를 생성하기 위한 기능
-    @PostMapping("/generate")
-    public ResponseEntity<ApiResponse<GeneratedContentResult>> generateWordContent(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @RequestBody GenerateContentRequest request
+
+    /**
+     * [1단계] AI 문장 생성 요청 전송 (FastAPI)
+     *
+     * 주어진 sessionId와 word를 기반으로 FastAPI에 생성 요청을 보냅니다.
+     * - 요청만 전송하며, 결과는 Redis에 비동기로 저장됨
+     * - 클라이언트는 이후 polling으로 결과를 확인해야 함
+     */
+    @PostMapping("/generate/request/{sessionId}/{word}")
+    public ResponseEntity<ApiResponse<Void>> requestWordContent(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId,
+            @PathVariable String word
     ) {
-        // 유저 검증 또는 요청에 포함된 유저 ID 대조 가능
-        GeneratedContentResult result = learningService.generateAndSaveWordContent(
-                userPrincipal.getId(), request
-        );
+        learningService.sendFastApiRequest(user.getId(), sessionId, word);
+        return ApiResponse.success(HttpStatus.OK);
+    }
+
+    /**
+     * [2단계] 생성된 결과 조회 및 자동 저장
+     *
+     * Redis에서 FastAPI가 저장한 결과를 조회하고,
+     * 아직 Learning 테이블에 저장되지 않은 경우 자동으로 저장합니다.
+     * - 이미 저장된 학습 데이터인 경우 저장은 생략됨
+     * - 프론트는 이 API만 polling 하면서 결과를 가져오면 됨
+     */
+    @GetMapping("/generate/result/{sessionId}/{word}")
+    public ResponseEntity<ApiResponse<GeneratedContentResult>> getGeneratedResultAndSave(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId,
+            @PathVariable String word
+    ) {
+        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), sessionId, word);
         return ApiResponse.success(result);
     }
+
+
 
     // 아이가 생성한 문장 정보 반환
     @GetMapping("/child/{childId}/words/{wordId}/sentence")
@@ -134,8 +156,5 @@ public class LearningController {
         learningService.persistProgressFromRedis(userId, childId, sessionId);
         return ApiResponse.success("Saved to DB");
     }
-
-
-
 
 }

@@ -24,6 +24,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     // 닉네임 중복확인
     boolean existsByNickname(String nickname);
-
+    
     Optional<User> findByProviderAndProviderId(Provider provider, String providerId);
 }
