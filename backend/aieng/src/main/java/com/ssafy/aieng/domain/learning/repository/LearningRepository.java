@@ -3,6 +3,7 @@ package com.ssafy.aieng.domain.learning.repository;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.word.entity.Word;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -48,6 +49,10 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
     Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
                                                 @Param("wordId") Integer wordId);
 
+    @Query("SELECT COUNT(l) FROM Learning l " +
+            "WHERE l.session.child.parent = :user " +
+            "AND l.learned = :learned")
+    long countBySessionChildParentAndLearned(@Param("user") User user, @Param("learned") boolean learned);
 
     @Query("""
         SELECT l
