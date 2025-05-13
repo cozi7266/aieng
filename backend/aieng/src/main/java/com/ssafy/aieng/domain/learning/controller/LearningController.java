@@ -101,9 +101,16 @@ public class LearningController {
         return ApiResponse.success(result);
     }
 
-
-
-
+    // 아이가 생성한 문장의 tts 듣기
+    @GetMapping("/children/{childId}/words/{wordId}/sentence/tts")
+    public ResponseEntity<ApiResponse<String>> getSentenceTTS(
+            @PathVariable Integer childId,
+            @PathVariable Integer wordId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        String audioUrl = learningService.getSentenceAudioUrl(userPrincipal.getId(), childId, wordId);
+        return ApiResponse.success(audioUrl);
+    }
 
 
 }
