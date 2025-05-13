@@ -12,14 +12,14 @@ import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
 import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
-import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
-import com.ssafy.aieng.domain.learning.repository.SessionRepository;
+import com.ssafy.aieng.domain.session.entity.SessionGroup;
+import com.ssafy.aieng.domain.session.repository.SessionGroupRepository;
+import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
-import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
-import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.CustomPage;
@@ -32,21 +32,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +61,7 @@ public class LearningService {
     private final ChildRepository childRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+    private final SessionGroupRepository sessionGroupRepository;
 
     private static final Duration REDIS_TTL = Duration.ofHours(24);
 
@@ -85,9 +84,7 @@ public class LearningService {
     //  아이가 테마에 진입할 때: 단어 랜덤 생성 및 학습 상태 유지
     @Transactional
     public CustomPage<LearningWordResponse> getOrCreateLearningSession(Integer childId, Integer themeId, Integer userId, Pageable pageable) {
-        List<Word> words = wordRepository.findAllByThemeId(themeId);
-
-        // 1. Session 조회 (없으면 생성)
+        // 1️⃣ Session 조회 (없으면 생성)
         Session session = sessionRepository.findByChildIdAndThemeId(childId, themeId)
                 .orElseGet(() -> {
                     Child child = childRepository.findById(childId)
@@ -99,18 +96,42 @@ public class LearningService {
                     Session newSession = Session.of(child, theme);
                     sessionRepository.save(newSession);
 
-                    List<Learning> learnings = words.stream()
-                            .map(word -> Learning.of(newSession, word))
-                            .toList();
+                    List<Word> wordList = wordRepository.findAllByThemeId(themeId);
+                    Collections.shuffle(wordList); // 단어 랜덤
 
-                    learningRepository.saveAll(learnings);
+                    int pageOrder = 0;
+                    int groupOrder = 0;
+                    for (int i = 0; i < wordList.size(); i += 5) {
+                        List<Word> groupWords = wordList.subList(i, Math.min(i + 5, wordList.size()));
 
-                    newSession.setWordCount(learnings.size());
+                        SessionGroup group = SessionGroup.builder()
+                                .session(newSession)
+                                .groupOrder(groupOrder++)
+                                .completed(false)
+                                .build();
+                        sessionGroupRepository.save(group);
+
+                        for (int j = 0; j < groupWords.size(); j++) {
+                            Word word = groupWords.get(j);
+                            Learning learning = Learning.builder()
+                                    .session(newSession)
+                                    .sessionGroup(group)
+                                    .word(word)
+                                    .pageOrder(pageOrder++)
+                                    .groupOrder(j)
+                                    .learned(false)
+                                    .build();
+                            learningRepository.save(learning);
+                        }
+                    }
+
+                    // 단어 총 개수 등록
+                    newSession.setTotalWordCount(wordList.size());
 
                     return newSession;
                 });
 
-        // 2. 해당 세션의 학습 단어 목록 페이징 조회
+        // 2️⃣ 페이징된 학습 단어 반환
         Page<Learning> page = learningRepository.findAllBySessionId(session.getId(), pageable);
 
         List<LearningWordResponse> dtoList = page.getContent().stream()
@@ -119,6 +140,7 @@ public class LearningService {
 
         return new CustomPage<>(new PageImpl<>(dtoList, pageable, page.getTotalElements()));
     }
+
 
     /**
      * FastAPI에 단어 생성 요청 전송 (문장, 이미지, TTS)
@@ -194,11 +216,15 @@ public class LearningService {
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
 
         Learning learning = learningRepository.findBySessionIdAndWordId(sessionId, wordEntity.getId())
-                .orElse(Learning.of(session, wordEntity));
+                .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
+
+        SessionGroup sessionGroup = learning.getSessionGroup();
 
         if (!learning.isLearned()) {
             learning.updateContent(result);
             learningRepository.save(learning);
+            session.incrementLearnedCount();
+            sessionGroup.incrementLearnedCount();
         }
 
         return result;
