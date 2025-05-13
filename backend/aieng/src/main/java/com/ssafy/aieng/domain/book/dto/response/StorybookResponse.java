@@ -27,7 +27,7 @@ public class StorybookResponse {
 
     public static StorybookResponse from(Storybook storybook) {
         List<PageResponse> pageResponses = storybook.getLearningStorybooks().stream()
-                .sorted(Comparator.comparing(LearningStorybook::getOrder))
+                .sorted(Comparator.comparing(LearningStorybook::getPageOrder))
                 .map(ls -> PageResponse.from(ls.getLearning()))
                 .collect(Collectors.toList());
 
@@ -39,4 +39,5 @@ public class StorybookResponse {
                 .pages(pageResponses)
                 .build();
     }
+
 } 

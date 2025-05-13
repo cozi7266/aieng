@@ -7,9 +7,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class GenerateContentRequest {
+public class SaveHistorytRequest {
+    private Integer userId;
     private Integer sessionId;
-    private String theme;
+    private Integer childId;
     private Integer wordId;
     private String word;
 }

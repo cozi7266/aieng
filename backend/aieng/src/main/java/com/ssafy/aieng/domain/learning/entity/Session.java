@@ -3,11 +3,11 @@ package com.ssafy.aieng.domain.learning.entity;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.*;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
-
+import java.util.List;
 
 @Entity
 @Getter
@@ -24,6 +24,12 @@ public class Session extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theme_id", nullable = false)
     private Theme theme;
+
+    @OneToMany(mappedBy = "session")
+    private List<Learning> learnings;
+
+    @OneToMany(mappedBy = "session")
+    private List<SessionGroup> sessionGroups;
 
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
@@ -46,4 +52,9 @@ public class Session extends BaseEntity {
                 .wordCount(0)
                 .build();
     }
-} 
+
+    public void addLearning(Learning learning) {
+        this.learnings.add(learning);
+        learning.setSession(this);
+    }
+}
