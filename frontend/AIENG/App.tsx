@@ -27,7 +27,6 @@ import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getKeyHashAndroid } from "@react-native-kakao/core";
 import LoadingScreen from "./components/common/LoadingScreen";
 
 // 네비게이션 파라미터 타입 정의
@@ -66,7 +65,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getKeyHashAndroid().then(console.log);
     async function loadFonts() {
       try {
         await Font.loadAsync({
