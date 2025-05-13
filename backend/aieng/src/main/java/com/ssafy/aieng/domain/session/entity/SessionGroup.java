@@ -1,5 +1,6 @@
-package com.ssafy.aieng.domain.learning.entity;
+package com.ssafy.aieng.domain.session.entity;
 
+import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,6 +26,12 @@ public class SessionGroup extends BaseEntity {
     @Column(name = "group_order", nullable = false)
     private Integer groupOrder;
 
+    @Column(name = "total_count")
+    private Integer totalWordCount;
+
+    @Column(name = "learned_count")
+    private Integer learnedWordCount;
+
     @Column(name = "completed", nullable = false)
     private boolean completed;
 
@@ -35,12 +42,26 @@ public class SessionGroup extends BaseEntity {
     private LocalDateTime finishedAt;
 
     public void updateCompletionStatus() {
-        this.completed = learnings != null && learnings.stream().allMatch(Learning::isLearned);
+        if (this.learnings != null && this.learnings.stream().allMatch(Learning::isLearned)) {
+            this.completed = true;
+            this.finishedAt = LocalDateTime.now();
+        }
     }
 
     public void addLearning(Learning learning) {
         this.learnings.add(learning);
         learning.setSessionGroup(this);
+    }
+
+    public void updateCounts() {
+        this.totalWordCount = (learnings == null) ? 0 : learnings.size();
+        this.learnedWordCount = (int) learnings.stream().filter(Learning::isLearned).count();
+    }
+
+    public void incrementLearnedCount() {
+        if (this.learnedWordCount == null) this.learnedWordCount = 0;
+        this.learnedWordCount++;
+        updateCompletionStatus(); // 그룹 전체 완료 여부 자동 체크
     }
 
 }

@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
-import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.word.entity.Word;
 import org.springframework.data.domain.Page;
@@ -14,9 +14,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface LearningRepository extends JpaRepository<Learning, Integer> {
