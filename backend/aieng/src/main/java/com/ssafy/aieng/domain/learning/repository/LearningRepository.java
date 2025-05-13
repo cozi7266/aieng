@@ -1,19 +1,20 @@
 package com.ssafy.aieng.domain.learning.repository;
 
-import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
-import com.ssafy.aieng.domain.learning.entity.Learning;
-import com.ssafy.aieng.domain.learning.entity.Session;
-import com.ssafy.aieng.domain.word.entity.Word;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.data.domain.Pageable;
 
-
-import java.util.List;
-import java.util.Optional;
+import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
+import com.ssafy.aieng.domain.learning.entity.Learning;
+import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.user.entity.User;
+import com.ssafy.aieng.domain.word.entity.Word;
 
 @Repository
 public interface LearningRepository extends JpaRepository<Learning, Integer> {
@@ -47,4 +48,9 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
         """)
     Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
                                                 @Param("wordId") Integer wordId);
+
+    @Query("SELECT COUNT(l) FROM Learning l " +
+           "WHERE l.session.child.parent = :user " +
+           "AND l.learned = :learned")
+    long countBySessionChildParentAndLearned(@Param("user") User user, @Param("learned") boolean learned);
 }
