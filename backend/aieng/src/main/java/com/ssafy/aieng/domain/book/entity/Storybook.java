@@ -1,6 +1,6 @@
 package com.ssafy.aieng.domain.book.entity;
 
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -46,4 +46,4 @@ public class Storybook extends BaseEntity {
     public void addLearningStorybook(LearningStorybook learningStorybook) {
         this.learningStorybooks.add(learningStorybook);
     }
-} 
+}

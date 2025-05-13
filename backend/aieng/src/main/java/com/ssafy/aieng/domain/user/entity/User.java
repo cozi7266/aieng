@@ -1,11 +1,14 @@
 package com.ssafy.aieng.domain.user.entity;
 
+import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.user.enums.Provider;
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.SQLDelete;
+
+import java.util.List;
 
 
 @Entity
@@ -27,10 +30,25 @@ public class User extends BaseEntity {
     @Column(length = 20, nullable = false)
     private String nickname;
 
+    @Column(length = 200)
+    private String imgUrl;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    private List<Child> children;
+
     public void markAsDeleted() {
         if (isAlreadyDeleted()) {
             throw new IllegalStateException("이미 탈퇴한 사용자입니다.");
         }
-        softDelete();
+        markAsDeleted();
     }
+
+    public void setNickname(String userNickname) {
+        this.nickname = userNickname;
+    }
+
+    public void setProfileImage(String userImgUrl) {
+        this.imgUrl = userImgUrl;
+    }
+
 }

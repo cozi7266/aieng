@@ -1,7 +1,7 @@
 package com.ssafy.aieng.domain.word.entity;
 
 import com.ssafy.aieng.domain.theme.entity.Theme;
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,10 +13,6 @@ import jakarta.persistence.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "word")
 public class Word extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theme_id", nullable = false)

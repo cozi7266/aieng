@@ -14,12 +14,12 @@ public class UserInfoResponse {
     private Boolean isNew;
 
     public static UserInfoResponse of(User user) {
-        Boolean isNew = user.getCreatedAt().isAfter(LocalDateTime.now().minusDays(7));
+        Boolean isNew = user.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(1));
 
         return UserInfoResponse.builder()
                 .id(user.getId().toString())
                 .nickname(user.getNickname())
-                .isNew(isNew)  // 계산된 isNew 값
+                .isNew(isNew)
                 .build();
     }
 }

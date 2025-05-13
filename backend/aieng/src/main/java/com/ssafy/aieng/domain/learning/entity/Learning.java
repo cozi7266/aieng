@@ -1,11 +1,9 @@
 package com.ssafy.aieng.domain.learning.entity;
 
-import com.ssafy.aieng.domain.session.entity.Session;
+import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.word.entity.Word;
-import com.ssafy.aieng.global.common.Entity.BaseEntity;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.ssafy.aieng.global.common.entity.BaseEntity;
+import lombok.*;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -13,12 +11,10 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Table(name = "learning")
 public class Learning extends BaseEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
@@ -42,4 +38,26 @@ public class Learning extends BaseEntity {
 
     @Column(nullable = false)
     private boolean learned;
+
+    public static Learning of(Session session, Word word) {
+        return Learning.builder()
+                .session(session)
+                .word(word)
+                .sentence(null)
+                .ttsUrl(null)
+                .imgUrl(null)
+                .learned(false)
+                .learnedAt(null)
+                .build();
+    }
+
+    public void updateContent(GeneratedContentResult result) {
+        this.sentence = result.getSentence();
+        this.ttsUrl = result.getAudioUrl();
+        this.imgUrl = result.getImageUrl();
+        this.learned = true;
+        this.learnedAt = LocalDateTime.now();
+    }
+
+
 } 
