@@ -17,6 +17,7 @@ import HomeScreen from "./screens/HomeScreen";
 import ProfileSelectScreen from "./screens/ProfileSelectScreen";
 import LearningScreen from "./screens/LearningScreen";
 import SongScreen from "./screens/SongScreen";
+import SongSettingScreen from "./screens/song/SongSettingScreen";
 import WordcardScreen from "./screens/WordcardScreen";
 import WordSelectScreen from "./screens/learning/WordSelect";
 import WordListeningScreen from "./screens/learning/WordListening";
@@ -37,6 +38,7 @@ export type RootStackParamList = {
   ProfileSelect: undefined;
   LearningScreen: undefined;
   SongScreen: undefined;
+  SongSettingScreen: undefined;
   WordcardScreen: undefined;
   WordSelect: { theme: string; themeId: string };
   WordListening: {
@@ -168,6 +170,10 @@ export default function App() {
                     component={LearningScreen}
                   />
                   <Stack.Screen name="SongScreen" component={SongScreen} />
+                  <Stack.Screen
+                    name="SongSettingScreen"
+                    component={SongSettingScreen}
+                  />
                   <Stack.Screen
                     name="WordcardScreen"
                     component={WordcardScreen}

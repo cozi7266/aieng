@@ -204,6 +204,7 @@ const SongScreen: React.FC = () => {
   const handleCreateSong = () => {
     // 동요 생성 화면으로 이동
     console.log("Navigate to song creation");
+    navigation.navigate("SongSettingScreen");
   };
 
   const handleToggleFavorite = () => {
