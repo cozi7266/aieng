@@ -50,6 +50,11 @@ public enum ErrorCode {
     THEME_ALREADY_EXISTS(409, "T002", "이미 존재하는 테마입니다."),
     THEME_INVALID_TOTAL_WORDS(400, "T003", "유효하지 않은 단어 수입니다."),
 
+    // Word
+    WORD_NOT_FOUND(404, "W001", "단어를 찾을 수 없습니다."),
+    WORD_ALREADY_EXISTS(409, "W002", "이미 존재하는 단어입니다."),
+    WORD_IMAGE_NOT_FOUND(404, "W003", "단어의 이미지가 존재하지 않습니다."),
+
     // Book (Storybook)
     BOOK_NOT_FOUND(404, "B001", "그림책을 찾을 수 없습니다."),
     BOOK_CREATION_FAILED(500, "B002", "그림책 생성에 실패했습니다."),

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
+import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.service.LearningService;
@@ -17,13 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import com.ssafy.aieng.domain.learning.dto.request.SaveHistorytRequest;
 import org.springframework.web.client.RestTemplate;
 
 
@@ -42,8 +39,7 @@ public class LearningController {
     public ResponseEntity<ApiResponse<CustomPage<ThemeProgressResponse>>> getThemeProgressByChildId(
             @PathVariable Integer childId,
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         String cacheKey = "themeProgress:" + userPrincipal.getId() + ":" + childId + ":" + pageable.getPageNumber() + ":" + pageable.getPageSize();
 
         // 캐시가 있으면 그거 리턴
@@ -60,13 +56,12 @@ public class LearningController {
     }
 
     // 테마 접속 후 단어 조회
-    @GetMapping("/{childId}/theme/{themeId}/words")
+    @GetMapping("child/{childId}/theme/{themeId}/words")
     public ResponseEntity<ApiResponse<CustomPage<LearningWordResponse>>> getLearningWordsByTheme(
             @PathVariable Integer childId,
             @PathVariable Integer themeId,
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable
-    ) {
+            Pageable pageable) {
         String cacheKey = String.format("learning:%d:%d:%d:%d:%d",
                 userPrincipal.getId(), childId, themeId,
                 pageable.getPageNumber(), pageable.getPageSize());
@@ -101,16 +96,46 @@ public class LearningController {
         return ApiResponse.success(result);
     }
 
-    // 아이가 생성한 문장의 tts 듣기
-    @GetMapping("/children/{childId}/words/{wordId}/sentence/tts")
-    public ResponseEntity<ApiResponse<String>> getSentenceTTS(
+    // 아이가 생성한 문장 정보 반환
+    @GetMapping("/child/{childId}/words/{wordId}/sentence")
+    public ResponseEntity<ApiResponse<SentenceResponse>> getSentenceTTS(
             @PathVariable Integer childId,
             @PathVariable Integer wordId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        String audioUrl = learningService.getSentenceAudioUrl(userPrincipal.getId(), childId, wordId);
-        return ApiResponse.success(audioUrl);
+        Integer userId = userPrincipal.getId();
+
+        SentenceResponse sentenceResponse = learningService.getSentenceResponse(userId, childId, wordId);
+
+        return ApiResponse.success(sentenceResponse);
     }
+
+
+//    // 1. Redis에 학습 상태 임시 저장
+//    @PostMapping("/progress/save")
+//    public ResponseEntity<ApiResponse<String>> saveLearningProgress(
+//            @RequestBody SaveHistorytRequest request,
+//            @AuthenticationPrincipal UserPrincipal userPrincipal
+//    ) {
+//        Integer userId = userPrincipal.getId();
+//        request.setUserId(userId);
+//        learningService.saveProgressToRedis(request);
+//        return ApiResponse.success("Saved to Redis");
+//    }
+
+    // 2. Redis -> DB 반영
+    @PostMapping("/child/{childId}/session/{sessionId}/persist")
+    public ResponseEntity<ApiResponse<String>> persistProgressToDb(
+            @PathVariable Integer childId,
+            @PathVariable Integer sessionId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Integer userId = userPrincipal.getId();
+        learningService.persistProgressFromRedis(userId, childId, sessionId);
+        return ApiResponse.success("Saved to DB");
+    }
+
+
 
 
 }
