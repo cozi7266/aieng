@@ -11,7 +11,6 @@ import { login, getProfile } from "@react-native-seoul/kakao-login";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Alert } from "react-native";
-import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { theme } from "../Theme";
 import { RootStackParamList } from "../App";
