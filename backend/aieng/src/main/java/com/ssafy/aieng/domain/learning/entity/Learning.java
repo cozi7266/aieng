@@ -1,6 +1,8 @@
 package com.ssafy.aieng.domain.learning.entity;
 
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
+import com.ssafy.aieng.domain.session.entity.Session;
+import com.ssafy.aieng.domain.session.entity.SessionGroup;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -21,7 +23,7 @@ public class Learning extends BaseEntity {
     private Session session;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id")
+    @JoinColumn(name = "group_id", nullable = false)
     private SessionGroup sessionGroup;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,8 +42,12 @@ public class Learning extends BaseEntity {
     @Column(name = "learned_at")
     private LocalDateTime learnedAt;
 
-    @Column(name = "page_order")
-    private Integer pageOrder;
+    @Column(name = "page_order", nullable = false)
+    private Integer pageOrder;  // 전체 순서
+
+    @Column(name = "group_order", nullable = false)
+    private Integer groupOrder; // 그룹 내 순서
+
 
     @Column(nullable = false)
     private boolean learned;
@@ -66,9 +72,10 @@ public class Learning extends BaseEntity {
         this.learnedAt = LocalDateTime.now();
     }
 
-    public static Learning of(Session session, Word word) {
+    public static Learning of(Session session, SessionGroup sessionGroup, Word word) {
         return Learning.builder()
                 .session(session)
+                .sessionGroup(sessionGroup)
                 .word(word)
                 .learned(false)
                 .build();

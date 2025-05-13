@@ -1,6 +1,6 @@
-package com.ssafy.aieng.domain.learning.repository;
+package com.ssafy.aieng.domain.session.repository;
 
-import com.ssafy.aieng.domain.learning.entity.SessionGroup;
+import com.ssafy.aieng.domain.session.entity.SessionGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
