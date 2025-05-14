@@ -46,7 +46,11 @@ public class QuizService {
         // 사용자의 자녀들의 세션에서 학습 완료된 단어 수 계산
         long learnedWordsCount = learningRepository.countBySessionChildUserAndLearnedTrue(user);
 
-        return learnedWordsCount >= REQUIRED_LEARNED_WORDS;
+        if (learnedWordsCount < REQUIRED_LEARNED_WORDS) {
+            throw new IllegalStateException("학습 완료된 단어가 5개 미만입니다. 현재 학습 완료된 단어: " + learnedWordsCount + "개");
+        }
+
+        return true;
     }
 
     @Transactional
@@ -55,7 +59,7 @@ public class QuizService {
         List<Learning> learnedWords = learningRepository.findBySessionIdAndLearnedTrue(request.getSessionId());
         
         if (learnedWords.size() < REQUIRED_LEARNED_WORDS) {
-            throw new IllegalStateException("학습 완료된 단어가 5개 미만입니다.");
+            throw new IllegalStateException("학습 완료된 단어가 5개 미만입니다. 현재 학습 완료된 단어: " + learnedWords.size() + "개");
         }
 
         // 2. 퀴즈 생성

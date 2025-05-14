@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ssafy.aieng.domain.quiz.dto.QuizCreateRequest;
+import com.ssafy.aieng.domain.quiz.dto.QuizErrorResponse;
 import com.ssafy.aieng.domain.quiz.dto.QuizResponse;
 import com.ssafy.aieng.domain.quiz.service.QuizService;
 
@@ -20,36 +21,36 @@ import com.ssafy.aieng.global.error.exception.CustomException;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 @RestController
-@RequestMapping("/api/quiz")
+@RequestMapping("/api/v1/quiz")
 @RequiredArgsConstructor
 public class QuizController {
     private final QuizService quizService;
     private final AuthenticationUtil authenticationUtil;
 
     // 퀴즈 활성화 상태 확인
-    @GetMapping("/status")
-    public ResponseEntity<ApiResponse<QuizStatusResponse>> checkQuizStatus(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        // 사용자 인증 확인
-        if (userPrincipal == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+    @GetMapping("/check")
+    public ResponseEntity<?> checkQuizAvailability(@RequestHeader("User-Id") String userId) {
+        try {
+            boolean isAvailable = quizService.checkQuizAvailability(userId);
+            return ResponseEntity.ok(isAvailable);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(new QuizErrorResponse(e.getMessage(), "QUIZ_NOT_AVAILABLE"));
         }
-
-        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-        if (userId == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
-        }
-
-        boolean isQuizActive = quizService.checkQuizAvailability(String.valueOf(userId));
-        return ApiResponse.success(new QuizStatusResponse(isQuizActive));
     }
 
     // 퀴즈 생성
-    @PostMapping("/create")
-    public ResponseEntity<QuizResponse> createQuiz(@RequestBody QuizCreateRequest request) {
-        QuizResponse response = quizService.createQuiz(request);
-        return ResponseEntity.ok(response);
+    @PostMapping
+    public ResponseEntity<?> createQuiz(@RequestBody QuizCreateRequest request) {
+        try {
+            QuizResponse response = quizService.createQuiz(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(new QuizErrorResponse(e.getMessage(), "QUIZ_CREATION_FAILED"));
+        }
     }
 } 
