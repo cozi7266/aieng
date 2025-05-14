@@ -32,10 +32,10 @@ public class QuizController {
     private final AuthenticationUtil authenticationUtil;
 
     // 퀴즈 활성화 상태 확인
-    @GetMapping("/status")
-    public ResponseEntity<?> checkQuizAvailability(@RequestHeader("User-Id") String userId) {
+    @GetMapping("/status/{sessionId}")
+    public ResponseEntity<?> checkQuizAvailability(@PathVariable Integer sessionId) {
         try {
-            boolean isAvailable = quizService.checkQuizAvailability(userId);
+            boolean isAvailable = quizService.checkQuizAvailability(sessionId);
             return ResponseEntity.ok(isAvailable);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest()

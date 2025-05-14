@@ -18,7 +18,6 @@ import com.ssafy.aieng.domain.quiz.dto.QuizResponse;
 import com.ssafy.aieng.domain.quiz.entity.Quiz;
 import com.ssafy.aieng.domain.quiz.entity.QuizQuestion;
 import com.ssafy.aieng.domain.quiz.repository.QuizRepository;
-import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
@@ -39,12 +38,9 @@ public class QuizService {
     private static final int TOTAL_WORDS = 6;
 
     @Transactional(readOnly = true)
-    public boolean checkQuizAvailability(String userId) {
-        User user = userRepository.findById(Integer.parseInt(userId))
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-
-        // 사용자의 자녀들의 세션에서 학습 완료된 단어 수 계산
-        long learnedWordsCount = learningRepository.countBySessionChildUserAndLearnedTrue(user);
+    public boolean checkQuizAvailability(Integer sessionId) {
+        // 해당 세션의 학습 완료된 단어 수 계산
+        long learnedWordsCount = learningRepository.countBySessionIdAndLearnedTrue(sessionId);
 
         if (learnedWordsCount < REQUIRED_LEARNED_WORDS) {
             throw new IllegalStateException("학습 완료된 단어가 5개 미만입니다. 현재 학습 완료된 단어: " + learnedWordsCount + "개");

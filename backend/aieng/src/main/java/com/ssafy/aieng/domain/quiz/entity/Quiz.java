@@ -31,10 +31,6 @@ public class Quiz extends BaseEntity {
     @Builder.Default
     private List<QuizQuestion> questions = new ArrayList<>();
 
-    public void setQuestions(List<QuizQuestion> questions) {
-        this.questions = questions;
-    }
-
     public static Quiz createQuiz(Session session) {
         Quiz quiz = new Quiz();
         quiz.setSession(session);

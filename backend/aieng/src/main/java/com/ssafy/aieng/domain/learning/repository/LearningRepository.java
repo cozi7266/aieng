@@ -64,4 +64,7 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
         AND l.learned = true
     """)
     long countBySessionChildUserAndLearnedTrue(@Param("user") User user);
+
+    @Query("SELECT COUNT(l) FROM Learning l WHERE l.session.id = :sessionId AND l.learned = true")
+    long countBySessionIdAndLearnedTrue(@Param("sessionId") Integer sessionId);
 }
