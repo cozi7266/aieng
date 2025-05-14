@@ -33,7 +33,7 @@ public class User extends BaseEntity {
     @Column(length = 200)
     private String imgUrl;
 
-    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Child> children;
 
     public void markAsDeleted() {
