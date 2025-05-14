@@ -25,7 +25,7 @@ public class QuizServiceImpl implements QuizService {
         User user = userRepository.findById(Integer.parseInt(userId))
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         
-        long learnedWordsCount = learningRepository.countBySessionChildParentAndLearned(user, true);
+        long learnedWordsCount = learningRepository.countBySessionChildUserAndLearned(user, true);
         
         return learnedWordsCount >= REQUIRED_LEARNED_WORDS;
     }
