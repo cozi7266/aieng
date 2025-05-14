@@ -60,6 +60,12 @@ public class SessionGroup extends BaseEntity {
 
     public void incrementLearnedCount() {
         if (this.learnedWordCount == null) this.learnedWordCount = 0;
+
+        // 처음 학습 시작할 때만 기록
+        if (this.learnedWordCount == 1 && this.startedAt == null) {
+            this.startedAt = LocalDateTime.now();
+        }
+
         this.learnedWordCount++;
         updateCompletionStatus(); // 그룹 전체 완료 여부 자동 체크
     }

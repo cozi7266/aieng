@@ -11,5 +11,5 @@ public class GenerateContentRequest {
     private Integer sessionId;
     private String theme;
     private Integer wordId;
-    private String word;
+    private String wordEn;
 }

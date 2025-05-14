@@ -48,9 +48,11 @@ public class Learning extends BaseEntity {
     @Column(name = "group_order", nullable = false)
     private Integer groupOrder; // 그룹 내 순서
 
-
     @Column(nullable = false)
     private boolean learned;
+
+    @Version
+    private Long version;
 
     public boolean isLearned() {
         return learned;
