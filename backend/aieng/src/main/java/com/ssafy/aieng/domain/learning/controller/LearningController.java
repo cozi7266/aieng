@@ -1,8 +1,10 @@
 package com.ssafy.aieng.domain.learning.controller;
 
 import com.ssafy.aieng.domain.child.service.ChildService;
+import com.ssafy.aieng.domain.learning.dto.request.SaveHistorytRequest;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
+import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.service.LearningService;
 import com.ssafy.aieng.global.common.CustomPage;
@@ -34,58 +36,55 @@ public class LearningController {
     private final AuthenticationUtil authenticationUtil;
     private final RedisTemplate<String, Object> redisTemplate;
 
-    // 아이별 테마 조회(학습한 단어수도 같이 조회)
-    @GetMapping("/{childId}/theme-progress")
-    public ResponseEntity<ApiResponse<CustomPage<ThemeProgressResponse>>> getThemeProgressByChildId(
-            @PathVariable Integer childId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable
+
+    /**
+     * [1단계] AI 문장 생성 요청 전송 (FastAPI)
+     *
+     * 주어진 sessionId와 word를 기반으로 FastAPI에 생성 요청을 보냅니다.
+     * - 요청만 전송하며, 결과는 Redis에 비동기로 저장됨
+     * - 클라이언트는 이후 polling으로 결과를 확인해야 함
+     */
+    @PostMapping("/sessions/{sessionId}/words/{wordEn}/generation")
+    public ResponseEntity<ApiResponse<Void>> requestGeneration(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId,
+            @PathVariable String wordEn
     ) {
-        String cacheKey = "themeProgress:" + userPrincipal.getId() + ":" + childId + ":" + pageable.getPageNumber() + ":" + pageable.getPageSize();
-
-        // 캐시가 있으면 그거 리턴
-        @SuppressWarnings("unchecked")
-        CustomPage<ThemeProgressResponse> cached = (CustomPage<ThemeProgressResponse>) redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            return ApiResponse.success(cached);
-        }
-
-        // 없으면 DB 조회 후 캐시에 저장
-        CustomPage<ThemeProgressResponse> progressPage = learningService.getThemeProgressByChildIdForParent(childId, userPrincipal.getId(), pageable);
-        redisTemplate.opsForValue().set(cacheKey, progressPage);
-
-        return ApiResponse.success(progressPage);
+        learningService.sendFastApiRequest(user.getId(), sessionId, wordEn);
+        return ApiResponse.success(null);
     }
 
-    // 테마 접속 후 단어 조회
-    @GetMapping("/{childId}/theme/{themeId}/words")
-    public ResponseEntity<ApiResponse<CustomPage<LearningWordResponse>>> getLearningWordsByTheme(
-            @PathVariable Integer childId,
-            @PathVariable Integer themeId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable
+    /**
+     * [2단계] 생성된 결과 조회 및 자동 저장
+     *
+     * Redis에서 FastAPI가 저장한 결과를 조회하고,
+     * 아직 Learning 테이블에 저장되지 않은 경우 자동으로 저장합니다.
+     * - 이미 저장된 학습 데이터인 경우 저장은 생략됨
+     * - 프론트는 이 API만 polling 하면서 결과를 가져오면 됨
+     */
+    @GetMapping("/sessions/{sessionId}/words/{word}/generation")
+    public ResponseEntity<ApiResponse<GeneratedContentResult>> pollGeneratedResult(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId,
+            @PathVariable String word
     ) {
-        String cacheKey = String.format("learning:%d:%d:%d:%d:%d",
-                userPrincipal.getId(), childId, themeId,
-                pageable.getPageNumber(), pageable.getPageSize());
-
-        // Redis 캐시 확인
-        @SuppressWarnings("unchecked")
-        CustomPage<LearningWordResponse> cached =
-                (CustomPage<LearningWordResponse>) redisTemplate.opsForValue().get(cacheKey);
-
-        if (cached != null) {
-            return ApiResponse.success(cached);
-        }
-
-        // 없으면 DB 조회 + 캐시 저장
-        CustomPage<LearningWordResponse> result =
-                learningService.getOrCreateLearningSession(childId, themeId, userPrincipal.getId(), pageable);
-
-        redisTemplate.opsForValue().set(cacheKey, result);
-
+        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), sessionId, word);
         return ApiResponse.success(result);
     }
+
+
+    // 아이가 생성한 문장 정보 반환
+    @GetMapping("/sessions/{sessionId}/words/{word}/sentence")
+    public ResponseEntity<ApiResponse<SentenceResponse>> getGeneratedSentence(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId,
+            @PathVariable String word
+    ) {
+        SentenceResponse sentenceResponse = learningService.getSentenceResponse(user.getId(), sessionId, word);
+        return ApiResponse.success(sentenceResponse);
+    }
+
+
 
 
 }

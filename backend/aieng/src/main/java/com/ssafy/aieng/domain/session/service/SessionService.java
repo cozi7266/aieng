@@ -86,7 +86,7 @@ public class SessionService {
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
         Collections.shuffle(wordList);
 
-        int pageOrder = 0, groupOrder = 0;
+        int pageOrder = 1, groupOrder = 1;
         List<Learning> learningBatch = new ArrayList<>();
 
         for (int i = 0; i < wordList.size(); i += 5) {
@@ -96,6 +96,8 @@ public class SessionService {
                     .session(session)
                     .groupOrder(groupOrder++)
                     .completed(false)
+                    .totalWordCount(groupWords.size())
+                    .learnedWordCount(0)
                     .build();
             sessionGroupRepository.save(group);
 
@@ -106,7 +108,7 @@ public class SessionService {
                         .sessionGroup(group)
                         .word(word)
                         .pageOrder(pageOrder++)
-                        .groupOrder(j)
+                        .groupOrder(j+1)
                         .learned(false)
                         .build();
                 learningBatch.add(learning);
