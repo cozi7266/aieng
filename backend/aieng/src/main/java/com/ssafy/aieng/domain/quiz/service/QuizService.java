@@ -63,10 +63,9 @@ public class QuizService {
         }
 
         // 2. 퀴즈 생성
-        Quiz quiz = new Quiz();
         Session session = sessionRepository.findById(request.getSessionId().intValue())
                 .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
-        quiz.setSession(session);
+        Quiz quiz = Quiz.createQuiz(session);
         quiz = quizRepository.save(quiz);
 
         // 3. 퀴즈 문제 생성 (학습 완료된 단어들 중에서)
@@ -162,5 +161,12 @@ public class QuizService {
         response.setQuestions(questionResponses);
         
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public QuizResponse getQuizBySessionId(Integer sessionId) {
+        Quiz quiz = quizRepository.findBySessionId(sessionId)
+                .orElseThrow(() -> new IllegalStateException("해당 세션의 퀴즈를 찾을 수 없습니다."));
+        return convertToResponse(quiz);
     }
 } 

@@ -22,16 +22,17 @@ import com.ssafy.aieng.global.security.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
-@RequestMapping("/api/v1/quiz")
+@RequestMapping("/api/quiz")
 @RequiredArgsConstructor
 public class QuizController {
     private final QuizService quizService;
     private final AuthenticationUtil authenticationUtil;
 
     // 퀴즈 활성화 상태 확인
-    @GetMapping("/check")
+    @GetMapping("/status")
     public ResponseEntity<?> checkQuizAvailability(@RequestHeader("User-Id") String userId) {
         try {
             boolean isAvailable = quizService.checkQuizAvailability(userId);
@@ -43,7 +44,7 @@ public class QuizController {
     }
 
     // 퀴즈 생성
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<?> createQuiz(@RequestBody QuizCreateRequest request) {
         try {
             QuizResponse response = quizService.createQuiz(request);
@@ -51,6 +52,18 @@ public class QuizController {
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(new QuizErrorResponse(e.getMessage(), "QUIZ_CREATION_FAILED"));
+        }
+    }
+
+    // 퀴즈 조회
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<?> getQuiz(@PathVariable Integer sessionId) {
+        try {
+            QuizResponse response = quizService.getQuizBySessionId(sessionId);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(new QuizErrorResponse(e.getMessage(), "QUIZ_NOT_FOUND"));
         }
     }
 } 
