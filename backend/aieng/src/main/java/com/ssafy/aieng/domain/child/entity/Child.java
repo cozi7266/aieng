@@ -34,8 +34,8 @@ public class Child extends BaseEntity {
     private String imgUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    private User parent;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     // 아이 프로필 수정
     public void updateChildProfile(String name, Gender gender, LocalDate birthdate, String imgUrl) {

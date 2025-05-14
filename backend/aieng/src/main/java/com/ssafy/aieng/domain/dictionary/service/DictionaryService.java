@@ -28,7 +28,7 @@ public class DictionaryService {
     public List<DictionaryResponse> getDictionaryByChildId(Integer childId, Integer userId) {
         log.info("[DictionaryService] Checking child access - childId: {}, userId: {}", childId, userId);
         // 1. childId가 해당 userId의 자녀인지 확인
-        if (!childRepository.existsByIdAndParentId(childId, userId)) {
+        if (!childRepository.existsByIdAndUserId(childId, userId)) {
             log.warn("[DictionaryService] Invalid child access attempt - childId: {}, userId: {}", childId, userId);
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);
         }
@@ -52,7 +52,7 @@ public class DictionaryService {
         log.info("[DictionaryService] Checking child access for word detail - childId: {}, wordId: {}, userId: {}", 
                 childId, wordId, userId);
         // 1. childId가 해당 userId의 자녀인지 확인
-        if (!childRepository.existsByIdAndParentId(childId, userId)) {
+        if (!childRepository.existsByIdAndUserId(childId, userId)) {
             log.warn("[DictionaryService] Invalid child access attempt for word detail - childId: {}, userId: {}", 
                     childId, userId);
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);

@@ -26,7 +26,4 @@ public class WordController {
         return ApiResponse.success(response);
     }
 
-
-
-
 }

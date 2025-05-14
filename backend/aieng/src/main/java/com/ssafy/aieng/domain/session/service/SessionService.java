@@ -54,7 +54,7 @@ public class SessionService {
     private Child getVerifiedChild(Integer userId, Integer childId) {
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
-        if (!child.getParent().getId().equals(userId)) {
+        if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
         return child;
