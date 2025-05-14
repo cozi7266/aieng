@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     padding: theme.spacing.l,
-    ...theme.shadows.strong,
+    ...theme.shadows.default,
     borderWidth: 2,
     borderColor: theme.colors.primary,
   },

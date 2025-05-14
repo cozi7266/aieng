@@ -1,5 +1,4 @@
 // screens/learning/WordQuiz.tsx
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -11,7 +10,12 @@ import {
   Modal,
   ScrollView,
 } from "react-native";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  RouteProp,
+  CommonActions,
+} from "@react-navigation/native";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { theme } from "../../Theme";
@@ -200,7 +204,8 @@ const WordQuizScreen: React.FC = () => {
       // 다음 학습 단계로 이동 시에는 경고 표시 안 함
       if (
         e.data.action.type === "NAVIGATE" &&
-        e.data.action.payload?.name === "WordComplete"
+        (e.data.action.payload?.name === "WordComplete" ||
+          e.data.action.payload?.name === "Home")
       ) {
         return;
       }
@@ -243,24 +248,28 @@ const WordQuizScreen: React.FC = () => {
     ]).start();
   };
 
-  // 다음 화면으로 이동
+  // 다음 화면으로 이동 - React Navigation 6에 맞게 수정
   const handleContinue = () => {
     if (!isAnswered) return;
 
-    navigation.navigate("WordSelect", {
-      themeId: themeId,
-      theme: themeName,
-    });
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: "WordSelect",
+        params: {
+          themeId: themeId,
+          theme: themeName,
+        },
+      })
+    );
   };
 
-  // 노래 화면으로 이동하는 함수 추가
+  // 노래 화면으로 이동하는 함수 - React Navigation 6에 맞게 수정
   const handleSongPress = () => {
-    // 노래 화면으로 이동
-    navigation.navigate("SongScreen", {
-      themeId: themeId,
-      theme: themeName,
-      wordId: wordId,
-    });
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: "SongSettingScreen",
+      })
+    );
   };
 
   // 로딩 화면
@@ -276,7 +285,12 @@ const WordQuizScreen: React.FC = () => {
           <BackButton
             onPress={() =>
               NavigationWarningAlert.show({
-                onConfirm: () => navigation.navigate("Home"),
+                onConfirm: () =>
+                  navigation.dispatch(
+                    CommonActions.navigate({
+                      name: "Home",
+                    })
+                  ),
               })
             }
           />

@@ -6,6 +6,8 @@ import {
   View,
   ActivityIndicator,
   AppState,
+  AppStateStatus,
+  LogBox,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -28,6 +30,12 @@ import * as Font from "expo-font";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoadingScreen from "./components/common/LoadingScreen";
+
+// NativeEventEmitter 경고 무시
+LogBox.ignoreLogs([
+  "new NativeEventEmitter()",
+  "`new NativeEventEmitter()` was called with a non-null argument",
+]);
 
 // 네비게이션 파라미터 타입 정의
 export type RootStackParamList = {
@@ -100,13 +108,20 @@ export default function App() {
     checkAuthToken();
 
     // 앱이 포그라운드로 돌아올 때마다 인증 상태 확인
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === "active") {
         checkAuthToken();
       }
-    });
+    };
+
+    // 버전에 따라 다른 이벤트 리스너 등록 방식 사용
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange
+    );
 
     return () => {
+      // 버전에 따른 이벤트 리스너 제거 방식 사용
       subscription.remove();
     };
   }, []);
@@ -125,7 +140,6 @@ export default function App() {
               {!isAuthenticated ? (
                 // 인증되지 않은 사용자를 위한 스택
                 <>
-                  {/* <Stack.Screen name="Login" component={LoginScreen} /> */}
                   <Stack.Screen name="Login">
                     {(props) => (
                       <LoginScreen
@@ -134,7 +148,6 @@ export default function App() {
                       />
                     )}
                   </Stack.Screen>
-                  {/* <Stack.Screen name="Signup" component={SignupScreen} /> */}
                   <Stack.Screen name="Signup">
                     {(props) => (
                       <SignupScreen
