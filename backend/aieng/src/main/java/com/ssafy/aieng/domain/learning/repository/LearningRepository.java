@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
 
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
-import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.word.entity.Word;
 
@@ -26,10 +26,8 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
 
     List<Learning> findTop5ByWordThemeIdAndLearnedTrueOrderByLearnedAtDesc(Integer themeId);
 
-
     @Query("SELECT l FROM Learning l JOIN l.session s WHERE s.child.id = :childId AND l.learned = true ORDER BY l.learnedAt DESC")
     List<Learning> findAllByChildIdAndLearnedTrueOrderByLearnedAtDesc(@Param("childId") Integer childId);
-
 
     @Query("""
         SELECT l FROM Learning l
@@ -55,5 +53,15 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
 
     List<Learning> findBySessionIdAndLearnedTrue(Integer sessionId);
 
-    long countBySessionChildUserAndLearned(User user, boolean b);
+    long countBySessionChildUserAndLearned(User user, boolean learned);
+
+    @Query("""
+        SELECT COUNT(l)
+        FROM Learning l
+        JOIN l.session s
+        JOIN s.child c
+        WHERE c.user = :user
+        AND l.learned = true
+    """)
+    long countBySessionChildUserAndLearnedTrue(@Param("user") User user);
 }

@@ -1,6 +1,6 @@
 package com.ssafy.aieng.domain.quiz.entity;
 
-import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;

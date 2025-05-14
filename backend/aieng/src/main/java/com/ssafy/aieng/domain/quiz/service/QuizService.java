@@ -11,9 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ssafy.aieng.domain.learning.entity.Learning;
-import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
-import com.ssafy.aieng.domain.learning.repository.SessionRepository;
 import com.ssafy.aieng.domain.quiz.dto.QuizCreateRequest;
 import com.ssafy.aieng.domain.quiz.dto.QuizResponse;
 import com.ssafy.aieng.domain.quiz.entity.Quiz;
@@ -21,8 +20,8 @@ import com.ssafy.aieng.domain.quiz.entity.QuizQuestion;
 import com.ssafy.aieng.domain.quiz.repository.QuizRepository;
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
-import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
+import com.ssafy.aieng.domain.session.repository.SessionRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -44,7 +43,8 @@ public class QuizService {
         User user = userRepository.findById(Integer.parseInt(userId))
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        long learnedWordsCount = learningRepository.countBySessionChildParentAndLearned(user, true);
+        // 사용자의 자녀들의 세션에서 학습 완료된 단어 수 계산
+        long learnedWordsCount = learningRepository.countBySessionChildUserAndLearnedTrue(user);
 
         return learnedWordsCount >= REQUIRED_LEARNED_WORDS;
     }
