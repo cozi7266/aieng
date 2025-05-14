@@ -1,5 +1,6 @@
-package com.ssafy.aieng.domain.learning.service;
+package com.ssafy.aieng.domain.quiz.service;
 
+import com.ssafy.aieng.domain.learning.service.QuizService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
