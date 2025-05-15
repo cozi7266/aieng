@@ -151,6 +151,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ setIsAuthenticated }) => {
                 onPress: () => {
                   // 인증 상태 변경하여 Home 화면으로 자동 이동
                   setIsAuthenticated(true);
+                  navigation.navigate("Home");
                 },
               },
             ]

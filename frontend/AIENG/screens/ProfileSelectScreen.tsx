@@ -132,8 +132,7 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
       confirmText: "만들기",
       cancelText: "취소",
       onConfirm: () => {
-        // 실제 구현 시: navigation.navigate("CreateProfile");
-        console.log("프로필 추가 화면으로 이동");
+        navigation.navigate("Signup");
       },
     });
   };

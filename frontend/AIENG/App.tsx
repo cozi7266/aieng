@@ -148,6 +148,10 @@ export default function App() {
                       />
                     )}
                   </Stack.Screen>
+                </>
+              ) : (
+                // 인증된 사용자를 위한 스택
+                <>
                   <Stack.Screen name="Signup">
                     {(props) => (
                       <SignupScreen
@@ -156,10 +160,6 @@ export default function App() {
                       />
                     )}
                   </Stack.Screen>
-                </>
-              ) : (
-                // 인증된 사용자를 위한 스택
-                <>
                   <Stack.Screen name="Home">
                     {(props) => (
                       <HomeScreen
