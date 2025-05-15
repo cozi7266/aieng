@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/child")
@@ -35,7 +37,7 @@ public class ChildController {
         return ApiResponse.success(HttpStatus.OK);
     }
 
-     // 아이 프로필 조회
+    // 아이 프로필 조회
     @GetMapping("/{childId}")
     public ResponseEntity<ApiResponse<ChildInfoResponse>> findChildInfo(
             @PathVariable Integer childId,
@@ -45,6 +47,17 @@ public class ChildController {
         ChildInfoResponse childInfoResponse = childService.getChildInfo(userId, childId);
 
         return ApiResponse.success(childInfoResponse);
+    }
+
+    // 아이 프로필 목록 조회
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ChildInfoResponse>>> findChildInfoList(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+
+        List<ChildInfoResponse> childInfoResponseList = childService.findChildInfoList(userId);
+
+        return ApiResponse.success(childInfoResponseList);
     }
 
     // 아이 프로필 수정
