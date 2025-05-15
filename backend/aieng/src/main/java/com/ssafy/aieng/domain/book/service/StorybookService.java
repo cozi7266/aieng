@@ -1,25 +1,22 @@
 package com.ssafy.aieng.domain.book.service;
 
-import com.ssafy.aieng.domain.book.dto.request.StorybookCreateRequest;
 import com.ssafy.aieng.domain.book.dto.response.StorybookResponse;
 import com.ssafy.aieng.domain.book.entity.LearningStorybook;
 import com.ssafy.aieng.domain.book.entity.Storybook;
-import com.ssafy.aieng.domain.book.repository.LearningStorybookRepository;
 import com.ssafy.aieng.domain.book.repository.StorybookRepository;
-import com.ssafy.aieng.domain.child.entity.Child;
-import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
-import com.ssafy.aieng.domain.theme.entity.Theme;
-import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
+import com.ssafy.aieng.domain.session.entity.Session;
+import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.ssafy.aieng.global.common.CustomAuthentication;
 
-import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -28,58 +25,65 @@ import java.util.List;
 public class StorybookService {
 
     private final StorybookRepository storybookRepository;
-    private final LearningStorybookRepository learningStorybookRepository;
-    private final ChildRepository childRepository;
-    private final ThemeRepository themeRepository;
     private final LearningRepository learningRepository;
+    private final SessionRepository sessionRepository;
+    private final CustomAuthentication customAuthentication;
+
+    private static final String DEFAULT_IMAGE_URL =
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Sample_User_Icon.png/480px-Sample_User_Icon.png";
+
 
     @Transactional
-    public StorybookResponse createStorybook(Integer themeId, StorybookCreateRequest request) {
-        // 1. 아이 조회
-        Child child = childRepository.findById(request.getChildId())
-                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+    public StorybookResponse createStorybook(Integer userId, Integer childId, Integer sessionId) {
 
-        // 2. 테마 조회
-        Theme theme = themeRepository.findById(themeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
+        // 1. 자녀 소유자 검증
+        customAuthentication.validateChildOwnership(userId, childId);
 
-        // 3. 해당 테마에서 학습 완료된 단어 5개 조회
-        List<Learning> completedLearnings = learningRepository
-                .findTop5ByWordThemeIdAndLearnedTrueOrderByLearnedAtDesc(themeId);
+        // 2. 세션 검증 + 자녀 일치 여부 확인
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        if (completedLearnings.isEmpty()) {
-            throw new CustomException(ErrorCode.BOOK_NO_COMPLETED_LEARNING);
+        if (!session.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 4. 그림책 생성
-        String coverUrl = String.format(
-                "https://s3.amazonaws.com/aieng-bucket/storybooks/%s_cover.png", theme.getThemeName());
+        // 3. 학습 완료 여부 확인
+        long learnedCount = learningRepository.countBySessionIdAndLearned(sessionId, true);
+        if (learnedCount < session.getTotalWordCount()) {
+            throw new CustomException(ErrorCode.STORYBOOK_CREATION_FAILED);
+        }
 
+        // 4. 그림책 기본 제목/설명 자동 생성
+        String title = session.getChild().getName() + "의 그림책";
+        String description = LocalDate.now() + "의 학습을 바탕으로 생성된 그림책입니다.";
+
+        // 대표 이미지(첫 번째 학습 이미지)
+        List<Learning> learnings = learningRepository.findAllBySessionIdAndLearnedTrueOrderByPageOrder(sessionId);
+        String coverUrl = learnings.isEmpty() ? DEFAULT_IMAGE_URL : learnings.get(0).getImgUrl();
+
+        // 5. Storybook 생성
         Storybook storybook = Storybook.builder()
-                .child(child)
+                .child(session.getChild())
+                .title(title)
+                .description(description)
                 .coverUrl(coverUrl)
-                .title(request.getTitle())
-                .description(request.getDescription())
                 .build();
 
-        // 5. 학습 기록과 연결
-        for (int i = 0; i < completedLearnings.size(); i++) {
-            Learning learning = completedLearnings.get(i);
+        // 6. 그림책에 학습 단어 연결
+        for (int i = 0; i < learnings.size(); i++) {
+            Learning learning = learnings.get(i);
 
-            LearningStorybook learningStorybook = LearningStorybook.builder()
+            LearningStorybook ls = LearningStorybook.builder()
                     .storybook(storybook)
                     .learning(learning)
-                    .pageOrder(i + 1)
+                    .pageOrder(i)
                     .build();
 
-            storybook.addLearningStorybook(learningStorybook);
+            storybook.addLearningStorybook(ls);
         }
 
-        // 6. 저장
+        // 7. 저장 및 응답 반환
         storybookRepository.save(storybook);
-
-        // 7. 반환
         return StorybookResponse.from(storybook);
     }
-
 }

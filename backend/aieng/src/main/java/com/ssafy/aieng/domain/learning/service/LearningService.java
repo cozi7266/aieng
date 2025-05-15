@@ -60,6 +60,22 @@ public class LearningService {
     private static final Duration REDIS_TTL = Duration.ofHours(24);
 
 
+    // 한 세션에 단어 목록 조회 (랜덤 6개 조회)
+    @Transactional(readOnly = true)
+    public LearningSessionDetailResponse getLearningSessionDetail(Integer userId, Integer childId, Integer sessionId) {
+        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        if (!session.getChild().getUser().getId().equals(userId)
+                || !session.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        List<Learning> learnings = learningRepository.findAllBySessionIdAndDeletedFalse(sessionId);
+        return LearningSessionDetailResponse.of(session, learnings);
+    }
+
+
     /**
      * FastAPI에 단어 생성 요청 전송 (문장, 이미지, TTS)
      * - Redis에 결과가 저장되기를 기다리지 않음
@@ -213,19 +229,6 @@ public class LearningService {
         );
     }
 
-
-    @Transactional(readOnly = true)
-    public LearningSessionDetailResponse getLearningSessionDetail(Integer userId, Integer sessionId) {
-        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-
-        if (!session.getChild().getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
-        }
-
-        List<Learning> learnings = learningRepository.findAllBySessionIdAndDeletedFalse(sessionId);
-        return LearningSessionDetailResponse.of(session, learnings);
-    }
 
 
 

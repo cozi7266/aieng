@@ -43,4 +43,6 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
     long countBySessionIdAndLearned(Integer sessionId, boolean b);
 
     List<Learning> findAllBySessionIdAndLearnedTrue(Integer sessionId);
+
+    List<Learning> findAllBySessionIdAndLearnedTrueOrderByPageOrder(Integer sessionId);
 }
