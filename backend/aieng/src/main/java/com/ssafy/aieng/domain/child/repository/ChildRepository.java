@@ -4,6 +4,7 @@ import com.ssafy.aieng.domain.child.entity.Child;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -14,4 +15,7 @@ public interface ChildRepository extends JpaRepository<Child, Integer> {
 
     // 부모와 이이가 매칭이 맞는지 확인
     boolean existsByIdAndUserId(Integer childId, Integer userId);
+
+
+    List<Child> findAllByUserIdAndDeletedFalse(Integer userId);
 }
