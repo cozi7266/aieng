@@ -152,14 +152,6 @@ export default function App() {
               ) : (
                 // 인증된 사용자를 위한 스택
                 <>
-                  <Stack.Screen name="Signup">
-                    {(props) => (
-                      <SignupScreen
-                        {...props}
-                        setIsAuthenticated={setIsAuthenticated}
-                      />
-                    )}
-                  </Stack.Screen>
                   <Stack.Screen name="Home">
                     {(props) => (
                       <HomeScreen
@@ -171,6 +163,14 @@ export default function App() {
                   <Stack.Screen name="ProfileSelect">
                     {(props) => (
                       <ProfileSelectScreen
+                        {...props}
+                        setIsAuthenticated={setIsAuthenticated}
+                      />
+                    )}
+                  </Stack.Screen>
+                  <Stack.Screen name="Signup">
+                    {(props) => (
+                      <SignupScreen
                         {...props}
                         setIsAuthenticated={setIsAuthenticated}
                       />
