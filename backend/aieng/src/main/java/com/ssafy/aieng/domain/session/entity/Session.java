@@ -47,7 +47,7 @@ public class Session extends BaseEntity {
     @Column(name = "progress_rate")
     private Integer progressRate;
 
-    // ✅ 학습 세션 생성
+    // 학습 세션 생성
     public static Session of(Child child, Theme theme) {
         return Session.builder()
                 .child(child)
@@ -59,13 +59,13 @@ public class Session extends BaseEntity {
                 .build();
     }
 
-    // ✅ 총 단어 수 설정 + 진행률 초기화
+    // 총 단어 수 설정 + 진행률 초기화
     public void setTotalWordCount(int count) {
         this.totalWordCount = count;
         updateProgressRate();
     }
 
-    // ✅ 학습 단어 수 증가 / 감소 + 진행률 자동 업데이트
+    // 학습 단어 수 증가 / 감소 + 진행률 자동 업데이트
     public void incrementLearnedCount() {
         this.learnedWordCount++;
         updateProgressRate();
@@ -78,7 +78,7 @@ public class Session extends BaseEntity {
         }
     }
 
-    // ✅ 진행률 계산
+    // 진행률 계산
     public void updateProgressRate() {
         if (totalWordCount != null && totalWordCount > 0) {
             this.progressRate = (int) ((learnedWordCount * 100.0) / totalWordCount);

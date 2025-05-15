@@ -15,6 +15,7 @@ import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
+import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.CustomPage;
@@ -63,34 +64,34 @@ public class SessionService {
     // 클라이언트가 테마 클릭 시 단어 순서 저장 (RDB, Redis)
     @Transactional
     public Integer createLearningSession(Integer userId, Integer childId, Integer themeId) {
-        // 1️⃣ 아이 소유자 검증
+        // 1️. 아이 소유자 검증
         Child child = getVerifiedChild(userId, childId);
 
-        // 2️⃣ 테마 확인
+        // 2. 테마 확인
         Theme theme = themeRepository.findById(themeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
 
-        // ✅ 3️⃣ 기존 세션 존재 여부 확인
+        // 3. 기존 세션 존재 여부 확인
         Optional<Session> existingSessionOpt = sessionRepository.findByChildIdAndThemeId(childId, themeId);
         if (existingSessionOpt.isPresent()) {
             return existingSessionOpt.get().getId(); // 기존 세션 ID 반환
         }
 
-        // ✅ 이후부터는 "정말로 새로운 세션"일 때만 실행됨
+        //  이후부터는 "정말로 새로운 세션"일 때만 실행됨
 
-        // 4️⃣ 세션 생성
+        // 4. 세션 생성
         Session session = Session.of(child, theme);
         sessionRepository.save(session);
 
-        // 5️⃣ 단어 셔플 및 그룹 묶기
+        // 5️. 단어 셔플 및 그룹 묶기
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
         Collections.shuffle(wordList);
 
         int pageOrder = 1, groupOrder = 1;
         List<Learning> learningBatch = new ArrayList<>();
 
-        for (int i = 0; i < wordList.size(); i += 5) {
-            List<Word> groupWords = wordList.subList(i, Math.min(i + 5, wordList.size()));
+        for (int i = 0; i < wordList.size(); i += 6) {
+            List<Word> groupWords = wordList.subList(i, Math.min(i + 6, wordList.size()));
 
             SessionGroup group = SessionGroup.builder()
                     .session(session)
@@ -118,7 +119,7 @@ public class SessionService {
         learningRepository.saveAll(learningBatch);
         session.setTotalWordCount(learningBatch.size());
 
-        // ✅ Redis 캐시 저장
+        //  Redis 캐시 저장
         String orderKey = String.format("session:%d:wordOrder", session.getId());
         List<String> wordIds = learningBatch.stream()
                 .sorted(Comparator.comparing(Learning::getPageOrder))
@@ -154,10 +155,10 @@ public class SessionService {
     public CustomPage<SessionResponse> getSessionsByChildPaged(
             Integer userId, Integer childId, int page, int size
     ) {
-        // 🔹 1. 아이 소유자 검증
+        // 1. 아이 소유자 검증
         Child child = getVerifiedChild(userId, childId);
 
-        // 🔹 2. 페이징 및 정렬 (기본 정렬: 테마 ID → createdAt)
+        // 2. 페이징 및 정렬 (기본 정렬: 테마 ID → createdAt)
         PageRequest pageRequest = PageRequest.of(
                 page - 1,
                 size,
@@ -167,10 +168,10 @@ public class SessionService {
                 )
         );
 
-        // 🔹 3. DB 조회
+        // 3. DB 조회
         Page<Session> sessionPage = sessionRepository.findAllByChildIdAndDeletedFalse(childId, pageRequest);
 
-        // 🔹 4. DTO 변환
+        // 4. DTO 변환
         Page<SessionResponse> dtoPage = sessionPage.map(SessionResponse::of);
 
         return new CustomPage<>(dtoPage);
@@ -213,6 +214,30 @@ public class SessionService {
     }
 
 
+    /**
+     * 한 세션 내에서 그룹(SessionGroup) 단위로 단어 목록을 페이지별로 조회
+     */
+    public CustomPage<List<WordResponse>> getPagedWordsBySessionGroup(Integer userId, Integer sessionId, int page, int size) {
+        // 세션 조회 및 권한 확인
+        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        getVerifiedChild(userId, session.getChild().getId());
+
+        // 그룹 단위로 페이징 조회
+        PageRequest pageRequest = PageRequest.of(page - 1, size, Sort.by("groupOrder"));
+        Page<SessionGroup> sessionGroupPage = sessionGroupRepository.findAllBySessionIdAndDeletedFalse(sessionId, pageRequest);
+
+        // 각 그룹의 단어들을 WordResponse 리스트로 변환
+        Page<List<WordResponse>> wordGroupsPage = sessionGroupPage.map(group -> {
+            List<Learning> learnings = group.getLearnings();
+            return learnings.stream()
+                    .map(WordResponse::of)
+                    .toList();
+        });
+
+        // CustomPage로 반환
+        return new CustomPage<>(wordGroupsPage);
+    }
 
 
 

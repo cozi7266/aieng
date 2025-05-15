@@ -2,15 +2,16 @@ package com.ssafy.aieng.domain.word.entity;
 
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import jakarta.persistence.*;
+
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 @Table(name = "word")
 public class Word extends BaseEntity {
 
