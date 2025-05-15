@@ -344,30 +344,32 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
                 )}
 
                 {/* 프로필 추가 버튼 */}
-                <Card
-                  style={[
-                    styles.profileCard,
-                    styles.addProfileCard,
-                    { width: itemWidth, height: itemWidth * 0.5 },
-                  ]}
-                  variant="outlined"
-                >
-                  <TouchableOpacity
-                    style={styles.profileCardContent}
-                    onPress={handleAddProfile}
-                    activeOpacity={0.8}
+                {profiles.length < 8 && (
+                  <Card
+                    style={[
+                      styles.profileCard,
+                      styles.addProfileCard,
+                      { width: itemWidth, height: itemWidth * 0.5 },
+                    ]}
+                    variant="outlined"
                   >
-                    <View style={styles.addNameContainer}>
-                      <FontAwesome5
-                        name="plus"
-                        size={24}
-                        color={theme.colors.primary}
-                        style={{ marginRight: theme.spacing.s }}
-                      />
-                      <Text style={styles.addProfileText}>프로필 추가</Text>
-                    </View>
-                  </TouchableOpacity>
-                </Card>
+                    <TouchableOpacity
+                      style={styles.profileCardContent}
+                      onPress={handleAddProfile}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.addNameContainer}>
+                        <FontAwesome5
+                          name="plus"
+                          size={24}
+                          color={theme.colors.primary}
+                          style={{ marginRight: theme.spacing.s }}
+                        />
+                        <Text style={styles.addProfileText}>프로필 추가</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </Card>
+                )}
               </View>
             </ScrollView>
 
