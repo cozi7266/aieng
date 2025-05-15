@@ -46,6 +46,7 @@ public class ChildService {
                 .gender(request.getChildGender())
                 .birthdate(request.getChildBirthdate())
                 .imgUrl(request.getChildImgUrl())
+                .user(user)
                 .build();
 
         childRepository.save(child);
