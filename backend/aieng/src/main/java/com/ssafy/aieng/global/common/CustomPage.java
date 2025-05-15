@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.util.List;
 
 @Getter
-@NoArgsConstructor // ✅ Jackson 역직렬화를 위해 필수
+@NoArgsConstructor // Jackson 역직렬화를 위해 필수
 public class CustomPage<T> implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -22,7 +22,7 @@ public class CustomPage<T> implements Serializable {
     private boolean first;
     private boolean last;
 
-    // ✅ Page 객체에서 변환용 생성자
+    // Page 객체에서 변환용 생성자
     public CustomPage(Page<T> page) {
         this.content = page.getContent();
         this.pageNumber = page.getNumber() + 1;
@@ -33,7 +33,7 @@ public class CustomPage<T> implements Serializable {
         this.last = page.isLast();
     }
 
-    // ✅ 역직렬화를 위한 생성자 (선택사항: Jackson이 잘 인식 못할 경우 대비)
+    // 역직렬화를 위한 생성자 (선택사항: Jackson이 잘 인식 못할 경우 대비)
     @JsonCreator
     public CustomPage(
             @JsonProperty("content") List<T> content,

@@ -14,7 +14,6 @@ public interface SessionRepository extends JpaRepository<Session, Integer> {
 
     Optional<Session> findByChildIdAndThemeId(Integer childId, Integer themeId);
 
-    Optional<Session> findTopByChildIdOrderByCreatedAtDesc(Integer childId);
 
     Optional<Session> findByIdAndDeletedFalse(Integer id);
 

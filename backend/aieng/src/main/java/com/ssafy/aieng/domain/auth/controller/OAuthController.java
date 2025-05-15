@@ -47,6 +47,7 @@ public class OAuthController {
         return ApiResponse.success(loginResult.getResponse(), responseCookie);
     }
 
+    // 앱 전용 로그인 (프론트에서 직접 OAuth Access Token을 직접 받아오는 경우)
     @PostMapping("/kakao/token")
     public ResponseEntity<ApiResponse<OAuthLoginResponse>> kakaoLoginWithToken(
             @RequestBody KakaoTokenLoginRequest request) {

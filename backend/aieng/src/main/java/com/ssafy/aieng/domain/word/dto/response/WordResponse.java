@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.word.dto.response;
 
+import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.word.entity.Word;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +15,17 @@ public class WordResponse {
     private String wordTtsUrl;
 
     public static WordResponse of(Word word) {
+        return new WordResponse(
+                word.getId(),
+                word.getWordEn(),
+                word.getWordKo(),
+                word.getImgUrl(),
+                word.getTtsUrl()
+        );
+    }
+
+    public static WordResponse of(Learning learning) {
+        Word word = learning.getWord();
         return new WordResponse(
                 word.getId(),
                 word.getWordEn(),

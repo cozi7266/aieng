@@ -6,6 +6,7 @@ import com.ssafy.aieng.domain.session.dto.response.SessionResponse;
 import com.ssafy.aieng.domain.session.service.SessionService;
 import com.ssafy.aieng.domain.theme.service.ThemeService;
 import com.ssafy.aieng.domain.user.service.UserService;
+import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.service.WordService;
 import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.response.ApiResponse;
@@ -72,5 +73,21 @@ public class SessionController {
         sessionService.softDeleteSession(sessionId, user.getId());
         return ApiResponse.success(HttpStatus.OK);
     }
+
+    //  한 세션 내 서브세션(SessionGroup) 단위로 단어 리스트를 페이지네이션 조회
+    // - 한 Session에는 여러 SessionGroup이 있음 (각 그룹은 최대 6단어)
+    // - 클라이언트가 page=1 요청 시 → 첫 번째 그룹의 단어 리스트 반환
+    // - 응답 형태는 CustomPage<List<WordResponse>> 형태로 그룹별 단어 묶음 제공
+    @GetMapping("/{sessionId}/pages")
+    public ResponseEntity<ApiResponse<CustomPage<List<WordResponse>>>> getPagedWordsBySessionGroup(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "1") int size
+    ) {
+        CustomPage<List<WordResponse>> result = sessionService.getPagedWordsBySessionGroup(user.getId(), sessionId, page, size);
+        return ApiResponse.success(result);
+    }
+
 
 }
