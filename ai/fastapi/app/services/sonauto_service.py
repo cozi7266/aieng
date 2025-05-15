@@ -113,7 +113,7 @@ class SonautoService:
             raise
 
         # 6. Redis 저장
-        redis_key = f"Learning:user:{user_id}:session:{session_id}:song"
+        redis_key = f"Song:user:{user_id}:session:{session_id}"
         redis_value = {
             "song_url": s3_url,
             "lyrics_en": lyrics_en,
