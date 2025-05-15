@@ -6,8 +6,8 @@ import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.entity.Learning;
+import com.ssafy.aieng.domain.session.dto.response.ChildThemeProgressResponse;
 import com.ssafy.aieng.domain.session.dto.response.CreateSessionResponse;
-import com.ssafy.aieng.domain.session.dto.response.SessionResponse;
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
@@ -17,7 +17,6 @@ import com.ssafy.aieng.domain.user.repository.UserRepository;
 import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
-import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
 import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
@@ -25,14 +24,12 @@ import com.ssafy.aieng.global.error.exception.CustomException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -140,39 +137,33 @@ public class SessionService {
 
 
 
-    //  특정 학습 세션 조회
-    public SessionResponse getSessionById(Integer sessionId, Integer userId) {
-        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        getVerifiedChild(userId, session.getChild().getId());
-        return SessionResponse.of(session);
-    }
-
     // 자녀의 세션 목록 조회 (정렬 필드도 유연하게 처리 가능)
-    public CustomPage<SessionResponse> getSessionsByChildPaged(
-            Integer userId, Integer childId, int page, int size
-    ) {
-        // 1. 아이 소유자 검증
-        Child child = getVerifiedChild(userId, childId);
+    public List<ChildThemeProgressResponse> getAllThemesWithProgress(Integer userId, Integer childId) {
+        getVerifiedChild(userId, childId);
 
-        // 2. 페이징 및 정렬 (기본 정렬: 테마 ID → createdAt)
-        PageRequest pageRequest = PageRequest.of(
-                page - 1,
-                size,
-                Sort.by(
-                        Sort.Order.asc("theme.id"),      // 테마 순 정렬
-                        Sort.Order.desc("createdAt")     // 생성일 순 정렬
-                )
-        );
+        List<Theme> allThemes = themeRepository.findAll();
+        List<Session> sessions = sessionRepository.findAllByChildIdAndDeletedFalse(childId);
 
-        // 3. DB 조회
-        Page<Session> sessionPage = sessionRepository.findAllByChildIdAndDeletedFalse(childId, pageRequest);
+        // 테마별 최신 세션만 남기기
+        Map<Integer, Session> themeSessionMap = sessions.stream()
+                .collect(Collectors.toMap(
+                        s -> s.getTheme().getId(),
+                        s -> s,
+                        (s1, s2) -> s1.getStartedAt().isAfter(s2.getStartedAt()) ? s1 : s2
+                ));
 
-        // 4. DTO 변환
-        Page<SessionResponse> dtoPage = sessionPage.map(SessionResponse::of);
-
-        return new CustomPage<>(dtoPage);
+        // 각 테마에 대해 DTO 생성
+        return allThemes.stream()
+                .map(theme -> {
+                    Session session = themeSessionMap.get(theme.getId());
+                    return (session != null)
+                            ? ChildThemeProgressResponse.fromSession(session)
+                            : ChildThemeProgressResponse.fromThemeOnly(theme);
+                })
+                .toList();
     }
+
+
 
 
     // 학습 세션 삭제 (Soft Delete 적용)
@@ -197,6 +188,18 @@ public class SessionService {
         if (!session.isAlreadyDeleted()) {
             session.softDelete();
         }
+    }
+
+    public ChildThemeProgressResponse getThemeProgress(Integer userId, Integer childId, Integer themeId) {
+        getVerifiedChild(userId, childId);
+
+        Theme theme = themeRepository.findById(themeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
+
+        return sessionRepository
+                .findTopByChildIdAndThemeIdAndDeletedFalseOrderByStartedAtDesc(childId, themeId)
+                .map(ChildThemeProgressResponse::fromSession)
+                .orElseGet(() -> ChildThemeProgressResponse.fromThemeOnly(theme));
     }
 
 }

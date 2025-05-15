@@ -15,7 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -46,6 +48,7 @@ public class ChildService {
                 .gender(request.getChildGender())
                 .birthdate(request.getChildBirthdate())
                 .imgUrl(request.getChildImgUrl())
+                .user(user)
                 .build();
 
         childRepository.save(child);
@@ -124,5 +127,20 @@ public class ChildService {
                     .addParameter("userId", userId);
         }
     }
+
+    public List<ChildInfoResponse> findChildInfoList(Integer userId) {
+        // 1. 유저 검증 (예외 처리 포함 가능)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 해당 유저의 삭제되지 않은 아이들 조회
+        List<Child> children = childRepository.findAllByUserIdAndDeletedFalse(userId);
+
+        // 3. Child → ChildInfoResponse 변환
+        return children.stream()
+                .map(child -> ChildInfoResponse.of(user, child))
+                .collect(Collectors.toList());
+    }
+
 
 }
