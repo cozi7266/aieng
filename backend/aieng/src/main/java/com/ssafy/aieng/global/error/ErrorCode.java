@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 @AllArgsConstructor
-public enum ErrorCode {
+public enum  ErrorCode {
 
     // Common
     INVALID_INPUT_VALUE(400, "C001", "잘못된 입력값입니다"),
@@ -44,6 +44,12 @@ public enum ErrorCode {
     LEARNING_NOT_FOUND(404, "L001", "학습 단어 정보를 찾을 수 없습니다."),
     LEARNING_ALREADY_EXISTS(409, "L002", "이미 학습 세션에 단어가 존재합니다."),
     LEARNING_UPDATE_FAILED(500, "L003", "학습 정보를 업데이트하는 데 실패했습니다."),
+
+    // QUIZ
+    QUIZ_ALREADY_EXISTS(409, "Q001", "퀴즈가 이미 존재합니다."),
+    QUIZ_NOT_FOUND(404, "Q002", "퀴즈가 존재하지 않습니다."),
+    QUIZ_CREATION_FAILED(400, "Q003", "퀴즈 생성 조건을 만족하지 않습니다."),
+
 
     // Theme
     THEME_NOT_FOUND(404, "T001", "테마를 찾을 수 없습니다."),

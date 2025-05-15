@@ -121,11 +121,11 @@ public class SessionService {
             // Redis Key: Learning:user:{userId}:session:{sessionId}:word:{wordEn}
             String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, session.getId(), word.getWordEn());
 
-            Map<String, String> wordInfo = Map.of(
-                    "wordEn", word.getWordEn(),
-                    "wordKo", word.getWordKo(),
-                    "imgUrl", word.getImgUrl()
-            );
+            Map<String, String> wordInfo = new HashMap<>();
+            if (word.getWordEn() != null) wordInfo.put("wordEn", word.getWordEn());
+            if (word.getWordKo() != null) wordInfo.put("wordKo", word.getWordKo());
+            if (word.getImgUrl() != null) wordInfo.put("imgUrl", word.getImgUrl());
+
             stringRedisTemplate.opsForHash().putAll(infoKey, wordInfo);
             stringRedisTemplate.expire(infoKey, Duration.ofDays(1));
         }

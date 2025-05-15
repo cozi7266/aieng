@@ -26,8 +26,6 @@ public class UserController {
 
     private final AuthenticationUtil authenticationUtil;
     private final UserService userService;
-    private final JwtTokenProvider jwtTokenProvider;
-
 
     // Authorization 헤더의 Bearer 토큰을 검증하고 유저 존재 여부를 반환합니다.  @return 유효한 토큰이고 유저가 존재하면 true, 아니면 false
     @GetMapping("/validate")

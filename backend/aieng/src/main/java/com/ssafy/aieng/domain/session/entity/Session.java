@@ -55,6 +55,7 @@ public class Session extends BaseEntity {
                 .child(child)
                 .theme(theme)
                 .startedAt(LocalDateTime.now())
+                .status(SessionStatus.LEARNING)
                 .totalWordCount(0)
                 .learnedWordCount(0)
                 .progressRate(0)

@@ -27,10 +27,10 @@ public class ChildController {
     // 아이 프로필 등록
     @PostMapping()
     public ResponseEntity<ApiResponse<Void>> createChildProfile(
-            @AuthenticationPrincipal UserPrincipal parentPrincipal,
+            @AuthenticationPrincipal UserPrincipal usertPrincipal,
             @RequestBody ChildProfileCreateRequest request) {
 
-        childService.createChildProfile(parentPrincipal.getId(), request);
+        childService.createChildProfile(usertPrincipal.getId(), request);
 
         return ApiResponse.success(HttpStatus.OK);
     }

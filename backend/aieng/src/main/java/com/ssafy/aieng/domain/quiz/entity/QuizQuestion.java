@@ -41,4 +41,37 @@ public class QuizQuestion extends BaseEntity{
 
     @Column(name = "ans_ch_id", nullable = false)
     private Integer ansChId;
+
+    @Column(name = "quiz_type")
+    private String quizType;
+
+    @Column(name = "question_text")
+    private String question;
+
+    public static QuizQuestion create(
+            Quiz quiz,
+            Integer ansWordId,
+            String ansImageUrl,
+            Integer ch1Id,
+            Integer ch2Id,
+            Integer ch3Id,
+            Integer ch4Id,
+            Integer ansChId,
+            String quizType,
+            String question
+    ) {
+        QuizQuestion q = new QuizQuestion();
+        q.setQuiz(quiz);
+        q.setAnsWordId(ansWordId);
+        q.setAnsImageUrl(ansImageUrl);
+        q.setCh1Id(ch1Id);
+        q.setCh2Id(ch2Id);
+        q.setCh3Id(ch3Id);
+        q.setCh4Id(ch4Id);
+        q.setAnsChId(ansChId);
+        q.setQuizType(quizType);
+        q.setQuestion(question);
+        return q;
+    }
+
 } 
