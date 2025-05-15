@@ -6,11 +6,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   Animated,
   Dimensions,
-  SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -22,13 +22,22 @@ import BackButton from "../components/navigation/BackButton";
 import Card from "../components/common/Card";
 import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
 import axios from "axios";
-import { Alert } from "react-native";
 
-// 프로필 데이터 타입
+// API 응답의 아이 프로필 데이터 타입
+interface ChildProfile {
+  userId: number;
+  childId: number;
+  childName: string;
+  childGender: string;
+  childBirthday: string;
+}
+
+// 화면에서 사용하는 프로필 타입
 interface Profile {
   id: string;
   name: string;
-  avatar: any;
+  childGender?: string;
+  childBirthday?: string;
   isActive?: boolean;
 }
 
@@ -47,30 +56,65 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
   const navigation = useNavigation<ProfileSelectScreenNavigationProp>();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+  const [isLoading, setIsLoading] = useState(true);
 
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
-  // 가상 프로필 데이터 (추후 API 연동)
-  const mockProfiles: Profile[] = [
-    {
-      id: "1",
-      name: "박하나",
-      avatar: require("../assets/images/main_mascot.png"),
-      isActive: true,
-    },
-    {
-      id: "2",
-      name: "박둘",
-      avatar: require("../assets/images/main_mascot.png"),
-    },
-    {
-      id: "3",
-      name: "박셋",
-      avatar: require("../assets/images/main_mascot.png"),
-    },
-  ];
+  // API에서 아이 프로필 데이터 가져오기
+  const fetchChildProfiles = async () => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+
+      if (!token) {
+        console.error("토큰이 없습니다");
+        Alert.alert(
+          "오류",
+          "로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요."
+        );
+        setIsAuthenticated(false);
+        return;
+      }
+
+      console.log("아이 프로필 API 요청 시작");
+
+      const response = await axios.get("https://www.aieng.co.kr/api/child", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("API 응답:", response.data);
+
+      if (response.data.success) {
+        // 프로필 데이터 변환
+        const profilesWithActive = response.data.data.map(
+          (child: ChildProfile, index: number) => ({
+            id: child.childId.toString(),
+            name: child.childName,
+            childGender: child.childGender,
+            childBirthday: child.childBirthday,
+            isActive: index === 0, // 첫 번째 프로필을 기본적으로 활성화 상태로 설정
+          })
+        );
+        setProfiles(profilesWithActive);
+      } else {
+        Alert.alert(
+          "오류",
+          response.data.error?.message || "프로필을 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error) {
+      console.error("프로필 로딩 오류:", error);
+      Alert.alert(
+        "프로필 로딩 실패",
+        "프로필 정보를 가져오는 중 오류가 발생했습니다."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // 화면 진입 애니메이션
@@ -88,7 +132,7 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
     ]).start();
 
     // 프로필 데이터 로딩
-    setProfiles(mockProfiles);
+    fetchChildProfiles();
 
     // 화면 크기 변경 감지
     const subscription = Dimensions.addEventListener("change", ({ window }) => {
@@ -124,7 +168,7 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
     });
   };
 
-  // 프로필 추가 핸들러 - NavigationWarningAlert 사용
+  // 프로필 추가 핸들러
   const handleAddProfile = () => {
     NavigationWarningAlert.show({
       title: "프로필 추가",
@@ -137,7 +181,7 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
     });
   };
 
-  // 회원 탈퇴 핸들러 - NavigationWarningAlert 사용
+  // 회원 탈퇴 핸들러
   const handleDeleteAccount = () => {
     NavigationWarningAlert.show({
       title: "회원 탈퇴하기",
@@ -158,9 +202,6 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
             );
             return;
           }
-
-          // 로딩 상태 표시 (선택적)
-          // setLoading(true);
 
           console.log("회원 탈퇴 API 요청 시작");
 
@@ -212,9 +253,6 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
             "회원 탈퇴 실패",
             "회원 탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요."
           );
-        } finally {
-          // 로딩 상태 해제 (선택적)
-          // setLoading(false);
         }
       },
     });
@@ -224,6 +262,16 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
   const isLandscape = dimensions.width > dimensions.height;
   const columns = isLandscape ? 4 : 2;
   const itemWidth = Math.min(dimensions.width / (columns + 0.5), 280);
+
+  // 로딩 중일 때 표시할 UI
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>프로필을 불러오고 있어요...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.outerContainer}>
@@ -258,48 +306,49 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.profileGrid}>
-                {profiles.map((profile) => (
-                  <Card
-                    key={profile.id}
-                    style={[
-                      styles.profileCard,
-                      profile.isActive && styles.activeCard,
-                      { width: itemWidth, height: itemWidth * 1.2 },
-                    ]}
-                    variant="default"
-                  >
-                    <TouchableOpacity
-                      style={styles.profileCardContent}
-                      onPress={() => handleProfileSelect(profile.id)}
-                      activeOpacity={0.8}
+                {profiles.length > 0 ? (
+                  profiles.map((profile) => (
+                    <Card
+                      key={profile.id}
+                      style={[
+                        styles.profileCard,
+                        profile.isActive && styles.activeCard,
+                        { width: itemWidth, height: itemWidth * 0.5 },
+                      ]}
+                      variant="default"
                     >
-                      <View style={styles.avatarContainer}>
-                        <Image
-                          source={profile.avatar}
-                          style={styles.avatarImage}
-                          resizeMode="cover"
-                        />
-                        {profile.isActive && (
-                          <View style={styles.activeIndicator}>
-                            <FontAwesome5
-                              name="check"
-                              size={18}
-                              color="white"
-                            />
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.profileName}>{profile.name}</Text>
-                    </TouchableOpacity>
-                  </Card>
-                ))}
+                      <TouchableOpacity
+                        style={styles.profileCardContent}
+                        onPress={() => handleProfileSelect(profile.id)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.nameContainer}>
+                          <Text style={styles.profileName}>{profile.name}</Text>
+                          {profile.isActive && (
+                            <View style={styles.activeIndicator}>
+                              <FontAwesome5
+                                name="check"
+                                size={18}
+                                color="white"
+                              />
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    </Card>
+                  ))
+                ) : (
+                  <Text style={styles.noProfileText}>
+                    아직 등록된 프로필이 없어요. 프로필을 추가해보세요!
+                  </Text>
+                )}
 
                 {/* 프로필 추가 버튼 */}
                 <Card
                   style={[
                     styles.profileCard,
                     styles.addProfileCard,
-                    { width: itemWidth, height: itemWidth * 1.2 },
+                    { width: itemWidth, height: itemWidth * 0.5 },
                   ]}
                   variant="outlined"
                 >
@@ -308,14 +357,15 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
                     onPress={handleAddProfile}
                     activeOpacity={0.8}
                   >
-                    <View style={styles.addAvatarContainer}>
+                    <View style={styles.addNameContainer}>
                       <FontAwesome5
                         name="plus"
-                        size={32}
+                        size={24}
                         color={theme.colors.primary}
+                        style={{ marginRight: theme.spacing.s }}
                       />
+                      <Text style={styles.addProfileText}>프로필 추가</Text>
                     </View>
-                    <Text style={styles.addProfileText}>프로필 추가</Text>
                   </TouchableOpacity>
                 </Card>
               </View>
@@ -350,6 +400,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
     overflow: "hidden",
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    marginTop: theme.spacing.m,
+  },
+  noProfileText: {
+    ...theme.typography.body,
+    fontSize: 20,
+    color: theme.colors.subText,
+    textAlign: "center",
+    marginVertical: theme.spacing.l,
   },
   gradientOverlay: {
     position: "absolute",
@@ -421,19 +487,14 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: theme.colors.primary,
   },
-  avatarContainer: {
+  nameContainer: {
     position: "relative",
-    marginBottom: theme.spacing.m,
-  },
-  avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   activeIndicator: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
+    marginLeft: theme.spacing.s,
     backgroundColor: theme.colors.primary,
     width: 30,
     height: 30,
@@ -445,6 +506,7 @@ const styles = StyleSheet.create({
   },
   profileName: {
     ...theme.typography.body,
+    fontSize: 26,
     color: theme.colors.text,
     textAlign: "center",
   },
@@ -454,17 +516,14 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: `${theme.colors.accent}20`,
   },
-  addAvatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: `${theme.colors.primary}20`,
+  addNameContainer: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.m,
   },
   addProfileText: {
     ...theme.typography.body,
+    fontSize: 24,
     color: theme.colors.primary,
     textAlign: "center",
   },
