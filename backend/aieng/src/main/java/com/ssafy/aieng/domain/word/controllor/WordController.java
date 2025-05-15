@@ -21,10 +21,11 @@ public class WordController {
     @GetMapping("/{wordId}")
     public ResponseEntity<ApiResponse<WordResponse>> findWordById(
             @PathVariable("wordId") Integer wordId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestHeader("X-Child-Id") Integer childId
     ) {
         Integer userId = userPrincipal.getId();
-        WordResponse response = wordService.getWordDetail(userId, wordId);
+        WordResponse response = wordService.getWordDetail(userId, wordId, childId);
         return ApiResponse.success(response);
     }
 
