@@ -1,13 +1,16 @@
 package com.ssafy.aieng.domain.learning.controller;
 
 import com.ssafy.aieng.domain.child.service.ChildService;
-import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
-import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
+import com.ssafy.aieng.domain.learning.dto.request.SaveHistorytRequest;
+import com.ssafy.aieng.domain.learning.dto.response.*;
 import com.ssafy.aieng.domain.learning.service.LearningService;
+import com.ssafy.aieng.domain.word.dto.response.WordResponse;
+import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,7 +18,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -53,13 +62,13 @@ public class LearningController {
      * - 이미 저장된 학습 데이터인 경우 저장은 생략됨
      * - 프론트는 이 API만 polling 하면서 결과를 가져오면 됨
      */
-    @GetMapping("/sessions/{sessionId}/words/{word}/generation")
+    @GetMapping("/sessions/{sessionId}/words/{wordEn}/generation")
     public ResponseEntity<ApiResponse<GeneratedContentResult>> pollGeneratedResult(
             @AuthenticationPrincipal UserPrincipal user,
             @PathVariable Integer sessionId,
-            @PathVariable String word
+            @PathVariable String wordEn
     ) {
-        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), sessionId, word);
+        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), sessionId, wordEn);
         return ApiResponse.success(result);
     }
 
@@ -73,6 +82,16 @@ public class LearningController {
     ) {
         SentenceResponse sentenceResponse = learningService.getSentenceResponse(user.getId(), sessionId, word);
         return ApiResponse.success(sentenceResponse);
+    }
+
+    // 특정 세션에 포함된 학습 단어 전체 조회 (6개 고정)
+    @GetMapping("/sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<LearningSessionDetailResponse>> getLearningSessionDetail(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable Integer sessionId
+    ) {
+        LearningSessionDetailResponse response = learningService.getLearningSessionDetail(user.getId(), sessionId);
+        return ApiResponse.success(response);
     }
 
 
