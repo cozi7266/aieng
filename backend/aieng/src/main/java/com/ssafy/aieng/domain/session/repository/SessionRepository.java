@@ -13,11 +13,14 @@ import java.util.Optional;
 @Repository
 public interface SessionRepository extends JpaRepository<Session, Integer> {
 
+    Optional<Session> findByChildIdAndThemeId(Integer childId, Integer themeId);
+
+    Optional<Session> findTopByChildIdOrderByCreatedAtDesc(Integer childId);
+
     Optional<Session> findByIdAndDeletedFalse(Integer id);
 
     Page<Session> findAllByChildIdAndDeletedFalse(Integer childId, Pageable pageable);
 
     Optional<Session> findByChildIdAndThemeIdAndFinishedAtIsNull(Integer childId, Integer themeId);
-
 
 }
