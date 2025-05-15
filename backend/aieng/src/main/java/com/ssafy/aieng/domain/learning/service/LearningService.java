@@ -105,6 +105,11 @@ public class LearningService {
      * - 이미 저장된 경우 중복 저장 생략
      * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
      */
+    /**
+     * Redis에서 생성 결과를 조회하고, Learning 테이블에 저장
+     * - 이미 저장된 경우 중복 저장 생략
+     * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
+     */
     @Transactional
     public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer sessionId, String wordEn) {
         // 1. Redis에서 FastAPI 결과 조회
