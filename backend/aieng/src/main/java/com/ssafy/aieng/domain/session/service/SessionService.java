@@ -6,11 +6,10 @@ import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.entity.Learning;
+import com.ssafy.aieng.domain.session.dto.response.CreateSessionResponse;
 import com.ssafy.aieng.domain.session.dto.response.SessionResponse;
 import com.ssafy.aieng.domain.session.entity.Session;
-import com.ssafy.aieng.domain.session.entity.SessionGroup;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
-import com.ssafy.aieng.domain.session.repository.SessionGroupRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
@@ -20,6 +19,7 @@ import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
+import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import jakarta.transaction.Transactional;
@@ -43,7 +43,6 @@ public class SessionService {
     private final RedisService redisService;
     private final LearningRepository learningRepository;
     private final SessionRepository sessionRepository;
-    private final SessionGroupRepository sessionGroupRepository;
     private final ChildService childService;
     private final ThemeRepository themeRepository;
     private final WordRepository wordRepository;
@@ -61,87 +60,85 @@ public class SessionService {
         return child;
     }
 
-    // 클라이언트가 테마 클릭 시 단어 순서 저장 (RDB, Redis)
     @Transactional
-    public Integer createLearningSession(Integer userId, Integer childId, Integer themeId) {
-        // 1️. 아이 소유자 검증
+    public CreateSessionResponse createLearningSession(Integer userId, Integer childId, Integer themeId) {
+        // 1. 아이 소유자 검증
         Child child = getVerifiedChild(userId, childId);
 
         // 2. 테마 확인
         Theme theme = themeRepository.findById(themeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
 
-        // 3. 기존 세션 존재 여부 확인
-        Optional<Session> existingSessionOpt = sessionRepository.findByChildIdAndThemeId(childId, themeId);
-        if (existingSessionOpt.isPresent()) {
-            return existingSessionOpt.get().getId(); // 기존 세션 ID 반환
-        }
+        // 3. 기존 진행 중인 세션 조회
+        Optional<Session> existingSessionOpt = sessionRepository
+                .findByChildIdAndThemeIdAndFinishedAtIsNull(childId, themeId);
 
-        //  이후부터는 "정말로 새로운 세션"일 때만 실행됨
+        if (existingSessionOpt.isPresent()) {
+            Session existing = existingSessionOpt.get();
+            List<WordResponse> words = learningRepository.findAllBySessionIdAndDeletedFalse(existing.getId()).stream()
+                    .sorted(Comparator.comparing(Learning::getPageOrder))
+                    .map(WordResponse::of)
+                    .toList();
+            return new CreateSessionResponse(existing.getId(), false, words);
+        }
 
         // 4. 세션 생성
         Session session = Session.of(child, theme);
         sessionRepository.save(session);
 
-        // 5️. 단어 셔플 및 그룹 묶기
+        // 5. 랜덤 단어 6개 선택
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
         Collections.shuffle(wordList);
+        List<Word> selectedWords = wordList.stream().limit(6).toList();
 
-        int pageOrder = 1, groupOrder = 1;
+        // 6. Learning 엔티티 생성 및 저장
         List<Learning> learningBatch = new ArrayList<>();
-
-        for (int i = 0; i < wordList.size(); i += 6) {
-            List<Word> groupWords = wordList.subList(i, Math.min(i + 6, wordList.size()));
-
-            SessionGroup group = SessionGroup.builder()
+        for (int i = 0; i < selectedWords.size(); i++) {
+            Word word = selectedWords.get(i);
+            Learning learning = Learning.builder()
                     .session(session)
-                    .groupOrder(groupOrder++)
-                    .completed(false)
-                    .totalWordCount(groupWords.size())
-                    .learnedWordCount(0)
+                    .word(word)
+                    .pageOrder(i + 1)
+                    .learned(false)
                     .build();
-            sessionGroupRepository.save(group);
-
-            for (int j = 0; j < groupWords.size(); j++) {
-                Word word = groupWords.get(j);
-                Learning learning = Learning.builder()
-                        .session(session)
-                        .sessionGroup(group)
-                        .word(word)
-                        .pageOrder(pageOrder++)
-                        .groupOrder(j+1)
-                        .learned(false)
-                        .build();
-                learningBatch.add(learning);
-            }
+            learningBatch.add(learning);
         }
-
         learningRepository.saveAll(learningBatch);
         session.setTotalWordCount(learningBatch.size());
 
-        //  Redis 캐시 저장
+        // 7. Redis 저장 (순서)
         String orderKey = String.format("session:%d:wordOrder", session.getId());
         List<String> wordIds = learningBatch.stream()
-                .sorted(Comparator.comparing(Learning::getPageOrder))
                 .map(l -> l.getWord().getId().toString())
                 .toList();
         stringRedisTemplate.opsForList().rightPushAll(orderKey, wordIds);
         stringRedisTemplate.expire(orderKey, Duration.ofDays(1));
 
+        // 8. Redis 저장 (각 단어 정보)
         for (Learning learning : learningBatch) {
             Word word = learning.getWord();
-            String infoKey = String.format("session:%d:wordInfo:%d", session.getId(), word.getId());
-            Map<String, String> wordInfo = Map.of(
-                    "wordEn", word.getWordEn(),
-                    "wordKo", word.getWordKo(),
-                    "imgUrl", word.getImgUrl()
-            );
+
+            // Redis Key: Learning:user:{userId}:session:{sessionId}:word:{wordEn}
+            String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, session.getId(), word.getWordEn());
+
+            Map<String, String> wordInfo = new HashMap<>();
+            if (word.getWordEn() != null) wordInfo.put("wordEn", word.getWordEn());
+            if (word.getWordKo() != null) wordInfo.put("wordKo", word.getWordKo());
+            if (word.getImgUrl() != null) wordInfo.put("imgUrl", word.getImgUrl());
+
             stringRedisTemplate.opsForHash().putAll(infoKey, wordInfo);
             stringRedisTemplate.expire(infoKey, Duration.ofDays(1));
         }
 
-        return session.getId();
+        // 9. 응답용 변환
+        List<WordResponse> wordResponses = selectedWords.stream()
+                .map(WordResponse::of)
+                .toList();
+
+        return new CreateSessionResponse(session.getId(), true, wordResponses);
     }
+
+
 
     //  특정 학습 세션 조회
     public SessionResponse getSessionById(Integer sessionId, Integer userId) {
@@ -185,61 +182,21 @@ public class SessionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
         // 유저가 이 세션의 아이 부모인지 확인
-        Child child = getVerifiedChild(userId, session.getChild().getId());
+        getVerifiedChild(userId, session.getChild().getId());
 
-        // SessionGroup + 그 안의 Learning 소프트 삭제
-        if (session.getSessionGroups() != null) {
-            for (SessionGroup group : session.getSessionGroups()) {
-
-                //  1. Learning 삭제
-                if (group.getLearnings() != null) {
-                    for (Learning learning : group.getLearnings()) {
-                        if (!learning.isAlreadyDeleted()) {
-                            learning.softDelete();
-                        }
-                    }
-                }
-
-                // 2. SessionGroup 삭제
-                if (!group.isAlreadyDeleted()) {
-                    group.softDelete();
+        // Learning soft delete
+        if (session.getLearnings() != null) {
+            for (Learning learning : session.getLearnings()) {
+                if (!learning.isAlreadyDeleted()) {
+                    learning.softDelete();
                 }
             }
         }
 
-        // 마지막으로 Session soft delete
+        // Session soft delete
         if (!session.isAlreadyDeleted()) {
             session.softDelete();
         }
     }
-
-
-    /**
-     * 한 세션 내에서 그룹(SessionGroup) 단위로 단어 목록을 페이지별로 조회
-     */
-    public CustomPage<List<WordResponse>> getPagedWordsBySessionGroup(Integer userId, Integer sessionId, int page, int size) {
-        // 세션 조회 및 권한 확인
-        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        getVerifiedChild(userId, session.getChild().getId());
-
-        // 그룹 단위로 페이징 조회
-        PageRequest pageRequest = PageRequest.of(page - 1, size, Sort.by("groupOrder"));
-        Page<SessionGroup> sessionGroupPage = sessionGroupRepository.findAllBySessionIdAndDeletedFalse(sessionId, pageRequest);
-
-        // 각 그룹의 단어들을 WordResponse 리스트로 변환
-        Page<List<WordResponse>> wordGroupsPage = sessionGroupPage.map(group -> {
-            List<Learning> learnings = group.getLearnings();
-            return learnings.stream()
-                    .map(WordResponse::of)
-                    .toList();
-        });
-
-        // CustomPage로 반환
-        return new CustomPage<>(wordGroupsPage);
-    }
-
-
-
 
 }

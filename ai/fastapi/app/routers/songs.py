@@ -12,8 +12,9 @@ def generate_custom_song(
     s3 = Depends(get_s3)
 ):
     result = SonautoService(redis, s3).generate_song(
-        user_id=request.user_id,
-        mood=request.mood,
-        voice=request.voice
+        child_id=request.childId,
+        session_id=request.sessionId,
+        mood_name=request.moodName,
+        voice_name=request.voiceName
     )
     return result

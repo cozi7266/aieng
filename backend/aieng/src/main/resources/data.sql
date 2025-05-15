@@ -4,7 +4,7 @@ INSERT INTO user (id, created_at, updated_at, deleted, nickname, provider_id, pr
 VALUES (1, NOW(), NOW(), false, '엄마곰', 'kakao-123', 'KAKAO');
 
 -- 자녀
-INSERT INTO child (id, created_at, updated_at, deleted, name, birthdate, gender, parent_id)
+INSERT INTO child (id, created_at, updated_at, deleted, name, birthdate, gender, user_id)
 VALUES (1, NOW(), NOW(), false, '하이', '2020-05-01', 'F', 1),
         (2, NOW(), NOW(), false, '하이2', '2019-03-15', 'M', 1),
         (3, NOW(), NOW(), false, '하이3', '2021-07-20', 'F', 1);

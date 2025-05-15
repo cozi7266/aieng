@@ -2,6 +2,7 @@ package com.ssafy.aieng.domain.session.entity;
 
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.learning.entity.Learning;
+import com.ssafy.aieng.domain.session.SessionStatus;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -26,11 +27,8 @@ public class Session extends BaseEntity {
     @JoinColumn(name = "theme_id", nullable = false)
     private Theme theme;
 
-    @OneToMany(mappedBy = "session")
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Learning> learnings;
-
-    @OneToMany(mappedBy = "session")
-    private List<SessionGroup> sessionGroups;
 
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
@@ -47,12 +45,17 @@ public class Session extends BaseEntity {
     @Column(name = "progress_rate")
     private Integer progressRate;
 
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private SessionStatus status;
+
     // 학습 세션 생성
     public static Session of(Child child, Theme theme) {
         return Session.builder()
                 .child(child)
                 .theme(theme)
                 .startedAt(LocalDateTime.now())
+                .status(SessionStatus.LEARNING)
                 .totalWordCount(0)
                 .learnedWordCount(0)
                 .progressRate(0)
@@ -87,9 +90,33 @@ public class Session extends BaseEntity {
         }
     }
 
-    // ✅ 연관관계 편의 메서드
+    // 연관관계 편의 메서드
     public void addLearning(Learning learning) {
         this.learnings.add(learning);
         learning.setSession(this);
+    }
+
+    // 세션 종료
+    public void finish() {
+        this.finishedAt = LocalDateTime.now();
+    }
+
+    public void markQuizDone() {
+        if (this.status == SessionStatus.LEARNING) {
+            this.status = SessionStatus.QUIZ_DONE;
+        }
+    }
+
+    public void markStoryDone() {
+        if (this.status == SessionStatus.QUIZ_DONE) {
+            this.status = SessionStatus.STORY_DONE;
+        }
+    }
+
+    public void markSongDoneAndFinish() {
+        if (this.status == SessionStatus.STORY_DONE) {
+            this.status = SessionStatus.SONG_DONE;
+            this.finishedAt = LocalDateTime.now(); // ✅ 여기서만 세션 종료
+        }
     }
 }
