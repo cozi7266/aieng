@@ -1,6 +1,5 @@
 package com.ssafy.aieng.domain.session.dto.response;
 
-
 import com.ssafy.aieng.domain.session.entity.Session;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,6 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 public class SessionResponse {
+
     private Integer sessionId;
     private String childName;
     private Integer themeId;
@@ -22,8 +22,9 @@ public class SessionResponse {
     private Integer totalWordCount;
     private Integer learnedWordCount;
     private Integer progressRate;
+    private boolean isFinished;
 
-    //  정적 팩토리 메서드
+    // 정적 팩토리 메서드
     public static SessionResponse of(Session session) {
         return SessionResponse.builder()
                 .sessionId(session.getId())
@@ -36,7 +37,7 @@ public class SessionResponse {
                 .totalWordCount(session.getTotalWordCount())
                 .learnedWordCount(session.getLearnedWordCount())
                 .progressRate(session.getProgressRate())
+                .isFinished(session.getFinishedAt() != null)
                 .build();
     }
 }
-

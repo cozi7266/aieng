@@ -8,21 +8,17 @@ import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
-import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
+import com.ssafy.aieng.domain.learning.dto.response.LearningSessionDetailResponse;
 import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
-import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
-import com.ssafy.aieng.domain.session.entity.SessionGroup;
-import com.ssafy.aieng.domain.session.repository.SessionGroupRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
-import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
+import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
-import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
 import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
@@ -31,19 +27,16 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import java.util.Comparator;
+
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +56,6 @@ public class LearningService {
     private final ChildRepository childRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
-    private final SessionGroupRepository sessionGroupRepository;
 
     private static final Duration REDIS_TTL = Duration.ofHours(24);
 
@@ -83,9 +75,9 @@ public class LearningService {
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
 
         GenerateContentRequest request = GenerateContentRequest.builder()
+                .userId(userId)
                 .sessionId(sessionId)
                 .theme(themeName)
-                .wordId(wordEntity.getId())
                 .wordEn(wordEn)
                 .build();
 
@@ -114,8 +106,9 @@ public class LearningService {
      * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
      */
     @Transactional
-    public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer sessionId, String word) {
-        String key = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, word);
+    public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer sessionId, String wordEn) {
+        // 1. Redis에서 FastAPI 결과 조회
+        String key = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, wordEn);
         String json = stringRedisTemplate.opsForValue().get(key);
         if (json == null) throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
 
@@ -127,23 +120,29 @@ public class LearningService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
+        // 2. 학습 엔티티 조회
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        Word wordEntity = wordRepository.findByWordEn(word)
+        Word wordEntity = wordRepository.findByWordEn(wordEn)
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
         Learning learning = learningRepository.findBySessionIdAndWordId(sessionId, wordEntity.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
-        SessionGroup sessionGroup = learning.getSessionGroup();
 
         try {
             if (!learning.isLearned()) {
+                // 3. 학습 완료 처리
                 learning.updateContent(result);
                 learningRepository.save(learning);
                 session.incrementLearnedCount();
-                sessionGroup.incrementLearnedCount();
+
+                // 4. 모든 단어 학습 시 세션 종료 처리
+                if (session.getLearnedWordCount().equals(session.getTotalWordCount())) {
+                    session.finish(); // ✅ finishedAt 설정
+                    log.info("🎉 세션 종료 처리됨: sessionId={}, finishedAt={}", session.getId(), session.getFinishedAt());
+                }
             }
         } catch (ObjectOptimisticLockingFailureException e) {
-            log.warn("🔄 중복 저장 방지: 이미 저장된 Learning 데이터 - sessionId={}, word={}", sessionId, word);
+            log.warn("🔄 중복 저장 방지: 이미 저장된 Learning 데이터 - sessionId={}, word={}", sessionId, wordEn);
         }
 
         log.info("✅ 학습 완료 후 진행률: sessionId={}, learned={}, rate={}",
@@ -151,6 +150,7 @@ public class LearningService {
 
         return result;
     }
+
 
 
 
@@ -207,6 +207,22 @@ public class LearningService {
                 learning.getTtsUrl()
         );
     }
+
+
+    @Transactional(readOnly = true)
+    public LearningSessionDetailResponse getLearningSessionDetail(Integer userId, Integer sessionId) {
+        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        if (!session.getChild().getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        List<Learning> learnings = learningRepository.findAllBySessionIdAndDeletedFalse(sessionId);
+        return LearningSessionDetailResponse.of(session, learnings);
+    }
+
+
 
 
 
