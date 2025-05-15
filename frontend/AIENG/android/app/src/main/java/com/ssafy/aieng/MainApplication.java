@@ -18,6 +18,15 @@ import expo.modules.ReactNativeHostWrapper;
 
 import java.util.List;
 
+// 키 해시 생성을 위해 추가된 import 문
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
+import android.util.Base64;
+import android.util.Log;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class MainApplication extends Application implements ReactApplication {
 
   private final ReactNativeHost mReactNativeHost =
@@ -61,6 +70,10 @@ public class MainApplication extends Application implements ReactApplication {
   public void onCreate() {
     super.onCreate();
     SoLoader.init(this, /* native exopackage */ false);
+    
+    // 키 해시 출력 메서드 호출 (추가된 부분)
+    getHashKey();
+    
     if (!BuildConfig.REACT_NATIVE_UNSTABLE_USE_RUNTIME_SCHEDULER_ALWAYS) {
       ReactFeatureFlags.unstable_useRuntimeSchedulerAlways = false;
     }
@@ -78,5 +91,31 @@ public class MainApplication extends Application implements ReactApplication {
   public void onConfigurationChanged(@NonNull Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     ApplicationLifecycleDispatcher.onConfigurationChanged(this, newConfig);
+  }
+  
+  // 키 해시 출력 메서드 (추가된 부분)
+  private void getHashKey() {
+    PackageInfo packageInfo = null;
+    try {
+        packageInfo = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_SIGNATURES);
+    } catch (PackageManager.NameNotFoundException e) {
+        e.printStackTrace();
+    }
+
+    if (packageInfo == null) {
+        Log.e("KeyHash", "KeyHash: null");
+        return;
+    }
+
+    for (Signature signature : packageInfo.signatures) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA");
+            md.update(signature.toByteArray());
+            String hashKey = Base64.encodeToString(md.digest(), Base64.DEFAULT);
+            Log.d("KeyHash", "키 해시 값: " + hashKey);
+        } catch (NoSuchAlgorithmException e) {
+            Log.e("KeyHash", "해시 생성 오류: " + e.toString());
+        }
+    }
   }
 }

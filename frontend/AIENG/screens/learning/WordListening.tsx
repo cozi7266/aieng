@@ -11,7 +11,12 @@ import {
   SafeAreaView,
   ScrollView,
 } from "react-native";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  RouteProp,
+  CommonActions,
+} from "@react-navigation/native";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { Audio } from "expo-av";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -223,7 +228,8 @@ const WordListeningScreen: React.FC = () => {
       // 다음 학습 단계로 이동 시에는 경고 표시 안 함
       if (
         e.data.action.type === "NAVIGATE" &&
-        e.data.action.payload?.name === "WordPractice"
+        (e.data.action.payload?.name === "WordSentence" ||
+          e.data.action.payload?.name === "WordSelect")
       ) {
         return;
       }
@@ -240,7 +246,7 @@ const WordListeningScreen: React.FC = () => {
     });
 
     return unsubscribe;
-  }, [navigation, themeId, themeName]);
+  }, [navigation]);
 
   // 오디오 재생/정지 처리
   const handlePlayAudio = async () => {
@@ -303,10 +309,15 @@ const WordListeningScreen: React.FC = () => {
             onPress={() =>
               NavigationWarningAlert.show({
                 onConfirm: () =>
-                  navigation.navigate("WordSelect", {
-                    themeId: themeId,
-                    theme: themeName,
-                  }),
+                  navigation.dispatch(
+                    CommonActions.navigate({
+                      name: "WordSelect",
+                      params: {
+                        themeId: themeId,
+                        theme: themeName,
+                      },
+                    })
+                  ),
               })
             }
           />
