@@ -1,13 +1,15 @@
 from pydantic import BaseModel
 
 class WordRequest(BaseModel):
-    childId: int
+    userId: int
     sessionId: int
-    wordId: int
-    word: str
+    wordEn: str
+    theme: str
 
 class WordResponse(BaseModel):
-    word: str
+    wordEn: str
     sentence: str
+    translation: str
+    imagePrompt: str
     imageUrl: str
     audioUrl: str
