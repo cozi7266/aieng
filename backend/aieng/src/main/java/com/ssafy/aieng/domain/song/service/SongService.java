@@ -14,6 +14,10 @@ import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.domain.book.entity.Storybook;
 import com.ssafy.aieng.domain.book.repository.StorybookRepository;
+import com.ssafy.aieng.domain.child.entity.Child;
+import com.ssafy.aieng.domain.child.repository.ChildRepository;
+import com.ssafy.aieng.domain.session.entity.Session;
+import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;
@@ -44,6 +49,8 @@ public class SongService {
     private final SongRepository songRepository;
     private final VoiceRepository voiceRepository;
     private final MoodRepository moodRepository;
+    private final ChildRepository childRepository;
+    private final SessionRepository sessionRepository;
     @Autowired
     private final StorybookRepository storybookRepository;
 
@@ -57,14 +64,27 @@ public class SongService {
             Mood mood = moodRepository.findById(requestDto.getMoodId())
                     .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
-            // 2. FastAPI 서버로 요청 전송
+            // 현재 진행 중인 세션 조회 (Child와 User 정보도 함께 조회)
+            Session session = sessionRepository.findTopByChildIdOrderByCreatedAtDesc(voice.getChildId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+            Child child = session.getChild();  // Session에서 Child 정보를 직접 가져옴
+
+            // 2. FastAPI 요청 형식으로 변환
+            var fastApiRequest = new HashMap<String, String>();
+            fastApiRequest.put("userId", child.getUser().getId().toString());
+            fastApiRequest.put("sessionId", session.getId().toString());
+            fastApiRequest.put("moodName", mood.getName());
+            fastApiRequest.put("voiceName", voice.getName());
+
+            // 3. FastAPI 서버로 요청 전송
             URL url = new URL(FASTAPI_URL + "/songs");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
 
-            String jsonInputString = objectMapper.writeValueAsString(requestDto);
+            String jsonInputString = objectMapper.writeValueAsString(fastApiRequest);
             try (OutputStream os = conn.getOutputStream()) {
                 byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
                 os.write(input, 0, input.length);
@@ -95,7 +115,7 @@ public class SongService {
             String lyric = responseJson.get("lyric").asText();
             String description = responseJson.get("description").asText();
 
-            // 3. 노래 정보 저장
+            // 4. 노래 정보 저장
             Song song = Song.builder()
                     .storybookId(requestDto.getStorybookId())
                     .voice(voice)
@@ -103,11 +123,15 @@ public class SongService {
                     .title(title)
                     .lyric(lyric)
                     .description(description)
+                    .songUrl(songUrl)
                     .build();
             
             songRepository.save(song);
 
-            // 4. 응답 생성
+            // 세션 상태 업데이트
+            session.markSongDoneAndFinish();
+
+            // 5. 응답 생성
             return SongGenerateResponseDto.builder()
                     .songUrl(songUrl)
                     .message("Song generated successfully")
