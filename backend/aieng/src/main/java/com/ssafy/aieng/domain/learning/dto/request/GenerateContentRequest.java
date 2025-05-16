@@ -10,6 +10,6 @@ import lombok.*;
 public class GenerateContentRequest {
     private Integer userId;
     private Integer sessionId;
-    private String theme;
+    private String theme;  // themeKo 인데 일부러 수정 안함
     private String wordEn;
 }
