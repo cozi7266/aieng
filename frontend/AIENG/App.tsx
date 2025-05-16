@@ -152,17 +152,17 @@ export default function App() {
               ) : (
                 // 인증된 사용자를 위한 스택
                 <>
-                  <Stack.Screen name="Home">
+                  <Stack.Screen name="ProfileSelect">
                     {(props) => (
-                      <HomeScreen
+                      <ProfileSelectScreen
                         {...props}
                         setIsAuthenticated={setIsAuthenticated}
                       />
                     )}
                   </Stack.Screen>
-                  <Stack.Screen name="ProfileSelect">
+                  <Stack.Screen name="Home">
                     {(props) => (
-                      <ProfileSelectScreen
+                      <HomeScreen
                         {...props}
                         setIsAuthenticated={setIsAuthenticated}
                       />
