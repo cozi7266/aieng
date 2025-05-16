@@ -128,10 +128,9 @@ public class SessionService {
         }
 
         // 9. 응답용 변환
-        List<WordResponse> wordResponses = selectedWords.stream()
-                .map(WordResponse::of)
+        List<WordResponse> wordResponses = learningBatch.stream()
+                .map(learning -> WordResponse.of(learning.getWord(), learning))
                 .toList();
-
         return new CreateSessionResponse(session.getId(), true, wordResponses);
     }
 
