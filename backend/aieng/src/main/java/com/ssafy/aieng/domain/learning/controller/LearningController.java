@@ -1,15 +1,13 @@
 package com.ssafy.aieng.domain.learning.controller;
 
-import com.ssafy.aieng.domain.child.service.ChildService;
+
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.learning.dto.response.LearningSessionDetailResponse;
 import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
 import com.ssafy.aieng.domain.learning.service.LearningService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
-import com.ssafy.aieng.global.common.util.AuthenticationUtil;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -42,7 +40,7 @@ public class LearningController {
             @PathVariable Integer sessionId,
             @PathVariable String wordEn
     ) {
-        learningService.sendFastApiRequest(user.getId(), sessionId, wordEn);
+        learningService.sendFastApiRequest(user.getId(), childId, sessionId, wordEn);
         return ApiResponse.success(null);
     }
 
@@ -56,7 +54,7 @@ public class LearningController {
             @PathVariable Integer sessionId,
             @PathVariable String wordEn
     ) {
-        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), sessionId, wordEn);
+        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), childId, sessionId, wordEn);
         return ApiResponse.success(result);
     }
 

@@ -13,17 +13,21 @@ public class WordResponse {
     private String wordKo;
     private String wordImgUrl;
     private String wordTtsUrl;
+    private Boolean isLearned;
 
-    public static WordResponse of(Word word) {
+    // ✅ 1. Learning 객체 기반
+    public static WordResponse of(Word word, Learning learning) {
         return new WordResponse(
                 word.getId(),
                 word.getWordEn(),
                 word.getWordKo(),
                 word.getImgUrl(),
-                word.getTtsUrl()
+                word.getTtsUrl(),
+                learning.isLearned()
         );
     }
 
+    // ✅ 2. Learning 단독 객체 기반
     public static WordResponse of(Learning learning) {
         Word word = learning.getWord();
         return new WordResponse(
@@ -31,7 +35,25 @@ public class WordResponse {
                 word.getWordEn(),
                 word.getWordKo(),
                 word.getImgUrl(),
-                word.getTtsUrl()
+                word.getTtsUrl(),
+                learning.isLearned()
         );
+    }
+
+    // ✅ 3. Word만 있고, 학습 여부를 따로 지정하고 싶은 경우
+    public static WordResponse of(Word word, boolean isLearned) {
+        return new WordResponse(
+                word.getId(),
+                word.getWordEn(),
+                word.getWordKo(),
+                word.getImgUrl(),
+                word.getTtsUrl(),
+                isLearned
+        );
+    }
+
+    // ✅ 4. Word만 있을 경우 기본값으로 학습 안됨(false)
+    public static WordResponse of(Word word) {
+        return of(word, false);  // 기본은 false 처리
     }
 }
