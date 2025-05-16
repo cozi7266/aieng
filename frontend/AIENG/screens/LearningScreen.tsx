@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     padding: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxl,
+    paddingBottom: 0,
   },
   subtitle: {
     ...theme.typography.body,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: theme.spacing.m,
-    paddingBottom: theme.spacing.l,
+    paddingBottom: 0,
     flexGrow: 1,
   },
   columnWrapper: {

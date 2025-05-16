@@ -148,9 +148,11 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ setIsAuthenticated }) => {
             message: "아이 정보가 성공적으로 등록되었습니다!",
             confirmText: "확인",
             onConfirm: () => {
-              // 인증 상태 변경하여 Home 화면으로 자동 이동
-              setIsAuthenticated(true);
-              navigation.navigate("Home");
+              // ProfileSelect 화면으로 이동
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "ProfileSelect" }],
+              });
             },
             onCancel: () => {},
           });
@@ -392,7 +394,7 @@ const styles = StyleSheet.create({
     width: "80%",
     minWidth: 550,
     maxWidth: 900,
-    height: "75%",
+    height: "83%",
     alignItems: "center",
     backgroundColor: "white",
     paddingVertical: theme.spacing.l,
@@ -407,7 +409,7 @@ const styles = StyleSheet.create({
     width: "70%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.s,
+    marginBottom: theme.spacing.xs,
   },
   logoImage: {
     width: 250,
@@ -417,7 +419,7 @@ const styles = StyleSheet.create({
     ...theme.typography.title,
     color: theme.colors.primary,
     fontSize: 28,
-    marginBottom: theme.spacing.m,
+    marginBottom: theme.spacing.s,
     textAlign: "center",
   },
   formContainer: {
@@ -426,7 +428,7 @@ const styles = StyleSheet.create({
   },
   formContentContainer: {
     paddingHorizontal: theme.spacing.m,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: 0,
     alignItems: "center",
   },
   inputContainer: {

@@ -93,14 +93,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
         // 액세스 토큰 저장
         await AsyncStorage.setItem("accessToken", data.accessToken);
 
-        // isNew 값에 따라 다른 처리
+        // 인증 상태 업데이트 (모든 경우에 true로 설정)
+        setIsAuthenticated(true);
+
+        // isNew 값에 따라 다른 화면으로 이동
         if (data.user.isNew) {
-          // 회원가입이 필요한 경우
+          // 신규 회원인 경우 Signup 화면으로 이동
+          console.log("신규 회원 - Signup 화면으로 이동");
           navigation.navigate("Signup");
         } else {
-          // 이미 가입된 사용자 - 인증 상태 직접 업데이트
-          console.log("기존 사용자 로그인 - 인증 상태 업데이트");
-          setIsAuthenticated(true); // 여기가 핵심! 직접 상태 업데이트
+          // 기존 회원인 경우 ProfileSelect 화면으로 이동
+          console.log("기존 회원 - ProfileSelect 화면으로 이동");
+          navigation.navigate("ProfileSelect");
         }
       } else {
         Alert.alert("로그인 오류", error || "로그인 중 오류가 발생했습니다.");
@@ -139,7 +143,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
           <KakaoLoginButton onPress={handleKakaoLogin} />
 
           {/* 임시 홈화면 이동 버튼 추가 */}
-          <View style={styles.tempButtonSpacer} />
+          {/* <View style={styles.tempButtonSpacer} />
           <Button
             title="메인 페이지로"
             onPress={handleTempHomeNavigation}
@@ -147,7 +151,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
             style={styles.tempHomeButton}
             textStyle={{ fontSize: 18 }}
             height={55} // 원하는 높이 직접 지정
-          />
+          /> */}
         </View>
       </Card>
     </View>

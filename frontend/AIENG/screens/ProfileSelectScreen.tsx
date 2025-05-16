@@ -12,9 +12,10 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { FontAwesome5 } from "@expo/vector-icons";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { RootStackParamList } from "../App";
 import { theme } from "../Theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -70,6 +71,28 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
   // 애니메이션 값
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  // 화면 크기 변화 감지
+  useEffect(() => {
+    // 가로 모드 고정
+    lockOrientation();
+
+    // 화면 크기 변경 시 dimensions 업데이트
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions(window);
+    });
+
+    return () => {
+      subscription.remove();
+      ScreenOrientation.unlockAsync();
+    };
+  }, []);
+
+  const lockOrientation = async () => {
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.LANDSCAPE
+    );
+  };
 
   // API에서 아이 프로필 데이터 가져오기
   const fetchChildProfiles = async () => {
@@ -158,14 +181,14 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
 
     // 프로필 데이터 로딩
     fetchChildProfiles();
-
-    // 화면 크기 변경 감지
-    const subscription = Dimensions.addEventListener("change", ({ window }) => {
-      setDimensions(window);
-    });
-
-    return () => subscription.remove();
   }, []);
+
+  // 화면이 포커스될 때마다 프로필 목록 새로고침
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchChildProfiles();
+    }, [])
+  );
 
   // 프로필 선택 핸들러
   const handleProfileSelect = async (profileId: string) => {
@@ -321,6 +344,9 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
             "회원 탈퇴 실패",
             "회원 탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요."
           );
+          // 오류 발생 시에도 로그인 화면으로 이동
+          await AsyncStorage.removeItem("accessToken");
+          setIsAuthenticated(false);
         }
       },
     });
@@ -390,16 +416,16 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
                         delayLongPress={500}
                       >
                         <View style={styles.nameContainer}>
-                          <Text style={styles.profileName}>{profile.name}</Text>
                           {profile.isActive && (
                             <View style={styles.activeIndicator}>
                               <FontAwesome5
                                 name="check"
-                                size={18}
+                                size={28}
                                 color="white"
                               />
                             </View>
                           )}
+                          <Text style={styles.profileName}>{profile.name}</Text>
                         </View>
                       </TouchableOpacity>
                     </Card>
@@ -517,7 +543,7 @@ const styles = StyleSheet.create({
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    marginBottom: theme.spacing.s,
+    marginBottom: 0,
   },
   subtitle: {
     ...theme.typography.subTitle,
@@ -558,21 +584,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: theme.spacing.l,
   },
   activeIndicator: {
-    marginLeft: theme.spacing.s,
     backgroundColor: theme.colors.primary,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "white",
   },
   profileName: {
-    ...theme.typography.body,
-    fontSize: 26,
+    ...theme.typography.title,
+    fontSize: 36,
     color: theme.colors.text,
     textAlign: "center",
   },
