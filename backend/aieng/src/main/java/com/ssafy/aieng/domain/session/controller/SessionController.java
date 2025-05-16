@@ -53,13 +53,14 @@ public class SessionController {
     }
 
     // 기존 세션에서 단어만 다시 랜덤하게 섞기
-    @PostMapping("/themes/{themeId}/reshuffle")
+    @PostMapping("/{sessionId}/themes/{themeId}/reshuffle")
     public ResponseEntity<ApiResponse<CreateSessionResponse>> reshuffleSessionWords(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId,
             @PathVariable Integer themeId
     ) {
-        CreateSessionResponse response = sessionService.reshuffleWords(user.getId(), childId, themeId);
+        CreateSessionResponse response = sessionService.reshuffleWords(user.getId(), childId, themeId, sessionId);
         return ApiResponse.success(response);
     }
 
