@@ -16,7 +16,6 @@ import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
-import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
@@ -96,7 +95,7 @@ public class LearningService {
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        String themeName = session.getTheme().getThemeName();
+        String themeKo = session.getTheme().getThemeKo();
 
         Word wordEntity = wordRepository.findByWordEn(wordEn)
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
@@ -104,7 +103,7 @@ public class LearningService {
         GenerateContentRequest request = GenerateContentRequest.builder()
                 .userId(userId)
                 .sessionId(sessionId)
-                .theme(themeName)
+                .theme(themeKo)
                 .wordEn(wordEn)
                 .build();
 
@@ -135,11 +134,26 @@ public class LearningService {
      * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
      */
     @Transactional
-    public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer childId, Integer sessionId, String wordEn) {
+    public GeneratedContentResult sendRequestAndSave(Integer userId, Integer childId, Integer sessionId, String wordEn) {
         validateChildOwnership(userId, childId);
 
+        // FastAPI 요청 보내기
+        sendFastApiRequest(userId, childId, sessionId, wordEn);
+
+        // Redis polling
         String key = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, wordEn);
-        String json = stringRedisTemplate.opsForValue().get(key);
+        String json = null;
+
+        int retry = 0;
+        while (retry < 10) {
+            json = stringRedisTemplate.opsForValue().get(key);
+            if (json != null) break;
+            try {
+                Thread.sleep(500); // 0.5초 대기 후 재시도
+            } catch (InterruptedException ignored) {}
+            retry++;
+        }
+
         if (json == null) throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
 
         GeneratedContentResult result;
@@ -150,6 +164,7 @@ public class LearningService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
+        // DB 저장 처리
         Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         Word wordEntity = wordRepository.findByWordEn(wordEn)

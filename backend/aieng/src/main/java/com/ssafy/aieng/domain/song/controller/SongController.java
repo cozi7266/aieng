@@ -10,9 +10,11 @@ import com.ssafy.aieng.domain.song.service.SongService;
 import com.ssafy.aieng.domain.voice.dto.VoiceResponseDto;
 import com.ssafy.aieng.domain.voice.service.VoiceService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
+import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,14 +28,16 @@ public class SongController {
     private final MoodService moodService;
     private final VoiceService voiceService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> generateSong(@RequestBody SongGenerateRequestDto requestDto) {
-        try {
-            SongGenerateResponseDto response = songService.generateSong(requestDto);
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            return ApiResponse.fail(e.getMessage());
-        }
+    // 동요 생성
+    @PostMapping("/sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> generateSong(
+            @RequestBody SongGenerateRequestDto requestDto,
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId
+    ) {
+        SongGenerateResponseDto response = songService.generateSong(user.getId(), childId, sessionId, requestDto);
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/voice")

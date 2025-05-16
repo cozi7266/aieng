@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.song.dto.response;
 
+import com.ssafy.aieng.domain.song.entity.Song;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,10 +18,22 @@ public class SongGenerateResponseDto {
     private Integer voiceId;
     private Integer moodId;
     private String songUrl;
-    private String message;
-    private String status;
     private String title;
     private String lyric;
     private String description;
     private LocalDateTime createdAt;
-} 
+
+    public static SongGenerateResponseDto of(Song song) {
+        return SongGenerateResponseDto.builder()
+                .id(song.getId())
+                .storybookId(song.getStorybookId())
+                .voiceId(song.getVoice().getId())
+                .moodId(song.getMood().getId())
+                .songUrl(song.getSongUrl())
+                .title(song.getTitle())
+                .lyric(song.getLyric())
+                .description(song.getDescription())
+                .createdAt(song.getCreatedAt())
+                .build();
+    }
+}
