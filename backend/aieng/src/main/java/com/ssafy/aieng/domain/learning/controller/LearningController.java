@@ -20,9 +20,6 @@ import org.springframework.web.bind.annotation.*;
 public class LearningController {
 
     private final LearningService learningService;
-    private final ChildService childService;
-    private final AuthenticationUtil authenticationUtil;
-    private final RedisTemplate<String, Object> redisTemplate;
 
     // 특정 세션에 포함된 학습 단어 전체 조회 (6개 고정)
     @GetMapping("/sessions/{sessionId}/words")
