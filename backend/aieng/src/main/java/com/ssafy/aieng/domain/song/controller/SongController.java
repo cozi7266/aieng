@@ -26,6 +26,16 @@ public class SongController {
     private final MoodService moodService;
     private final VoiceService voiceService;
 
+    @PostMapping
+    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> generateSong(@RequestBody SongGenerateRequestDto requestDto) {
+        try {
+            SongGenerateResponseDto response = songService.generateSong(requestDto);
+            return ApiResponse.success(response);
+        } catch (Exception e) {
+            return ApiResponse.fail(e.getMessage());
+        }
+    }
+
     @GetMapping("/voice")
     public ResponseEntity<ApiResponse<List<VoiceResponseDto>>> getDefaultVoices() {
         List<VoiceResponseDto> response = voiceService.getDefaultVoices();
@@ -54,15 +64,6 @@ public class SongController {
         return ApiResponse.success(response);
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> generateSong(@RequestBody SongGenerateRequestDto requestDto) {
-        try {
-            SongGenerateResponseDto response = songService.generateSong(requestDto);
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            return ApiResponse.fail(e.getMessage());
-        }
-    }
 
     @PutMapping("/{songId}/delete")
     public ResponseEntity<ApiResponse<Void>> deleteSong(@PathVariable Integer songId) {

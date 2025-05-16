@@ -16,7 +16,6 @@ public class WordController {
 
     private final WordService wordService;
 
-
     // 단어 상세 조회
     @GetMapping("/{wordId}")
     public ResponseEntity<ApiResponse<WordResponse>> findWordById(

@@ -52,6 +52,18 @@ public class SessionController {
         return ApiResponse.success(response);
     }
 
+    // 기존 세션에서 단어만 다시 랜덤하게 섞기
+    @PostMapping("/themes/{themeId}/reshuffle")
+    public ResponseEntity<ApiResponse<CreateSessionResponse>> reshuffleSessionWords(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer themeId
+    ) {
+        CreateSessionResponse response = sessionService.reshuffleWords(user.getId(), childId, themeId);
+        return ApiResponse.success(response);
+    }
+
+
 
     // 자녀의 특정 세션 삭제 (Soft Delete)
     @PutMapping("/{sessionId}/deactivate")
