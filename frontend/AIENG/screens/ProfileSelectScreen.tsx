@@ -50,6 +50,15 @@ type ProfileSelectScreenProps = {
   setIsAuthenticated: (value: boolean) => void;
 };
 
+// axios 인터셉터 설정
+axios.interceptors.request.use(async (config) => {
+  const childId = await AsyncStorage.getItem("selectedChildId");
+  if (childId) {
+    config.headers["X-Child-Id"] = childId;
+  }
+  return config;
+});
+
 const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
   setIsAuthenticated,
 }) => {
@@ -66,6 +75,7 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
   const fetchChildProfiles = async () => {
     try {
       const token = await AsyncStorage.getItem("accessToken");
+      const savedChildId = await AsyncStorage.getItem("selectedChildId");
 
       if (!token) {
         console.error("토큰이 없습니다");
@@ -90,14 +100,29 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
       if (response.data.success) {
         // 프로필 데이터 변환
         const profilesWithActive = response.data.data.map(
-          (child: ChildProfile, index: number) => ({
+          (child: ChildProfile) => ({
             id: child.childId.toString(),
             name: child.childName,
             childGender: child.childGender,
             childBirthday: child.childBirthday,
-            isActive: index === 0, // 첫 번째 프로필을 기본적으로 활성화 상태로 설정
+            isActive: child.childId.toString() === savedChildId, // 저장된 자녀 ID와 일치하는 프로필을 활성화
           })
         );
+
+        // 저장된 자녀 ID가 없거나 일치하는 프로필이 없는 경우 첫 번째 프로필을 활성화
+        if (
+          !savedChildId ||
+          !profilesWithActive.some((profile: Profile) => profile.isActive)
+        ) {
+          if (profilesWithActive.length > 0) {
+            profilesWithActive[0].isActive = true;
+            await AsyncStorage.setItem(
+              "selectedChildId",
+              profilesWithActive[0].id
+            );
+          }
+        }
+
         setProfiles(profilesWithActive);
       } else {
         Alert.alert(
@@ -143,29 +168,40 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
   }, []);
 
   // 프로필 선택 핸들러
-  const handleProfileSelect = (profileId: string) => {
-    // 선택된 프로필 업데이트
-    const updatedProfiles = profiles.map((profile) => ({
-      ...profile,
-      isActive: profile.id === profileId,
-    }));
-    setProfiles(updatedProfiles);
+  const handleProfileSelect = async (profileId: string) => {
+    try {
+      // 선택된 프로필 업데이트
+      const updatedProfiles = profiles.map((profile) => ({
+        ...profile,
+        isActive: profile.id === profileId,
+      }));
+      setProfiles(updatedProfiles);
 
-    // 선택 애니메이션 후 홈으로 이동
-    Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.05,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      navigation.navigate("Home");
-    });
+      // 선택된 자녀 ID를 AsyncStorage에 저장
+      await AsyncStorage.setItem("selectedChildId", profileId);
+
+      // 선택 애니메이션 후 홈으로 이동
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.05,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        navigation.navigate("Home");
+      });
+    } catch (error) {
+      console.error("프로필 선택 처리 중 오류:", error);
+      Alert.alert(
+        "오류",
+        "프로필 선택 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+      );
+    }
   };
 
   // 프로필 추가 핸들러
