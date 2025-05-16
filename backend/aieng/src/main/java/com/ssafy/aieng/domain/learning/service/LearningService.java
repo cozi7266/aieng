@@ -96,7 +96,7 @@ public class LearningService {
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        String themeName = session.getTheme().getThemeName();
+        String themeKo = session.getTheme().getThemeKo();
 
         Word wordEntity = wordRepository.findByWordEn(wordEn)
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
@@ -104,7 +104,7 @@ public class LearningService {
         GenerateContentRequest request = GenerateContentRequest.builder()
                 .userId(userId)
                 .sessionId(sessionId)
-                .theme(themeName)
+                .theme(themeKo)
                 .wordEn(wordEn)
                 .build();
 

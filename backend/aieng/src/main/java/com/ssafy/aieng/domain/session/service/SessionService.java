@@ -76,7 +76,7 @@ public class SessionService {
                     .sorted(Comparator.comparing(Learning::getPageOrder))
                     .map(WordResponse::of)
                     .toList();
-            return new CreateSessionResponse(existing.getId(), false, words);
+            return new CreateSessionResponse(existing.getId(), false, theme.getThemeEn(), theme.getThemeKo(), words);
         }
 
         // 4. 세션 생성
@@ -85,8 +85,11 @@ public class SessionService {
 
         // 5. 랜덤 단어 6개 선택
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
+        if (wordList.size() < 6) {
+            throw new CustomException(ErrorCode.NOT_ENOUGH_WORDS);
+        }
         Collections.shuffle(wordList);
-        List<Word> selectedWords = wordList.stream().limit(5).toList();
+        List<Word> selectedWords = wordList.stream().limit(6).toList();
 
         // 6. Learning 엔티티 생성 및 저장
         List<Learning> learningBatch = new ArrayList<>();
@@ -103,19 +106,9 @@ public class SessionService {
         learningRepository.saveAll(learningBatch);
         session.setTotalWordCount(learningBatch.size());
 
-        // 7. Redis 저장 (순서)
-        String orderKey = String.format("session:%d:wordOrder", session.getId());
-        List<String> wordIds = learningBatch.stream()
-                .map(l -> l.getWord().getId().toString())
-                .toList();
-        stringRedisTemplate.opsForList().rightPushAll(orderKey, wordIds);
-        stringRedisTemplate.expire(orderKey, Duration.ofDays(1));
-
-        // 8. Redis 저장 (각 단어 정보)
+        // 7. Redis 저장 (단어별 정보만)
         for (Learning learning : learningBatch) {
             Word word = learning.getWord();
-
-            // Redis Key: Learning:user:{userId}:session:{sessionId}:word:{wordEn}
             String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, session.getId(), word.getWordEn());
 
             Map<String, String> wordInfo = new HashMap<>();
@@ -127,12 +120,14 @@ public class SessionService {
             stringRedisTemplate.expire(infoKey, Duration.ofDays(1));
         }
 
-        // 9. 응답용 변환
+        // 8. 응답용 변환
         List<WordResponse> wordResponses = learningBatch.stream()
                 .map(learning -> WordResponse.of(learning.getWord(), learning))
                 .toList();
-        return new CreateSessionResponse(session.getId(), true, wordResponses);
+
+        return new CreateSessionResponse(session.getId(), true, theme.getThemeEn(), theme.getThemeKo(), wordResponses);
     }
+
 
     // 기존 세션에서 단어만 다시 랜덤하게 섞기
     @Transactional
@@ -156,6 +151,9 @@ public class SessionService {
 
         // 3. 새 단어 6개 선택
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
+        if (wordList.size() < 6) {
+            throw new CustomException(ErrorCode.NOT_ENOUGH_WORDS);
+        }
         Collections.shuffle(wordList);
         List<Word> selectedWords = wordList.stream().limit(6).toList();
 
@@ -192,8 +190,16 @@ public class SessionService {
                 .map(l -> WordResponse.of(l.getWord(), l))
                 .toList();
 
-        return new CreateSessionResponse(sessionId, false, wordResponses);
+        return new CreateSessionResponse(
+                sessionId,
+                false,
+                session.getTheme().getThemeEn(),
+                session.getTheme().getThemeKo(),
+                wordResponses
+        );
     }
+
+
 
 
 
