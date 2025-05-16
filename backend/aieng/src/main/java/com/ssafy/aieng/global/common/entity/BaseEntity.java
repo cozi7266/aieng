@@ -66,6 +66,6 @@ public abstract class BaseEntity {
         }
         this.deleted = false;
         this.deletedAt = null;
+        this.createdAt = LocalDateTime.now();
     }
-
 }
