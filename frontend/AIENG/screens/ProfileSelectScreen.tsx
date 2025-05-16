@@ -181,17 +181,15 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
     });
   };
 
-  // 회원 탈퇴 핸들러
-  const handleDeleteAccount = () => {
+  // 프로필 삭제 핸들러
+  const handleDeleteProfile = async (profileId: string) => {
     NavigationWarningAlert.show({
-      title: "회원 탈퇴하기",
-      message:
-        "정말로 회원 탈퇴를 진행하시겠어요? 이 작업은 되돌릴 수 없습니다.",
-      confirmText: "탈퇴하기",
+      title: "프로필 삭제",
+      message: "이 프로필을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+      confirmText: "삭제하기",
       cancelText: "취소",
       onConfirm: async () => {
         try {
-          // JWT 토큰 가져오기
           const token = await AsyncStorage.getItem("accessToken");
 
           if (!token) {
@@ -203,30 +201,67 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
             return;
           }
 
-          console.log("회원 탈퇴 API 요청 시작");
+          const response = await axios.put(
+            `https://www.aieng.co.kr/api/child/${profileId}/delete`,
+            {},
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
 
-          // API 요청 헤더 설정
-          const headers = {
-            Authorization: `Bearer ${token}`,
-          };
+          if (response.status === 200) {
+            // 프로필 목록에서 삭제된 프로필 제거
+            setProfiles(profiles.filter((profile) => profile.id !== profileId));
+            Alert.alert("성공", "프로필이 삭제되었습니다.");
+          } else {
+            throw new Error("예상치 못한 응답 상태: " + response.status);
+          }
+        } catch (error) {
+          console.error("프로필 삭제 처리 중 오류:", error);
+          Alert.alert(
+            "프로필 삭제 실패",
+            "프로필 삭제 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+          );
+        }
+      },
+    });
+  };
 
-          // 회원 탈퇴 API 호출
+  // 회원 탈퇴 핸들러
+  const handleDeleteAccount = () => {
+    NavigationWarningAlert.show({
+      title: "회원 탈퇴하기",
+      message:
+        "정말로 회원 탈퇴를 진행하시겠어요? 이 작업은 되돌릴 수 없습니다.",
+      confirmText: "탈퇴하기",
+      cancelText: "취소",
+      onConfirm: async () => {
+        try {
+          const token = await AsyncStorage.getItem("accessToken");
+
+          if (!token) {
+            console.error("토큰이 없습니다");
+            Alert.alert(
+              "오류",
+              "로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요."
+            );
+            return;
+          }
+
           const response = await axios.put(
             "https://www.aieng.co.kr/api/user/me",
             {},
-            { headers }
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
           );
 
-          console.log("API 응답 상태:", response.status);
-
-          // 성공적으로 처리됐는지 확인 (204 상태 코드)
           if (response.status === 204) {
-            console.log("회원 탈퇴 성공");
-
-            // 토큰 삭제
             await AsyncStorage.removeItem("accessToken");
-
-            // 퇴장 애니메이션
             Animated.parallel([
               Animated.timing(fadeAnim, {
                 toValue: 0,
@@ -239,7 +274,6 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
                 useNativeDriver: true,
               }),
             ]).start(() => {
-              // 인증 상태 업데이트하여 로그인 화면으로 이동
               setIsAuthenticated(false);
             });
           } else {
@@ -247,8 +281,6 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
           }
         } catch (error) {
           console.error("회원 탈퇴 처리 중 오류:", error);
-
-          // 사용자에게 오류 알림
           Alert.alert(
             "회원 탈퇴 실패",
             "회원 탈퇴 처리 중 오류가 발생했습니다. 다시 시도해주세요."
@@ -310,17 +342,21 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
                   profiles.map((profile) => (
                     <Card
                       key={profile.id}
-                      style={[
-                        styles.profileCard,
-                        profile.isActive && styles.activeCard,
-                        { width: itemWidth, height: itemWidth * 0.5 },
-                      ]}
+                      style={
+                        [
+                          styles.profileCard,
+                          profile.isActive && styles.activeCard,
+                          { width: itemWidth, height: itemWidth * 0.5 },
+                        ] as any
+                      }
                       variant="default"
                     >
                       <TouchableOpacity
                         style={styles.profileCardContent}
                         onPress={() => handleProfileSelect(profile.id)}
+                        onLongPress={() => handleDeleteProfile(profile.id)}
                         activeOpacity={0.8}
+                        delayLongPress={500}
                       >
                         <View style={styles.nameContainer}>
                           <Text style={styles.profileName}>{profile.name}</Text>
@@ -346,11 +382,13 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
                 {/* 프로필 추가 버튼 */}
                 {profiles.length < 8 && (
                   <Card
-                    style={[
-                      styles.profileCard,
-                      styles.addProfileCard,
-                      { width: itemWidth, height: itemWidth * 0.5 },
-                    ]}
+                    style={
+                      [
+                        styles.profileCard,
+                        styles.addProfileCard,
+                        { width: itemWidth, height: itemWidth * 0.5 },
+                      ] as any
+                    }
                     variant="outlined"
                   >
                     <TouchableOpacity
