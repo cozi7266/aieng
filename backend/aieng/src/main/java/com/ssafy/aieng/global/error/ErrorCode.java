@@ -61,6 +61,7 @@ public enum  ErrorCode {
     WORD_NOT_FOUND(404, "W001", "단어를 찾을 수 없습니다."),
     WORD_ALREADY_EXISTS(409, "W002", "이미 존재하는 단어입니다."),
     WORD_IMAGE_NOT_FOUND(404, "W003", "단어의 이미지가 존재하지 않습니다."),
+    NOT_ENOUGH_WORDS(400, "W004", "해당 테마에는 단어가 최소 6개 이상 필요합니다."),
 
     // Book (Storybook)
     BOOK_NOT_FOUND(404, "B001", "그림책을 찾을 수 없습니다."),

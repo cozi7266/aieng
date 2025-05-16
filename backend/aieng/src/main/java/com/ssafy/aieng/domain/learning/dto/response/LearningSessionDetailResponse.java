@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 public class LearningSessionDetailResponse {
     private Integer sessionId;
+    private String themeEn;
+    private String themeKo;
     private List<WordResponse> words;
 
     public static LearningSessionDetailResponse of(Session session, List<Learning> learnings) {
@@ -23,6 +25,8 @@ public class LearningSessionDetailResponse {
 
         return new LearningSessionDetailResponse(
                 session.getId(),
+                session.getTheme().getThemeEn(),
+                session.getTheme().getThemeKo(),
                 wordResponses
         );
     }

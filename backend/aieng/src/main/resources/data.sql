@@ -7,13 +7,14 @@ VALUES (1, NOW(), NOW(), false, '엄마곰', 'kakao-123', 'KAKAO');
 INSERT INTO child (id, created_at, updated_at, deleted, name, birthdate, gender, user_id)
 VALUES (1, NOW(), NOW(), false, '하이', '2020-05-01', 'F', 1),
         (2, NOW(), NOW(), false, '하이2', '2019-03-15', 'M', 1),
-        (3, NOW(), NOW(), false, '하이3', '2021-07-20', 'F', 1);
 
+        (3, NOW(), NOW(), false, '하이3', '2021-07-20', 'F', 1);
 -- 주제 (테마)
-INSERT INTO theme (id, created_at, updated_at, deleted, theme_name, image_url, total_words)
-VALUES (1, NOW(), NOW(), false, '동물', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/animal.jpg', 3),
-       (2, NOW(), NOW(), false, '과일', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/fruit.jpg', 5),
-       (3, NOW(), NOW(), false, '색깔', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/color.jpg', 4);
+INSERT INTO theme (id, created_at, updated_at, deleted, theme_en, theme_ko, image_url, total_words)
+VALUES
+    (1, NOW(), NOW(), false, 'animal', '동물', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/animal.jpg', 6),
+    (2, NOW(), NOW(), false, 'fruit', '과일', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/fruit.jpg', 7),
+    (3, NOW(), NOW(), false, 'color', '색깔', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/color.jpg', 8);
 
 -- 단어
 INSERT INTO word (id, created_at, updated_at, deleted, theme_id, word_ko, word_en, img_url, tts_url)
