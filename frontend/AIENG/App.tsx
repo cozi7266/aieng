@@ -27,7 +27,8 @@ import WordSentenceScreen from "./screens/learning/WordSentence";
 import WordQuizScreen from "./screens/learning/WordQuiz";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
-import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
+import { AlertProvider as WarningAlertProvider } from "./components/navigation/NavigationWarningAlert";
+import { AlertProvider as NavigationAlertProvider } from "./components/navigation/NavigationAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoadingScreen from "./components/common/LoadingScreen";
 
@@ -133,80 +134,82 @@ export default function App() {
   return (
     <AudioProvider>
       <SafeAreaProvider>
-        <AlertProvider>
-          <NavigationContainer>
-            <StatusBar hidden />
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              {!isAuthenticated ? (
-                // 인증되지 않은 사용자를 위한 스택
-                <>
-                  <Stack.Screen name="Login">
-                    {(props) => (
-                      <LoginScreen
-                        {...props}
-                        setIsAuthenticated={setIsAuthenticated}
-                      />
-                    )}
-                  </Stack.Screen>
-                </>
-              ) : (
-                // 인증된 사용자를 위한 스택
-                <>
-                  <Stack.Screen name="ProfileSelect">
-                    {(props) => (
-                      <ProfileSelectScreen
-                        {...props}
-                        setIsAuthenticated={setIsAuthenticated}
-                      />
-                    )}
-                  </Stack.Screen>
-                  <Stack.Screen name="Home">
-                    {(props) => (
-                      <HomeScreen
-                        {...props}
-                        setIsAuthenticated={setIsAuthenticated}
-                      />
-                    )}
-                  </Stack.Screen>
-                  <Stack.Screen name="Signup">
-                    {(props) => (
-                      <SignupScreen
-                        {...props}
-                        setIsAuthenticated={setIsAuthenticated}
-                      />
-                    )}
-                  </Stack.Screen>
-                  <Stack.Screen
-                    name="LearningScreen"
-                    component={LearningScreen}
-                  />
-                  <Stack.Screen name="SongScreen" component={SongScreen} />
-                  <Stack.Screen
-                    name="SongSettingScreen"
-                    component={SongSettingScreen}
-                  />
-                  <Stack.Screen
-                    name="WordcardScreen"
-                    component={WordcardScreen}
-                  />
-                  <Stack.Screen
-                    name="WordSelect"
-                    component={WordSelectScreen}
-                  />
-                  <Stack.Screen
-                    name="WordListening"
-                    component={WordListeningScreen}
-                  />
-                  <Stack.Screen
-                    name="WordSentence"
-                    component={WordSentenceScreen}
-                  />
-                  <Stack.Screen name="WordQuiz" component={WordQuizScreen} />
-                </>
-              )}
-            </Stack.Navigator>
-          </NavigationContainer>
-        </AlertProvider>
+        <WarningAlertProvider>
+          <NavigationAlertProvider>
+            <NavigationContainer>
+              <StatusBar hidden />
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                {!isAuthenticated ? (
+                  // 인증되지 않은 사용자를 위한 스택
+                  <>
+                    <Stack.Screen name="Login">
+                      {(props) => (
+                        <LoginScreen
+                          {...props}
+                          setIsAuthenticated={setIsAuthenticated}
+                        />
+                      )}
+                    </Stack.Screen>
+                  </>
+                ) : (
+                  // 인증된 사용자를 위한 스택
+                  <>
+                    <Stack.Screen name="ProfileSelect">
+                      {(props) => (
+                        <ProfileSelectScreen
+                          {...props}
+                          setIsAuthenticated={setIsAuthenticated}
+                        />
+                      )}
+                    </Stack.Screen>
+                    <Stack.Screen name="Home">
+                      {(props) => (
+                        <HomeScreen
+                          {...props}
+                          setIsAuthenticated={setIsAuthenticated}
+                        />
+                      )}
+                    </Stack.Screen>
+                    <Stack.Screen name="Signup">
+                      {(props) => (
+                        <SignupScreen
+                          {...props}
+                          setIsAuthenticated={setIsAuthenticated}
+                        />
+                      )}
+                    </Stack.Screen>
+                    <Stack.Screen
+                      name="LearningScreen"
+                      component={LearningScreen}
+                    />
+                    <Stack.Screen name="SongScreen" component={SongScreen} />
+                    <Stack.Screen
+                      name="SongSettingScreen"
+                      component={SongSettingScreen}
+                    />
+                    <Stack.Screen
+                      name="WordcardScreen"
+                      component={WordcardScreen}
+                    />
+                    <Stack.Screen
+                      name="WordSelect"
+                      component={WordSelectScreen}
+                    />
+                    <Stack.Screen
+                      name="WordListening"
+                      component={WordListeningScreen}
+                    />
+                    <Stack.Screen
+                      name="WordSentence"
+                      component={WordSentenceScreen}
+                    />
+                    <Stack.Screen name="WordQuiz" component={WordQuizScreen} />
+                  </>
+                )}
+              </Stack.Navigator>
+            </NavigationContainer>
+          </NavigationAlertProvider>
+        </WarningAlertProvider>
       </SafeAreaProvider>
     </AudioProvider>
   );

@@ -22,6 +22,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import BackButton from "../components/navigation/BackButton";
 import Card from "../components/common/Card";
 import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
+import NavigationAlert from "../components/navigation/NavigationAlert";
 import axios from "axios";
 
 // API 응답의 아이 프로필 데이터 타입
@@ -273,7 +274,12 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
           if (response.status === 200) {
             // 프로필 목록에서 삭제된 프로필 제거
             setProfiles(profiles.filter((profile) => profile.id !== profileId));
-            Alert.alert("성공", "프로필이 삭제되었습니다.");
+            NavigationAlert.show({
+              title: "성공",
+              message: "프로필이 삭제되었습니다.",
+              confirmText: "확인",
+              onConfirm: () => {},
+            });
           } else {
             throw new Error("예상치 못한 응답 상태: " + response.status);
           }
