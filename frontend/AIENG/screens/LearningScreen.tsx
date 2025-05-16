@@ -10,7 +10,7 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { RootStackParamList } from "../App";
@@ -27,7 +27,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // API 응답 데이터 타입 정의
 interface ThemeData {
   themeId: number;
-  themeName: string;
+  themeKo: string;
+  themeEn: string;
   themeImgUrl: string;
   sessionId: number | null;
   startedAt: string | null;
@@ -87,6 +88,8 @@ const LearningScreen: React.FC = () => {
           headers: {
             Authorization: `Bearer ${token}`,
             "X-Child-Id": selectedChildId,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
           },
         }
       );
@@ -130,9 +133,11 @@ const LearningScreen: React.FC = () => {
   };
 
   // 컴포넌트 마운트 시 테마 데이터 로드
-  useEffect(() => {
-    fetchThemes();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchThemes();
+    }, [])
+  );
 
   // 프로필 모달 상태에 따른 애니메이션
   useEffect(() => {
@@ -194,14 +199,14 @@ const LearningScreen: React.FC = () => {
       // 완료된 테마는 퀴즈 이동 알림 표시
       NavigationWarningAlert.show({
         title: "퀴즈 도전",
-        message: `${item.themeName} 테마의 학습을 완료했어요! 퀴즈를 풀고 동요를 만들어 볼까요?`,
+        message: `${item.themeKo} (${item.themeEn}) 테마의 학습을 완료했어요! 퀴즈를 풀고 동요를 만들어 볼까요?`,
         confirmText: "퀴즈 풀기",
         cancelText: "취소",
         onConfirm: () => {
           navigation.navigate("WordQuiz", {
             wordId: item.themeId.toString(),
             themeId: item.themeId.toString(),
-            theme: item.themeName,
+            theme: `${item.themeKo} (${item.themeEn})`,
           });
         },
         onCancel: () => {
@@ -211,7 +216,7 @@ const LearningScreen: React.FC = () => {
     } else {
       // 미완료 테마는 단어 선택 화면으로 이동
       navigation.navigate("WordSelect", {
-        theme: item.themeName,
+        theme: `${item.themeKo} (${item.themeEn})`,
         themeId: item.themeId.toString(),
       });
     }
@@ -221,7 +226,7 @@ const LearningScreen: React.FC = () => {
   const renderCard = ({ item }: { item: ThemeData }) => {
     return (
       <LearningThemeCard
-        title={item.themeName}
+        title={`${item.themeKo} (${item.themeEn})`}
         imageSource={{ uri: item.themeImgUrl }}
         completed={item.learnedWordCount}
         total={item.totalWordCount}

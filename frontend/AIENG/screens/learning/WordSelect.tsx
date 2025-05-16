@@ -8,7 +8,12 @@ import {
   Dimensions,
   Animated,
 } from "react-native";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  RouteProp,
+  useFocusEffect,
+} from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { theme } from "../../Theme";
@@ -18,6 +23,8 @@ import ProfileButton from "../../components/common/ProfileButton";
 import Button from "../../components/common/Button";
 import WordCard from "../../components/common/learning/WordCard";
 import { useProfile } from "../../contexts/ProfileContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
 // Define types
 type NavigationProp = NativeStackNavigationProp<any>;
@@ -27,7 +34,7 @@ export interface Word {
   id: string;
   english: string;
   korean: string;
-  image?: string;
+  image?: { uri: string };
   isLearned: boolean;
   isFlipped: boolean;
 }
@@ -40,13 +47,42 @@ interface ThemeProgress {
   completed_count: number;
 }
 
+// API 응답 타입 추가
+interface WordResponse {
+  wordId: number;
+  wordEn: string;
+  wordKo: string;
+  wordImgUrl: string;
+  wordTtsUrl: string;
+  isLearned: boolean;
+}
+
+interface SessionResponse {
+  sessionId: number;
+  themeEn: string;
+  themeKo: string;
+  words: WordResponse[];
+  new: boolean;
+}
+
+interface ApiError {
+  code: string;
+  message: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: SessionResponse | null;
+  error: ApiError | null;
+}
+
 const WordSelectScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
 
   // 기본 테마 정보 설정
-  const selectedTheme = "동물 (Animals)";
-  const themeId = "1";
+  const selectedTheme = route.params?.theme || "동물 (Animals)";
+  const themeId = route.params?.themeId || "1";
 
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
   const { isProfileModalOpen } = useProfile();
@@ -62,6 +98,12 @@ const WordSelectScreen: React.FC = () => {
 
   // 선택된 카드 ID를 추적하는 상태
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  // 테마 정보를 저장할 상태 추가
+  const [themeInfo, setThemeInfo] = useState<{ ko: string; en: string }>({
+    ko: "",
+    en: "",
+  });
 
   // Profile modal animation
   useEffect(() => {
@@ -115,9 +157,11 @@ const WordSelectScreen: React.FC = () => {
   }, []);
 
   // Load words based on theme and check for completed words
-  useEffect(() => {
-    loadInitialWords();
-  }, [themeId]);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadInitialWords();
+    }, [themeId])
+  );
 
   // Function to load initial words (when completedCount is 0)
   const loadInitialWords = async () => {
@@ -145,70 +189,102 @@ const WordSelectScreen: React.FC = () => {
   // Function to fetch theme words
   const fetchThemeWords = async (completedWordsList: string[] = []) => {
     try {
-      // API 응답 데이터가 부분적으로 생략되어 있으므로, 완전한 데이터를 다시 정의합니다
-      const fullData = {
-        cards: [
-          {
-            id: "1",
-            word: "cat",
-            korean: "고양이",
-            imageUrl: require("../../assets/images/main_mascot.png"),
-            learned: false,
-          },
-          {
-            id: "2",
-            word: "dog",
-            korean: "강아지",
-            imageUrl: require("../../assets/images/main_mascot.png"),
-            learned: false,
-          },
-          {
-            id: "3",
-            word: "rabbit",
-            korean: "토끼",
-            imageUrl: require("../../assets/images/main_mascot.png"),
-            learned: false,
-          },
-          {
-            id: "4",
-            word: "bird",
-            korean: "새",
-            imageUrl: require("../../assets/images/main_mascot.png"),
-            learned: false,
-          },
-          {
-            id: "5",
-            word: "fish",
-            korean: "물고기",
-            imageUrl: require("../../assets/images/main_mascot.png"),
-            learned: false,
-          },
-          {
-            id: "6",
-            word: "lion",
-            korean: "사자",
-            imageUrl: require("../../assets/images/main_mascot.png"),
-            learned: false,
-          },
-        ],
-      };
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-      // Transform the API data to our Word format
-      const selectedWords = fullData.cards.map((card) => ({
-        id: card.id,
-        english: card.word,
-        korean: card.korean,
-        image: card.imageUrl,
-        // 이미 학습한 단어인지 확인하여 isLearned 설정
-        isLearned: completedWordsList.includes(card.word),
-        isFlipped: false,
-      }));
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
 
-      setWords(selectedWords);
-      // 선택된 카드 초기화
-      setSelectedCardId(null);
-    } catch (error) {
-      console.error("Failed to fetch theme words:", error);
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log(
+        "URL:",
+        `https://www.aieng.co.kr/api/sessions/themes/${themeId}/start`
+      );
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+
+      const response = await axios.post<ApiResponse>(
+        `https://www.aieng.co.kr/api/sessions/themes/${themeId}/start`,
+        {}, // 빈 body
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        const sessionData = response.data.data;
+
+        if (!sessionData) {
+          throw new Error("세션 데이터가 없습니다.");
+        }
+
+        // 테마 정보 업데이트
+        setThemeInfo({
+          ko: sessionData.themeKo,
+          en: sessionData.themeEn,
+        });
+
+        // Transform the API data to our Word format
+        const selectedWords = sessionData.words.map((word) => ({
+          id: word.wordId.toString(),
+          english: word.wordEn,
+          korean: word.wordKo,
+          image: { uri: word.wordImgUrl },
+          isLearned: word.isLearned,
+          isFlipped: false,
+        }));
+
+        setWords(selectedWords);
+        setSelectedCardId(null);
+      } else {
+        throw new Error(
+          response.data.error?.message || "단어를 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        throw new Error(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Config:", error.config);
+        throw new Error(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
     }
   };
 
@@ -249,32 +325,6 @@ const WordSelectScreen: React.FC = () => {
     try {
       const selectedWord = words.find((word) => word.id === selectedCardId);
       if (!selectedWord) return;
-
-      // 이미 학습된 단어를 포함한 새로운 완료 단어 목록
-      const newCompletedWords = [...completedWords, selectedWord.english];
-      setCompletedWords(newCompletedWords);
-
-      // 완료 단어 개수 증가
-      const newCompletedCount = completedCount + 1;
-      setCompletedCount(newCompletedCount);
-
-      // API 응답 시뮬레이션 - 선택한 단어 학습 처리 후 업데이트된 상태
-      const themeProgress: ThemeProgress = {
-        theme_id: themeId,
-        completed_words: newCompletedWords,
-        total_words: 6,
-        completed_count: newCompletedCount,
-      };
-
-      // 선택한 단어만 학습 완료 표시
-      const updatedWords = words.map((word) => ({
-        ...word,
-        isLearned: word.id === selectedCardId ? true : word.isLearned,
-        isFlipped: false, // 모든 카드 원래 상태로
-      }));
-
-      setWords(updatedWords);
-      setSelectedCardId(null); // 선택 초기화
 
       navigation.navigate("WordListening", {
         wordId: selectedWord.id,
@@ -346,7 +396,12 @@ const WordSelectScreen: React.FC = () => {
             </View>
 
             <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>{selectedTheme}: 단어 선택</Text>
+              <Text style={styles.headerTitle}>
+                {themeInfo.ko
+                  ? `${themeInfo.ko} (${themeInfo.en})`
+                  : selectedTheme}
+                : 단어 선택
+              </Text>
             </View>
 
             <View style={styles.headerRight}>
