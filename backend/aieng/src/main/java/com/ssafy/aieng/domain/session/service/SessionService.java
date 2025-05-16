@@ -86,7 +86,7 @@ public class SessionService {
         // 5. 랜덤 단어 6개 선택
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
         Collections.shuffle(wordList);
-        List<Word> selectedWords = wordList.stream().limit(6).toList();
+        List<Word> selectedWords = wordList.stream().limit(5).toList();
 
         // 6. Learning 엔티티 생성 및 저장
         List<Learning> learningBatch = new ArrayList<>();
