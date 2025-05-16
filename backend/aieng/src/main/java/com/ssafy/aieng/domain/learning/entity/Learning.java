@@ -25,8 +25,11 @@ public class Learning extends BaseEntity {
     @JoinColumn(name = "word_id", nullable = false)
     private Word word;
 
-    @Column
+    @Column(name = "sentence")
     private String sentence;
+
+    @Column(name = "translation")
+    private String translation;
 
     @Column(name = "tts_url")
     private String ttsUrl;
@@ -56,6 +59,7 @@ public class Learning extends BaseEntity {
 
     public void updateContent(GeneratedContentResult result) {
         this.sentence = result.getSentence();
+        this.translation = result.getTranslation();
         this.ttsUrl = result.getAudioUrl();
         this.imgUrl = result.getImageUrl();
         this.learned = true;
