@@ -13,7 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 public class LearningSessionDetailResponse {
     private Integer sessionId;
-    private boolean isFinished;
     private List<WordResponse> words;
 
     public static LearningSessionDetailResponse of(Session session, List<Learning> learnings) {
@@ -24,7 +23,6 @@ public class LearningSessionDetailResponse {
 
         return new LearningSessionDetailResponse(
                 session.getId(),
-                session.getFinishedAt() != null,
                 wordResponses
         );
     }

@@ -128,11 +128,71 @@ public class SessionService {
         }
 
         // 9. 응답용 변환
-        List<WordResponse> wordResponses = selectedWords.stream()
-                .map(WordResponse::of)
+        List<WordResponse> wordResponses = learningBatch.stream()
+                .map(learning -> WordResponse.of(learning.getWord(), learning))
+                .toList();
+        return new CreateSessionResponse(session.getId(), true, wordResponses);
+    }
+
+    // 기존 세션에서 단어만 다시 랜덤하게 섞기
+    @Transactional
+    public CreateSessionResponse reshuffleWords(Integer userId, Integer childId, Integer themeId, Integer sessionId) {
+        // 1. 세션 조회 + 검증
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        if (!session.getChild().getId().equals(childId) || !session.getTheme().getId().equals(themeId) || session.getFinishedAt() != null) {
+            throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
+        }
+
+        // 2. 기존 Learning soft delete + Redis 삭제
+        List<Learning> oldLearnings = learningRepository.findAllBySessionIdAndDeletedFalse(sessionId);
+        for (Learning learning : oldLearnings) {
+            learning.softDelete();
+            String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, learning.getWord().getWordEn());
+            stringRedisTemplate.delete(infoKey);
+        }
+        learningRepository.saveAll(oldLearnings);
+
+        // 3. 새 단어 6개 선택
+        List<Word> wordList = wordRepository.findAllByThemeId(themeId);
+        Collections.shuffle(wordList);
+        List<Word> selectedWords = wordList.stream().limit(6).toList();
+
+        // 4. 새로운 Learning 저장
+        List<Learning> newLearnings = new ArrayList<>();
+        for (int i = 0; i < selectedWords.size(); i++) {
+            Word word = selectedWords.get(i);
+            Learning learning = Learning.builder()
+                    .session(session)
+                    .word(word)
+                    .pageOrder(i + 1)
+                    .learned(false)
+                    .build();
+            newLearnings.add(learning);
+        }
+        learningRepository.saveAll(newLearnings);
+
+        // 5. Redis 재등록
+        for (Learning learning : newLearnings) {
+            Word word = learning.getWord();
+            String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, word.getWordEn());
+
+            Map<String, String> wordInfo = new HashMap<>();
+            if (word.getWordEn() != null) wordInfo.put("wordEn", word.getWordEn());
+            if (word.getWordKo() != null) wordInfo.put("wordKo", word.getWordKo());
+            if (word.getImgUrl() != null) wordInfo.put("imgUrl", word.getImgUrl());
+
+            stringRedisTemplate.opsForHash().putAll(infoKey, wordInfo);
+            stringRedisTemplate.expire(infoKey, Duration.ofDays(1));
+        }
+
+        // 6. 응답 반환
+        List<WordResponse> wordResponses = newLearnings.stream()
+                .map(l -> WordResponse.of(l.getWord(), l))
                 .toList();
 
-        return new CreateSessionResponse(session.getId(), true, wordResponses);
+        return new CreateSessionResponse(sessionId, false, wordResponses);
     }
 
 
@@ -162,8 +222,6 @@ public class SessionService {
                 })
                 .toList();
     }
-
-
 
 
     // 학습 세션 삭제 (Soft Delete 적용)
@@ -201,5 +259,6 @@ public class SessionService {
                 .map(ChildThemeProgressResponse::fromSession)
                 .orElseGet(() -> ChildThemeProgressResponse.fromThemeOnly(theme));
     }
+
 
 }

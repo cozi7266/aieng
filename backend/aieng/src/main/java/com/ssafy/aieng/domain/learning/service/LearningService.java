@@ -59,6 +59,14 @@ public class LearningService {
 
     private static final Duration REDIS_TTL = Duration.ofHours(24);
 
+    // 유저, 아이 검증
+    private void validateChildOwnership(Integer userId, Integer childId) {
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+    }
 
     // 한 세션에 단어 목록 조회 (랜덤 6개 조회)
     @Transactional(readOnly = true)
@@ -81,8 +89,11 @@ public class LearningService {
      * - Redis에 결과가 저장되기를 기다리지 않음
      * - 프론트에서 이후 polling으로 결과 조회
      */
+
     @Transactional(readOnly = true)
-    public void sendFastApiRequest(Integer userId, Integer sessionId, String wordEn) {
+    public void sendFastApiRequest(Integer userId, Integer childId, Integer sessionId, String wordEn) {
+        validateChildOwnership(userId, childId);
+
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         String themeName = session.getTheme().getThemeName();
@@ -116,19 +127,17 @@ public class LearningService {
         }
     }
 
-    /**
-     * Redis에서 생성 결과를 조회하고, Learning 테이블에 저장
-     * - 이미 저장된 경우 중복 저장 생략
-     * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
-     */
+
+
     /**
      * Redis에서 생성 결과를 조회하고, Learning 테이블에 저장
      * - 이미 저장된 경우 중복 저장 생략
      * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
      */
     @Transactional
-    public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer sessionId, String wordEn) {
-        // 1. Redis에서 FastAPI 결과 조회
+    public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer childId, Integer sessionId, String wordEn) {
+        validateChildOwnership(userId, childId);
+
         String key = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, wordEn);
         String json = stringRedisTemplate.opsForValue().get(key);
         if (json == null) throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
@@ -141,8 +150,7 @@ public class LearningService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 2. 학습 엔티티 조회
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         Word wordEntity = wordRepository.findByWordEn(wordEn)
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
@@ -151,14 +159,12 @@ public class LearningService {
 
         try {
             if (!learning.isLearned()) {
-                // 3. 학습 완료 처리
                 learning.updateContent(result);
                 learningRepository.save(learning);
                 session.incrementLearnedCount();
 
-                // 4. 모든 단어 학습 시 세션 종료 처리
                 if (session.getLearnedWordCount().equals(session.getTotalWordCount())) {
-                    session.finish(); // ✅ finishedAt 설정
+                    session.finish();
                     log.info("🎉 세션 종료 처리됨: sessionId={}, finishedAt={}", session.getId(), session.getFinishedAt());
                 }
             }
@@ -171,7 +177,6 @@ public class LearningService {
 
         return result;
     }
-
 
 
 
