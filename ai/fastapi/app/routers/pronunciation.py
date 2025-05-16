@@ -20,7 +20,7 @@ async def evaluate_pronunciation_endpoint(
         Dict: 발음 평가 결과
     """
     try:
-        result = await evaluate_pronunciation(audio_file, expected_text)
+        result = await evaluate_pronunciation(audio_file, ans_text)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
