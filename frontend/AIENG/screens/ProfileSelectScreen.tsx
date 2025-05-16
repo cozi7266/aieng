@@ -357,12 +357,7 @@ const ProfileSelectScreen: React.FC<ProfileSelectScreenProps> = ({
 
           {/* Header */}
           <View style={styles.header}>
-            <BackButton
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            />
             <Text style={styles.title}>프로필 선택</Text>
-            <View style={styles.placeholder} />
           </View>
 
           {/* Content */}
@@ -504,24 +499,19 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.m,
+    paddingVertical: theme.spacing.l + 5,
     backgroundColor: "white",
     borderBottomWidth: 2,
     borderBottomColor: theme.colors.accent,
     ...theme.shadows.default,
-  },
-  backButton: {
-    marginLeft: -theme.spacing.s,
+    minHeight: 60,
   },
   title: {
     ...theme.typography.title,
     color: theme.colors.primary,
-  },
-  placeholder: {
-    width: 24,
   },
   contentContainer: {
     flex: 1,
