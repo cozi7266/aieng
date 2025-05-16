@@ -14,7 +14,7 @@ async def evaluate_pronunciation_endpoint(
     
     Args:
         audio_file: 사용자의 음성 파일
-        expected_text: 예상되는 텍스트
+        ans_text: 정답 텍스트
     
     Returns:
         Dict: 발음 평가 결과
