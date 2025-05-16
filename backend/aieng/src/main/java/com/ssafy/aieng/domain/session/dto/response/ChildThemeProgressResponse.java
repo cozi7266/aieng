@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 public class ChildThemeProgressResponse {
 
     private Integer themeId;
-    private String themeName;
+    private String themeKo;
+    private String themeEn;
     private String themeImgUrl;
     private Integer sessionId;          // 세션이 있으면 세션 ID
     private LocalDateTime startedAt;    // 세션 시작 시간
@@ -29,7 +30,7 @@ public class ChildThemeProgressResponse {
         return ChildThemeProgressResponse.builder()
                 .sessionId(session.getId())
                 .themeId(session.getTheme().getId())
-                .themeName(session.getTheme().getThemeName())
+                .themeKo(session.getTheme().getThemeKo())
                 .themeImgUrl(session.getTheme().getImageUrl())
                 .startedAt(session.getStartedAt())
                 .finishedAt(session.getFinishedAt())
@@ -44,7 +45,8 @@ public class ChildThemeProgressResponse {
     public static ChildThemeProgressResponse fromThemeOnly(Theme theme) {
         return ChildThemeProgressResponse.builder()
                 .themeId(theme.getId())
-                .themeName(theme.getThemeName())
+                .themeKo(theme.getThemeKo())
+                .themeEn(theme.getThemeEn())
                 .themeImgUrl(theme.getImageUrl())
                 .sessionId(null)
                 .startedAt(null)

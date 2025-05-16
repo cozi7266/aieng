@@ -8,7 +8,6 @@ import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.SongGenerateResponseDto;
 import com.ssafy.aieng.domain.song.dto.response.SongListResponseDto;
 import com.ssafy.aieng.domain.song.entity.Song;
-import com.ssafy.aieng.domain.song.entity.SongStatus;
 import com.ssafy.aieng.domain.song.repository.SongRepository;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
@@ -22,28 +21,26 @@ import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;
+import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SongService {
 
-    private static final String FASTAPI_URL = "http://localhost:8000";
+    private static final String FASTAPI_URL = "https://www.aieng.co.kr/fastapi/songs/";
     private final ObjectMapper objectMapper;
 
     private final SongRepository songRepository;
@@ -51,104 +48,85 @@ public class SongService {
     private final MoodRepository moodRepository;
     private final ChildRepository childRepository;
     private final SessionRepository sessionRepository;
-    @Autowired
     private final StorybookRepository storybookRepository;
 
+
+    // 동요 생성
     @Transactional
-    public SongGenerateResponseDto generateSong(SongGenerateRequestDto requestDto) {
+    public SongGenerateResponseDto generateSong(Integer userId, Integer childId, Integer sessionId, SongGenerateRequestDto requestDto) {
+        // 1. 유저와 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 2. 세션 검증
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (!session.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
+        }
+
+        // 3. Voice, Mood 조회
+        Voice voice = voiceRepository.findById(requestDto.getVoice())
+                .orElseThrow(() -> new CustomException(ErrorCode.VOICE_NOT_FOUND));
+        Mood mood = moodRepository.findById(requestDto.getMood())
+                .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
+
+        // 4. FastAPI 요청 준비
+        Map<String, Object> fastApiRequest = Map.of(
+                "userId", userId,
+                "sessionId", sessionId,
+                "moodName", mood.getName(),
+                "voiceName", voice.getName()
+        );
+
         try {
-            // 1. Voice와 Mood 정보 조회
-            Voice voice = voiceRepository.findById(requestDto.getVoiceId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.VOICE_NOT_FOUND));
-            
-            Mood mood = moodRepository.findById(requestDto.getMoodId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(fastApiRequest, headers);
 
-            // 현재 진행 중인 세션 조회 (Child와 User 정보도 함께 조회)
-            Session session = sessionRepository.findTopByChildIdOrderByCreatedAtDesc(voice.getChildId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+            ResponseEntity<String> fastApiResponse = new RestTemplate().postForEntity(
+                    FASTAPI_URL ,
+                    entity,
+                    String.class
+            );
 
-            Child child = session.getChild();  // Session에서 Child 정보를 직접 가져옴
-
-            // 2. FastAPI 요청 형식으로 변환
-            var fastApiRequest = new HashMap<String, String>();
-            fastApiRequest.put("userId", child.getUser().getId().toString());
-            fastApiRequest.put("sessionId", session.getId().toString());
-            fastApiRequest.put("moodName", mood.getName());
-            fastApiRequest.put("voiceName", voice.getName());
-
-            // 3. FastAPI 서버로 요청 전송
-            URL url = new URL(FASTAPI_URL + "/songs");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-
-            String jsonInputString = objectMapper.writeValueAsString(fastApiRequest);
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            if (responseCode != HttpURLConnection.HTTP_OK) {
+            if (fastApiResponse.getStatusCode().isError()) {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            StringBuilder response = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-            }
-
-            String responseBody = response.toString();
-            if (responseBody.isEmpty()) {
+            String responseBody = fastApiResponse.getBody();
+            if (responseBody == null || responseBody.isBlank()) {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            // FastAPI 응답 파싱
-            JsonNode responseJson = objectMapper.readTree(responseBody);
-            String songUrl = responseJson.get("song_url").asText();
-            String title = responseJson.get("title").asText();
-            String lyric = responseJson.get("lyric").asText();
-            String description = responseJson.get("description").asText();
+            JsonNode json = objectMapper.readTree(responseBody);
 
-            // 4. 노래 정보 저장
+            // 5. Song 저장 (status = CREATED)
             Song song = Song.builder()
                     .storybookId(requestDto.getStorybookId())
                     .voice(voice)
                     .mood(mood)
-                    .title(title)
-                    .lyric(lyric)
-                    .description(description)
-                    .songUrl(songUrl)
+                    .title(json.get("title").asText())
+                    .lyric(json.get("lyric").asText())
+                    .description(json.get("description").asText())
+                    .songUrl(json.get("song_url").asText())
                     .build();
-            
+
             songRepository.save(song);
+            session.markSongDoneAndFinish(); // ✅ 필요 시 상태 업데이트 로직도 함께 호출
 
-            // 세션 상태 업데이트
-            session.markSongDoneAndFinish();
-
-            // 5. 응답 생성
-            return SongGenerateResponseDto.builder()
-                    .songUrl(songUrl)
-                    .message("Song generated successfully")
-                    .status("SUCCESS")
-                    .title(title)
-                    .lyric(lyric)
-                    .description(description)
-                    .build();
+            return SongGenerateResponseDto.of(song);
 
         } catch (Exception e) {
-            log.error("Error generating song: ", e);
-            return SongGenerateResponseDto.builder()
-                    .message("Failed to generate song: " + e.getMessage())
-                    .status("FAILED")
-                    .build();
+            log.error("❌ FastAPI 동요 생성 실패", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
+
 
     @Transactional(readOnly = true)
     public List<SongListResponseDto> getSongList() {

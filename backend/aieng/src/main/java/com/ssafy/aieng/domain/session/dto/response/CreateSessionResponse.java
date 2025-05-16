@@ -11,5 +11,7 @@ import java.util.List;
 public class CreateSessionResponse {
     private Integer sessionId;
     private boolean isNew;
+    private String themeEn;
+    private String themeKo;
     private List<WordResponse> words;
 }

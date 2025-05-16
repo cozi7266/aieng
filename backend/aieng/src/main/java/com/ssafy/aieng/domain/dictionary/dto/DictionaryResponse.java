@@ -15,7 +15,8 @@ public class DictionaryResponse {
     private String imgUrl;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime learnedAt;
-    private String themeName;
+    private String themeEn;
+    private String themeKo;
 
     public static DictionaryResponse from(Learning learning) {
         return DictionaryResponse.builder()
@@ -23,7 +24,8 @@ public class DictionaryResponse {
                 .wordKo(learning.getWord().getWordKo())
                 .imgUrl(learning.getWord().getImgUrl())
                 .learnedAt(learning.getLearnedAt())
-                .themeName(learning.getWord().getTheme().getThemeName())
+                .themeEn(learning.getWord().getTheme().getThemeEn())
+                .themeKo(learning.getWord().getTheme().getThemeKo())
                 .build();
     }
 }
