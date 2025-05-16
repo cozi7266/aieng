@@ -134,6 +134,64 @@ public class SessionService {
         return new CreateSessionResponse(session.getId(), true, wordResponses);
     }
 
+    // 기존 세션에서 단어만 다시 랜덤하게 섞기
+    @Transactional
+    public CreateSessionResponse reshuffleWords(Integer userId, Integer childId, Integer themeId) {
+        // 1. 세션 조회 (세션은 그대로 유지)
+        Session session = sessionRepository.findByChildIdAndThemeIdAndFinishedAtIsNull(childId, themeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        // 2. 기존 Learning soft delete
+        List<Learning> oldLearnings = learningRepository.findAllBySessionIdAndDeletedFalse(session.getId());
+        for (Learning learning : oldLearnings) {
+            // learning soft delete
+            learning.softDelete();
+            // Redis 키 삭제
+            String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, session.getId(), learning.getWord().getWordEn());
+            stringRedisTemplate.delete(infoKey);
+        }
+        learningRepository.saveAll(oldLearnings);
+
+        // 3. 랜덤 단어 6개 선택
+        List<Word> wordList = wordRepository.findAllByThemeId(themeId);
+        Collections.shuffle(wordList);
+        List<Word> selectedWords = wordList.stream().limit(6).toList();
+
+        // 4. 새로운 Learning 생성 및 저장
+        List<Learning> newLearnings = new ArrayList<>();
+        for (int i = 0; i < selectedWords.size(); i++) {
+            Word word = selectedWords.get(i);
+            Learning learning = Learning.builder()
+                    .session(session)
+                    .word(word)
+                    .pageOrder(i + 1)
+                    .learned(false)
+                    .build();
+            newLearnings.add(learning);
+        }
+        learningRepository.saveAll(newLearnings);
+
+        // 5. Redis 저장 (단어별 정보만 저장)
+        for (Learning learning : newLearnings) {
+            Word word = learning.getWord();
+            String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, session.getId(), word.getWordEn());
+
+            Map<String, String> wordInfo = new HashMap<>();
+            if (word.getWordEn() != null) wordInfo.put("wordEn", word.getWordEn());
+            if (word.getWordKo() != null) wordInfo.put("wordKo", word.getWordKo());
+            if (word.getImgUrl() != null) wordInfo.put("imgUrl", word.getImgUrl());
+
+            stringRedisTemplate.opsForHash().putAll(infoKey, wordInfo);
+            stringRedisTemplate.expire(infoKey, Duration.ofDays(1));
+        }
+
+        // 6. 응답 반환
+        List<WordResponse> wordResponses = newLearnings.stream()
+                .map(l -> WordResponse.of(l.getWord(), l))
+                .toList();
+
+        return new CreateSessionResponse(session.getId(), false, wordResponses);
+    }
 
 
     // 자녀의 세션 목록 조회 (정렬 필드도 유연하게 처리 가능)
@@ -200,5 +258,6 @@ public class SessionService {
                 .map(ChildThemeProgressResponse::fromSession)
                 .orElseGet(() -> ChildThemeProgressResponse.fromThemeOnly(theme));
     }
+
 
 }
