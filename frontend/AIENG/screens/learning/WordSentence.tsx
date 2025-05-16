@@ -606,6 +606,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.l,
+    paddingBottom: 0,
   },
   cardContainer: {
     width: "70%", // 원하는 너비로 조정

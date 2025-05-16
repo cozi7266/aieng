@@ -104,7 +104,12 @@ const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem("accessToken");
+      // accessToken과 selectedChildId 모두 삭제
+      await Promise.all([
+        AsyncStorage.removeItem("accessToken"),
+        AsyncStorage.removeItem("selectedChildId"),
+      ]);
+
       handleClose();
       // 인증 상태를 먼저 변경
       setIsAuthenticated(false);

@@ -422,7 +422,7 @@ const SongScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBottom: -theme.spacing.s,
+    marginBottom: -theme.spacing.xxl,
     backgroundColor: theme.colors.background,
   },
   header: {
@@ -471,6 +471,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     flexDirection: "row",
+    paddingBottom: 0,
   },
   leftContainer: {
     flex: 1.5,

@@ -20,6 +20,7 @@ import { theme } from "../Theme";
 import { RootStackParamList } from "../App";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
 
 // 네비게이션 타입 정의
 type SignupScreenNavigationProp = NativeStackNavigationProp<
@@ -142,31 +143,37 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ setIsAuthenticated }) => {
         console.log("아이 등록 응답:", response.data);
 
         if (response.data.success) {
-          Alert.alert(
-            "회원가입 완료",
-            "아이 정보가 성공적으로 등록되었습니다!",
-            [
-              {
-                text: "확인",
-                onPress: () => {
-                  // 인증 상태 변경하여 Home 화면으로 자동 이동
-                  setIsAuthenticated(true);
-                },
-              },
-            ]
-          );
+          NavigationWarningAlert.show({
+            title: "회원가입 완료",
+            message: "아이 정보가 성공적으로 등록되었습니다!",
+            confirmText: "확인",
+            onConfirm: () => {
+              // ProfileSelect 화면으로 이동
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "ProfileSelect" }],
+              });
+            },
+            onCancel: () => {},
+          });
         } else {
-          Alert.alert(
-            "등록 실패",
-            response.data.error || "알 수 없는 오류가 발생했습니다."
-          );
+          NavigationWarningAlert.show({
+            title: "등록 실패",
+            message: response.data.error || "알 수 없는 오류가 발생했습니다.",
+            confirmText: "확인",
+            onConfirm: () => {},
+            onCancel: () => {},
+          });
         }
       } catch (error) {
         console.error("아이 등록 API 오류:", error);
-        Alert.alert(
-          "등록 실패",
-          "서버 통신 중 오류가 발생했습니다. 다시 시도해주세요."
-        );
+        NavigationWarningAlert.show({
+          title: "등록 실패",
+          message: "서버 통신 중 오류가 발생했습니다. 다시 시도해주세요.",
+          confirmText: "확인",
+          onConfirm: () => {},
+          onCancel: () => {},
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -387,7 +394,7 @@ const styles = StyleSheet.create({
     width: "80%",
     minWidth: 550,
     maxWidth: 900,
-    height: "75%",
+    height: "83%",
     alignItems: "center",
     backgroundColor: "white",
     paddingVertical: theme.spacing.l,
@@ -402,7 +409,7 @@ const styles = StyleSheet.create({
     width: "70%",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.s,
+    marginBottom: theme.spacing.xs,
   },
   logoImage: {
     width: 250,
@@ -412,7 +419,7 @@ const styles = StyleSheet.create({
     ...theme.typography.title,
     color: theme.colors.primary,
     fontSize: 28,
-    marginBottom: theme.spacing.m,
+    marginBottom: theme.spacing.s,
     textAlign: "center",
   },
   formContainer: {
@@ -421,7 +428,7 @@ const styles = StyleSheet.create({
   },
   formContentContainer: {
     paddingHorizontal: theme.spacing.m,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: 0,
     alignItems: "center",
   },
   inputContainer: {
