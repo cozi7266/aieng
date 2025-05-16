@@ -16,7 +16,8 @@ public class DictionaryDetailResponse {
     private String ttsUrl;
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime learnedAt;
-    private String themeName;
+    private String themeEn;
+    private String themeKo;
     private String sentence;  // 학습할 때 사용한 예문도 포함
 
     public static DictionaryDetailResponse from(Learning learning) {
@@ -26,7 +27,8 @@ public class DictionaryDetailResponse {
                 .imgUrl(learning.getWord().getImgUrl())
                 .ttsUrl(learning.getWord().getTtsUrl())
                 .learnedAt(learning.getLearnedAt())
-                .themeName(learning.getWord().getTheme().getThemeName())
+                .themeEn(learning.getWord().getTheme().getThemeEn())
+                .themeKo(learning.getWord().getTheme().getThemeKo())
                 .sentence(learning.getSentence())
                 .build();
     }

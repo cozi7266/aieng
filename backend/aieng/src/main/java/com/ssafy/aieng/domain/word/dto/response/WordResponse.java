@@ -15,7 +15,7 @@ public class WordResponse {
     private String wordTtsUrl;
     private Boolean isLearned;
 
-    // ✅ 1. Learning 객체 기반
+    // 1. Learning 객체 기반
     public static WordResponse of(Word word, Learning learning) {
         return new WordResponse(
                 word.getId(),
@@ -27,7 +27,7 @@ public class WordResponse {
         );
     }
 
-    // ✅ 2. Learning 단독 객체 기반
+    // 2. Learning 단독 객체 기반
     public static WordResponse of(Learning learning) {
         Word word = learning.getWord();
         return new WordResponse(
@@ -40,7 +40,7 @@ public class WordResponse {
         );
     }
 
-    // ✅ 3. Word만 있고, 학습 여부를 따로 지정하고 싶은 경우
+    // 3. Word만 있고, 학습 여부를 따로 지정하고 싶은 경우
     public static WordResponse of(Word word, boolean isLearned) {
         return new WordResponse(
                 word.getId(),
@@ -52,7 +52,7 @@ public class WordResponse {
         );
     }
 
-    // ✅ 4. Word만 있을 경우 기본값으로 학습 안됨(false)
+    // 4. Word만 있을 경우 기본값으로 학습 안됨(false)
     public static WordResponse of(Word word) {
         return of(word, false);  // 기본은 false 처리
     }

@@ -10,6 +10,7 @@ import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,7 @@ public class WordService {
    private final UserRepository userRepository;
 
    // 단어 상세 조회
+   @Transactional(readOnly = true)
    public WordResponse getWordDetail(Integer userId, Integer wordId, Integer childId) {
       // 1. 사용자 인증
       User user = userRepository.findById(userId)
