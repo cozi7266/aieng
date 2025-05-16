@@ -7,11 +7,11 @@ const kakaoNativeAppKey = process.env.EXPO_PUBLIC_KAKAO_NATIVE_KEY;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   // 기본 구성
-  name: "ssafy-ieng",
+  name: "aieng",
   slug: "snack-2821173a-cc06-41ba-91fd-e370f061b94b",
   version: "1.0.0",
-  orientation: "portrait",
-  icon: "./assets/icon.png",
+  orientation: "landscape",
+  icon: "./assets/images/brandlogo.png",
   userInterfaceStyle: "light",
 
   // 스플래시 화면 설정
