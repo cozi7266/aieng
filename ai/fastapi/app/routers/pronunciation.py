@@ -7,7 +7,7 @@ router = APIRouter()
 @router.post("/evaluate")
 async def evaluate_pronunciation_endpoint(
     audio_file: UploadFile = File(...),
-    expected_text: str = None
+    ans_text: str = None
 ) -> Dict:
     """
     사용자의 영어 발음을 평가합니다.
