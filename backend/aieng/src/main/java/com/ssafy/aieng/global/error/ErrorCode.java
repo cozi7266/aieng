@@ -36,9 +36,10 @@ public enum  ErrorCode {
     // Child
     FORBIDDEN_CHILD_ACCESS(403, "U005", "해당 자녀 정보에 접근할 수 없습니다."),
 
-    // Learning Session
+    // Session
     SESSION_NOT_FOUND(404, "S001", "학습 세션을 찾을 수 없습니다."),
     SESSION_CREATION_FAILED(500, "S002", "학습 세션 생성에 실패했습니다."),
+    INVALID_SESSION_ACCESS(403, "S003", "세션 접근 권한이 없거나 일치하지 않는 정보입니다."),
 
     // Learning Words
     LEARNING_NOT_FOUND(404, "L001", "학습 단어 정보를 찾을 수 없습니다."),
