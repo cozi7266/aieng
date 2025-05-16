@@ -206,8 +206,11 @@ const LearningThemeCard: React.FC<LearningThemeCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    margin: theme.spacing.s,
+    marginHorizontal: theme.spacing.s,
+    marginVertical: theme.spacing.xs,
     position: "relative",
+    aspectRatio: 1,
+    maxWidth: "30.5%",
   },
   glowEffect: {
     position: "absolute",

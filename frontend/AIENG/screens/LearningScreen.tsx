@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -20,6 +21,22 @@ import BGMToggleButton from "../components/common/BGMToggleButton";
 import ProfileButton from "../components/common/ProfileButton";
 import { useProfile } from "../contexts/ProfileContext";
 import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// API 응답 데이터 타입 정의
+interface ThemeData {
+  themeId: number;
+  themeName: string;
+  themeImgUrl: string;
+  sessionId: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  totalWordCount: number;
+  learnedWordCount: number;
+  progressRate: number;
+  isFinished: boolean;
+}
 
 type LearningScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -33,64 +50,89 @@ const LearningScreen: React.FC = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
   const [numColumns, setNumColumns] = useState(3);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 테마 데이터 상태 관리 (업데이트할 수 있도록 useState 사용)
-  const [learningThemes, setLearningThemes] = useState([
-    {
-      id: "1",
-      title: "동물 (Animals)",
-      imageUrl: require("../assets/icon.png"),
-      progress: {
-        completed: 5, // 예시: 완료된 테마
-        total: 5,
-      },
-    },
-    {
-      id: "2",
-      title: "색깔 (Colors)",
-      imageUrl: require("../assets/images/themes/colors.png"),
-      progress: {
-        completed: 3,
-        total: 5,
-      },
-    },
-    {
-      id: "3",
-      title: "음식 (Food)",
-      imageUrl: require("../assets/images/themes/food.png"),
-      progress: {
-        completed: 1,
-        total: 5,
-      },
-    },
-    {
-      id: "4",
-      title: "교통 (Transport)",
-      imageUrl: require("../assets/images/themes/transportation.png"),
-      progress: {
-        completed: 0,
-        total: 5,
-      },
-    },
-    {
-      id: "5",
-      title: "자연 (Nature)",
-      imageUrl: require("../assets/images/themes/nature.png"),
-      progress: {
-        completed: 2,
-        total: 5,
-      },
-    },
-    {
-      id: "6",
-      title: "숫자 (Numbers)",
-      imageUrl: require("../assets/images/themes/numbers.png"),
-      progress: {
-        completed: 0,
-        total: 5,
-      },
-    },
-  ]);
+  // 테마 데이터 상태 관리
+  const [learningThemes, setLearningThemes] = useState<ThemeData[]>([]);
+
+  // API에서 테마 데이터 가져오기
+  const fetchThemes = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/sessions/themes");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+      });
+
+      const response = await axios.get(
+        "https://www.aieng.co.kr/api/sessions/themes",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        setLearningThemes(response.data.data);
+      } else {
+        throw new Error(
+          response.data.error?.message ||
+            "테마 데이터를 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 테마 데이터 로드
+  useEffect(() => {
+    fetchThemes();
+  }, []);
 
   // 프로필 모달 상태에 따른 애니메이션
   useEffect(() => {
@@ -147,28 +189,19 @@ const LearningScreen: React.FC = () => {
   const logoWidth = logoHeight * 4;
 
   // 테마 선택 처리 및 완료 상태 확인
-  const handleThemeSelection = (item) => {
-    // 완료 여부 확인 (5/5)
-    const isCompleted = item.progress.completed === 5;
-
-    if (isCompleted) {
+  const handleThemeSelection = (item: ThemeData) => {
+    if (item.isFinished) {
       // 완료된 테마는 퀴즈 이동 알림 표시
       NavigationWarningAlert.show({
         title: "퀴즈 도전",
-        message: `${item.title} 테마의 학습을 완료했어요! 퀴즈를 풀고 동요를 만들어 볼까요?`,
+        message: `${item.themeName} 테마의 학습을 완료했어요! 퀴즈를 풀고 동요를 만들어 볼까요?`,
         confirmText: "퀴즈 풀기",
         cancelText: "취소",
         onConfirm: () => {
-          console.log(`퀴즈 화면으로 이동: ${item.title}`);
-
-          // 테마 진행도 초기화
-          resetThemeProgress(item.id);
-
-          // WordQuiz 화면으로 이동 - 첫 번째 단어 ID를 기본값으로 사용
           navigation.navigate("WordQuiz", {
-            wordId: "1", // 첫 번째 단어로 시작
-            themeId: item.id,
-            theme: item.title,
+            wordId: item.themeId.toString(),
+            themeId: item.themeId.toString(),
+            theme: item.themeName,
           });
         },
         onCancel: () => {
@@ -178,38 +211,42 @@ const LearningScreen: React.FC = () => {
     } else {
       // 미완료 테마는 단어 선택 화면으로 이동
       navigation.navigate("WordSelect", {
-        theme: item.title,
-        themeId: item.id,
+        theme: item.themeName,
+        themeId: item.themeId.toString(),
       });
     }
   };
 
-  // 테마 진행도 초기화 함수
-  const resetThemeProgress = (themeId) => {
-    setLearningThemes((prevThemes) =>
-      prevThemes.map((theme) =>
-        theme.id === themeId
-          ? { ...theme, progress: { ...theme.progress, completed: 0 } }
-          : theme
-      )
-    );
-  };
-
   // 카드 렌더링 함수
-  const renderCard = ({ item }) => {
-    const isCompleted = item.progress.completed === 5;
-
+  const renderCard = ({ item }: { item: ThemeData }) => {
     return (
       <LearningThemeCard
-        title={item.title}
-        imageSource={item.imageUrl}
-        completed={item.progress.completed}
-        total={item.progress.total}
-        isCompleted={isCompleted}
+        title={item.themeName}
+        imageSource={{ uri: item.themeImgUrl }}
+        completed={item.learnedWordCount}
+        total={item.totalWordCount}
+        isCompleted={item.isFinished}
         onPress={() => handleThemeSelection(item)}
       />
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>테마를 불러오고 있어요...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.errorContainer]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.outerContainer}>
@@ -254,10 +291,11 @@ const LearningScreen: React.FC = () => {
             <FlatList
               data={learningThemes}
               renderItem={renderCard}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.themeId.toString()}
               numColumns={numColumns}
               key={numColumns}
               contentContainerStyle={styles.listContainer}
+              columnWrapperStyle={styles.columnWrapper}
               showsVerticalScrollIndicator={false}
             />
           </View>
@@ -342,6 +380,30 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: theme.spacing.m,
     paddingBottom: theme.spacing.l,
+    flexGrow: 1,
+  },
+  columnWrapper: {
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.m,
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    marginTop: theme.spacing.m,
+  },
+  errorContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    textAlign: "center",
+    marginHorizontal: theme.spacing.xl,
   },
 });
 
