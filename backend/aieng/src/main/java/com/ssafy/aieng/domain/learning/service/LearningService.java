@@ -142,7 +142,7 @@ public class LearningService {
         }
 
         // 2. 학습 엔티티 조회
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         Word wordEntity = wordRepository.findByWordEn(wordEn)
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
