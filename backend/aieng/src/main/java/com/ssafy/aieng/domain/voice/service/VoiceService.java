@@ -25,24 +25,24 @@ public class VoiceService {
     private static final long MIN_FILE_LENGTH_SECONDS = 30; // 30초
     private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
-    @Transactional
-    public VoiceResponse createVoice(VoiceCreateRequest request) {
-        MultipartFile audioFile = request.getAudioFile();
-        validateAudioFile(audioFile);
-
-        // 파일 업로드 및 URL 생성
-        String audioUrl = uploadAudioFile(audioFile);
-
-        Voice voice = Voice.builder()
-                .childId(request.getChildId())
-                .name(request.getName())
-                .description(request.getDescription())
-                .audioUrl(audioUrl)
-                .build();
-
-        Voice savedVoice = voiceRepository.save(voice);
-        return VoiceResponse.from(savedVoice);
-    }
+//    @Transactional
+//    public VoiceResponse createVoice(VoiceCreateRequest request) {
+//        MultipartFile audioFile = request.getAudioFile();
+//        validateAudioFile(audioFile);
+//
+//        // 파일 업로드 및 URL 생성
+//        String audioUrl = uploadAudioFile(audioFile);
+//
+//        Voice voice = Voice.builder()
+//                .childId(request.getChildId())
+//                .name(request.getName())
+//                .description(request.getDescription())
+//                .audioUrl(audioUrl)
+//                .build();
+//
+//        Voice savedVoice = voiceRepository.save(voice);
+//        return VoiceResponse.from(savedVoice);
+//    }
 
     @Transactional(readOnly = true)
     public VoiceResponse getVoice(Integer voiceId) {

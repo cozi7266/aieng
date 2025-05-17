@@ -14,10 +14,6 @@ import jakarta.persistence.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Mood extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
     @Column(name = "name", length = 50, nullable = false)
     private String name;
 

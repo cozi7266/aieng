@@ -36,16 +36,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SessionService {
 
-    private final UserRepository userRepository;
-    private final RedisService redisService;
     private final LearningRepository learningRepository;
     private final SessionRepository sessionRepository;
-    private final ChildService childService;
     private final ThemeRepository themeRepository;
     private final WordRepository wordRepository;
     private final ChildRepository childRepository;
     private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
 
     // 사용자와 아이 인증
     private Child getVerifiedChild(Integer userId, Integer childId) {

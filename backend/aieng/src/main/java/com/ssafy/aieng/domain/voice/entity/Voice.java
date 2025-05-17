@@ -1,12 +1,12 @@
 package com.ssafy.aieng.domain.voice.entity;
 
+import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import jakarta.persistence.*;
 
 @Entity
 @Table(name = "voice")
@@ -14,12 +14,9 @@ import jakarta.persistence.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Voice extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(name = "child_id")
-    private Integer childId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "child_id", nullable = false)
+    private Child child;
 
     @Column(name = "name", length = 20, nullable = false)
     private String name;
@@ -31,10 +28,10 @@ public class Voice extends BaseEntity {
     private String audioUrl;
 
     @Builder
-    public Voice(Integer childId, String name, String description, String audioUrl) {
-        this.childId = childId;
+    public Voice(Child child, String name, String description, String audioUrl) {
+        this.child = child;
         this.name = name;
         this.description = description;
         this.audioUrl = audioUrl;
     }
-} 
+}

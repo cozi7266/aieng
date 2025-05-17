@@ -16,7 +16,6 @@ import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
-import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
