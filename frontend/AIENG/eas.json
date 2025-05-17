@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.4.0"
+    "version": ">= 5.4.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -13,7 +14,6 @@
     "production": {
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:bundleRelease",
         "autoIncrement": true
       }
     }
