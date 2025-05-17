@@ -12,5 +12,10 @@ public class RedisKeyUtil {
         return String.format("word:%d:%d:%s", sessionId, wordId, wordEn);
     }
 
+    // 동요 생성 결과 저장 키
+    public static String getGeneratedSongKey(Integer userId, Integer sessionId) {
+        return String.format("Song:user:%d:session:%d", userId, sessionId);
+    }
+
 
 }

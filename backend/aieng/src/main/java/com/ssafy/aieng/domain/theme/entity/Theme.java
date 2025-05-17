@@ -23,5 +23,5 @@ public class Theme extends BaseEntity {
     private String imageUrl;
 
     @Column(name = "total_words", columnDefinition = "TINYINT")
-    private Byte totalWords;
+    private Integer totalWords;
 }
