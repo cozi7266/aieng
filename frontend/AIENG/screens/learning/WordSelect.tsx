@@ -93,8 +93,13 @@ const WordSelectScreen: React.FC = () => {
   const [words, setWords] = useState<Word[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalWords, setTotalWords] = useState(6);
-  // 완료된 단어 목록을 추적하는 상태 추가
   const [completedWords, setCompletedWords] = useState<string[]>([]);
+
+  // words 배열이 변경될 때마다 completedCount 업데이트
+  useEffect(() => {
+    const learnedCount = words.filter((word) => word.isLearned).length;
+    setCompletedCount(learnedCount);
+  }, [words]);
 
   // 선택된 카드 ID를 추적하는 상태
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
@@ -245,6 +250,11 @@ const WordSelectScreen: React.FC = () => {
 
         // 세션 ID 저장
         setSessionId(sessionData.sessionId);
+        // AsyncStorage에도 세션 ID 저장
+        await AsyncStorage.setItem(
+          "currentSessionId",
+          sessionData.sessionId.toString()
+        );
 
         // 테마 정보 업데이트
         setThemeInfo({
@@ -407,6 +417,7 @@ const WordSelectScreen: React.FC = () => {
         wordId: selectedWord.id,
         themeId: themeId,
         theme: selectedTheme,
+        sessionId: sessionId, // 세션 ID 전달
       });
     } catch (error) {
       console.error("학습 시작 실패:", error);
@@ -435,7 +446,6 @@ const WordSelectScreen: React.FC = () => {
       // 진행률이 0이고 선택된 카드가 없을 때만 새로운 단어 가져오기
       handleRefreshWords();
     }
-    // 다른 경우에는 아무 동작도 하지 않음
   };
 
   // Render a word card
@@ -615,6 +625,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0E0E0",
     borderColor: "#AAAAAA",
     opacity: 0.7,
+    width: "35%",
+    minWidth: 150,
+    alignSelf: "center",
   },
 });
 
