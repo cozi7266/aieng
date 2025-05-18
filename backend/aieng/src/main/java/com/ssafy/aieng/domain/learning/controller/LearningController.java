@@ -30,31 +30,15 @@ public class LearningController {
         return ApiResponse.success(response);
     }
 
-    /**
-     * [1단계] AI 문장 생성 요청 전송 (FastAPI)
-     */
+    // fastapi 요청 및 응답 그리고 학습완료
     @PostMapping("/sessions/{sessionId}/words/{wordEn}/generation")
-    public ResponseEntity<ApiResponse<Void>> requestGeneration(
+    public ResponseEntity<ApiResponse<GeneratedContentResult>> requestAndSaveGeneration(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
             @PathVariable Integer sessionId,
             @PathVariable String wordEn
     ) {
-        learningService.sendFastApiRequest(user.getId(), childId, sessionId, wordEn);
-        return ApiResponse.success(null);
-    }
-
-    /**
-     * [2단계] 생성된 결과 조회 및 자동 저장
-     */
-    @GetMapping("/sessions/{sessionId}/words/{wordEn}/generation")
-    public ResponseEntity<ApiResponse<GeneratedContentResult>> pollGeneratedResult(
-            @AuthenticationPrincipal UserPrincipal user,
-            @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer sessionId,
-            @PathVariable String wordEn
-    ) {
-        GeneratedContentResult result = learningService.getAndSaveGeneratedResult(user.getId(), childId, sessionId, wordEn);
+        GeneratedContentResult result = learningService.sendRequestAndSave(user.getId(), childId, sessionId, wordEn);
         return ApiResponse.success(result);
     }
 
