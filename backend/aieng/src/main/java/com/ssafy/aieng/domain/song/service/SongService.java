@@ -134,9 +134,9 @@ public class SongService {
         }
         log.info("✅ 자녀 검증 완료: childId={}", childId);
 
-        // 2️⃣ 세션 조회 (세션이 없으면 오류)
-        log.info("📌 세션 조회 시작: childId={}", childId);
-        Session session = sessionRepository.findFirstByChildIdAndFinishedAtIsNull(childId)
+        // 2️⃣ 세션 조회 (진행 중인 세션과 테마가 일치하는 세션 조회)
+        log.info("📌 세션 조회 시작: childId={}, storybookId={}", childId, storybookId);
+        Session session = sessionRepository.findFirstByChildIdAndThemeIdAndFinishedAtIsNotNull(childId, storybookId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         log.info("✅ 세션 조회 완료: sessionId={}", session.getId());
 
