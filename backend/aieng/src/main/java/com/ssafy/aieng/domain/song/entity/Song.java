@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.song.entity;
 
+import com.ssafy.aieng.domain.book.entity.Storybook;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.mood.entity.Mood;
@@ -17,12 +18,9 @@ import jakarta.persistence.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Song extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(name = "storybook_id", nullable = false)
-    private Integer storybookId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "storybook_id", nullable = false)
+    private Storybook storybook;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voice_id", nullable = false)
@@ -49,8 +47,7 @@ public class Song extends BaseEntity {
     private SongStatus status = SongStatus.CREATED;
 
     @Builder
-    public Song(Integer storybookId, Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
-        this.storybookId = storybookId;
+    public Song(Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
         this.voice = voice;
         this.mood = mood;
         this.title = title;

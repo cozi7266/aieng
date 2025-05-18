@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Builder
 public class SongListResponseDto {
-    private Integer id;
-    private Integer storybookId;
+    private Integer songId;
     private String coverUrl;
     private Integer voiceId;
     private Integer moodId;
@@ -25,8 +24,7 @@ public class SongListResponseDto {
 
     public static SongListResponseDto from(Song song, Storybook storybook) {
         return SongListResponseDto.builder()
-                .id(song.getId())
-                .storybookId(song.getStorybookId())
+                .songId(song.getId())
                 .coverUrl(storybook.getCoverUrl())
                 .voiceId(song.getVoice().getId())
                 .moodId(song.getMood().getId())
