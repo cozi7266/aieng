@@ -105,6 +105,9 @@ const WordSelectScreen: React.FC = () => {
     en: "",
   });
 
+  // 세션 ID를 저장할 상태 추가
+  const [sessionId, setSessionId] = useState<number | null>(null);
+
   // Profile modal animation
   useEffect(() => {
     if (isProfileModalOpen) {
@@ -240,6 +243,9 @@ const WordSelectScreen: React.FC = () => {
           throw new Error("세션 데이터가 없습니다.");
         }
 
+        // 세션 ID 저장
+        setSessionId(sessionData.sessionId);
+
         // 테마 정보 업데이트
         setThemeInfo({
           ko: sessionData.themeKo,
@@ -285,6 +291,77 @@ const WordSelectScreen: React.FC = () => {
         console.log("Config:", error.config);
         throw new Error(error.message || "요청 처리 중 오류가 발생했습니다.");
       }
+    }
+  };
+
+  // 리롤 API 호출 함수 추가
+  const reshuffleWords = async () => {
+    if (!sessionId) {
+      throw new Error("세션 ID가 없습니다.");
+    }
+
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[리롤 API 요청]");
+      console.log(
+        "URL:",
+        `https://www.aieng.co.kr/api/sessions/${sessionId}/themes/${themeId}/reshuffle`
+      );
+
+      const response = await axios.post<ApiResponse>(
+        `https://www.aieng.co.kr/api/sessions/${sessionId}/themes/${themeId}/reshuffle`,
+        {}, // 빈 body
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const sessionData = response.data.data;
+
+        // 테마 정보 업데이트
+        setThemeInfo({
+          ko: sessionData.themeKo,
+          en: sessionData.themeEn,
+        });
+
+        // Transform the API data to our Word format
+        const selectedWords = sessionData.words.map((word) => ({
+          id: word.wordId.toString(),
+          english: word.wordEn,
+          korean: word.wordKo,
+          image: { uri: word.wordImgUrl },
+          isLearned: word.isLearned,
+          isFlipped: false,
+        }));
+
+        setWords(selectedWords);
+        setSelectedCardId(null);
+      } else {
+        throw new Error(
+          response.data.error?.message || "단어를 다시 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      console.error("리롤 실패:", error);
+      throw error;
     }
   };
 
@@ -339,7 +416,13 @@ const WordSelectScreen: React.FC = () => {
   // Refresh words - only available when completedCount is 0
   const handleRefreshWords = async () => {
     if (completedCount === 0) {
-      await fetchThemeWords(completedWords);
+      if (sessionId) {
+        // 세션이 있는 경우 리롤 API 호출
+        await reshuffleWords();
+      } else {
+        // 세션이 없는 경우 기존 API 호출
+        await fetchThemeWords(completedWords);
+      }
     }
   };
 
@@ -434,10 +517,11 @@ const WordSelectScreen: React.FC = () => {
               }
               onPress={handleButtonAction}
               variant="primary"
-              style={[
-                styles.refreshButton,
-                completedCount > 0 && !selectedCardId && styles.disabledButton,
-              ]}
+              style={
+                completedCount > 0 && !selectedCardId
+                  ? styles.disabledButton
+                  : styles.refreshButton
+              }
               disabled={completedCount > 0 && !selectedCardId}
             />
           </View>
