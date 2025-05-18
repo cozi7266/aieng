@@ -93,6 +93,7 @@ public enum  ErrorCode {
     // Storybook 관련 에러
     STORYBOOK_NOT_FOUND(404, "SB001", "그림책을 찾을 수 없습니다."),
     STORYBOOK_CREATION_FAILED(400, "SB002", "그림책을 생성할 수 없습니다."),
+    INVALID_STORYBOOK_ACCESS(403, "SB003", "유효하지 않은 그림책 접근입니다."),
 
     // Song 관련 에러
     SONG_NOT_FOUND(404, "SG001", "동요를 찾을 수 없습니다."),

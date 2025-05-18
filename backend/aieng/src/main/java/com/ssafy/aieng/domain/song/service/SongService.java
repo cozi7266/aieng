@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.ssafy.aieng.domain.book.entity.LearningStorybook;
 import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.mood.repository.MoodRepository;
 import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
@@ -58,7 +59,7 @@ public class SongService {
 
     // 동요 생성
     @Transactional
-    public void generateSong(Integer userId, Integer childId, Integer sessionId, SongGenerateRequestDto requestDto) {
+    public void generateSong(Integer userId, Integer childId, Integer storybookId, SongGenerateRequestDto requestDto) {
         // 1. 유저와 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -66,11 +67,12 @@ public class SongService {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 2. 세션 검증
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-        if (!session.getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
+        // 2. Storybook 검증 (sessionId 대신 storybookId로 변경)
+        Storybook storybook = storybookRepository.findById(storybookId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
+
+        if (!storybook.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
         }
 
         // 3. Voice, Mood 조회
@@ -87,7 +89,7 @@ public class SongService {
         // 4. FastAPI 요청 구성 및 전송 (결과는 Redis에 저장됨)
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
-                "sessionId", sessionId,
+                "storybookId", storybookId, // sessionId 대신 storybookId 사용
                 "moodName", mood.getName(),
                 "voiceName", voice.getName()
         );
@@ -121,9 +123,11 @@ public class SongService {
     }
 
 
+
+    // 동요 저장 (Redis -> RDB)
     // 동요 저장 (Redis -> RDB)
     @Transactional
-    public SongGenerateResponseDto saveSongFromRedis(Integer userId, Integer childId, Integer sessionId) {
+    public SongGenerateResponseDto saveSongFromRedis(Integer userId, Integer childId, Integer storybookId) {
         // 1️⃣ 자녀 소유자 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -131,16 +135,16 @@ public class SongService {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 2️⃣ 세션 조회
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        // 2️⃣ Storybook 조회 (세션 대신 storybookId 사용)
+        Storybook storybook = storybookRepository.findById(storybookId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
 
-        if (!session.getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
+        if (!storybook.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
         }
 
         // 3️⃣ Redis polling (최대 10번 시도, 0.5초 간격)
-        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId);  // ex: Song:user:{userId}:session:{sessionId}
+        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, storybookId);  // ex: Song:user:{userId}:storybook:{storybookId}
         String json = null;
         int retry = 0;
         while (retry < 10) {
@@ -180,6 +184,7 @@ public class SongService {
             Song song = Song.builder()
                     .voice(voice)
                     .mood(mood)
+                    .storybook(storybook)  // storybook 추가
                     .title("AI Generated Song")
                     .lyric(lyricsEn)
                     .description(lyricsKo)
@@ -187,9 +192,9 @@ public class SongService {
                     .build();
 
             songRepository.save(song);
-            session.markSongDoneAndFinish();
+            storybook.addLearningStorybook(new LearningStorybook(storybook, null, 0));  // Optional: LearningStorybook 추가
 
-            log.info("🎵 동요 저장 완료: sessionId={}, songUrl={}", sessionId, songUrl);
+            log.info("🎵 동요 저장 완료: storybookId={}, songUrl={}", storybookId, songUrl);
 
             return SongGenerateResponseDto.of(song);
 
@@ -198,6 +203,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
 }
