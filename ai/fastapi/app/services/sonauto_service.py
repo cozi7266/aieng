@@ -35,10 +35,10 @@ class SonautoService:
     async def generate_song(self, user_id: int, session_id: int, mood_name: str, voice_name: str) -> dict:
         # 1. Redis에서 문장 조회
         sentences = self.get_sentences_from_redis(user_id, session_id)
-        if len(sentences) != 5:
-            raise ValueError("학습 문장은 정확히 5개여야 합니다.")
+        if len(sentences) != 6:
+            raise ValueError("학습 문장은 정확히 6개여야 합니다.")
 
-        logger.info(f"[Sonauto] 세션 {session_id}에서 문장 5개 조회 완료")
+        logger.info(f"[Sonauto] 세션 {session_id}에서 문장 6개 조회 완료")
 
         # 2. GPT로 가사 및 번역 생성
         gpt_service = GPTService()
