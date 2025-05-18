@@ -88,7 +88,7 @@ public class SongService {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(fastApiRequest, headers);
 
             ResponseEntity<String> fastApiResponse = new RestTemplate().postForEntity(
-                    FASTAPI_URL ,
+                    FASTAPI_URL,
                     entity,
                     String.class
             );
@@ -104,19 +104,19 @@ public class SongService {
 
             JsonNode json = objectMapper.readTree(responseBody);
 
-            // 5. Song 저장 (status = CREATED)
+            // ✅ FastAPI 응답 필드 이름에 맞게 수정
             Song song = Song.builder()
                     .storybookId(requestDto.getStorybookId())
                     .voice(voice)
                     .mood(mood)
-                    .title(json.get("title").asText())
-                    .lyric(json.get("lyric").asText())
-                    .description(json.get("description").asText())
-                    .songUrl(json.get("song_url").asText())
+                    .title("AI Generated Song") // 고정값 또는 추후 FastAPI 응답 필드 추가 시 변경
+                    .lyric(json.get("lyricsEn").asText())
+                    .description(json.get("lyricsKo").asText())
+                    .songUrl(json.get("songUrl").asText())
                     .build();
 
             songRepository.save(song);
-            session.markSongDoneAndFinish(); // ✅ 필요 시 상태 업데이트 로직도 함께 호출
+            session.markSongDoneAndFinish();
 
             return SongGenerateResponseDto.of(song);
 
@@ -125,6 +125,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
 
