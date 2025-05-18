@@ -31,6 +31,7 @@ public class ChildThemeProgressResponse {
                 .sessionId(session.getId())
                 .themeId(session.getTheme().getId())
                 .themeKo(session.getTheme().getThemeKo())
+                .themeEn(session.getTheme().getThemeEn())
                 .themeImgUrl(session.getTheme().getImageUrl())
                 .startedAt(session.getStartedAt())
                 .finishedAt(session.getFinishedAt())
