@@ -1,6 +1,5 @@
 package com.ssafy.aieng.domain.book.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import lombok.Builder;
 import lombok.Getter;
@@ -8,15 +7,28 @@ import lombok.Getter;
 @Getter
 @Builder
 public class PageResponse {
-    private String word;
-    private String image;
+
+    private Integer wordId;
+    private String wordEn;
+    private String wordKo;
+    private String wordImgUrl;
     private String sentence;
+    private String translation;
+    private String sentenceImgUrl;
+    private String sentenceTtsUrl;
+    private Integer pageOrder;
 
     public static PageResponse from(Learning learning) {
         return PageResponse.builder()
-                .word(learning.getWord().getWordEn())
-                .image(learning.getImgUrl())
+                .wordId(learning.getWord().getId())
+                .wordEn(learning.getWord().getWordEn())
+                .wordKo(learning.getWord().getWordKo())
+                .wordImgUrl(learning.getWord().getImgUrl())
                 .sentence(learning.getSentence())
+                .translation(learning.getTranslation())
+                .sentenceImgUrl(learning.getImgUrl())
+                .sentenceTtsUrl(learning.getTtsUrl())
+                .pageOrder(learning.getPageOrder())
                 .build();
     }
-} 
+}

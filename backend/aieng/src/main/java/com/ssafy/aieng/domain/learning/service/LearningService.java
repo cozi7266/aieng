@@ -194,66 +194,28 @@ public class LearningService {
     }
 
 
-
     // 생성한 문장 관련 정보 조회
     @Transactional(readOnly = true)
-    public SentenceResponse getSentenceResponse(Integer userId, Integer sessionId, String word) {
-        Word wordEntity = wordRepository.findByWordEn(word)
-                .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
-        Integer wordId = wordEntity.getId();
+    public SentenceResponse getSentenceResponse(Integer userId, Integer childId, Integer sessionId, String wordEn) {
+        // 1️⃣ 자녀 소유자 검증
+        validateChildOwnership(userId, childId);
 
-        Learning learning = learningRepository.findBySessionIdAndWordId(sessionId, wordId)
+        // 2️⃣ 단어 엔티티 조회
+        Word word = wordRepository.findByWordEn(wordEn)
+                .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
+
+        // 3️⃣ 학습 기록 조회
+        Learning learning = learningRepository.findBySessionIdAndWordId(sessionId, word.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.LEARNING_NOT_FOUND));
 
-        String redisKey = RedisKeyUtil.getSentenceCacheKey(sessionId, wordId, word);
-
-        String cachedJson = stringRedisTemplate.opsForValue().get(redisKey);
-        if (cachedJson != null) {
-            try {
-                Map<String, String> cached = objectMapper.readValue(cachedJson, new TypeReference<>() {});
-                log.info("✅ Redis hit - key: {}", redisKey);
-                return new SentenceResponse(
-                        cached.get("wordEn"),
-                        cached.get("sentence"),
-                        cached.get("image_url"),
-                        cached.get("audio_url")
-                );
-            } catch (Exception e) {
-                log.warn("❌ Redis 파싱 실패 - key: {}, 이유: {}", redisKey, e.getMessage());
-            }
-        }
-
+        // 4️⃣ 학습 정보 유효성 검사
         if (learning.getSentence() == null || learning.getImgUrl() == null || learning.getTtsUrl() == null) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        Map<String, String> cache = new HashMap<>();
-        cache.put("wordEn", word);
-        cache.put("sentence", learning.getSentence());
-        cache.put("image_url", learning.getImgUrl());
-        cache.put("audio_url", learning.getTtsUrl());
-
-        try {
-            String jsonValue = objectMapper.writeValueAsString(cache);
-            stringRedisTemplate.opsForValue().set(redisKey, jsonValue);
-            log.info("💾 Redis 저장 완료 - key: {}", redisKey);
-        } catch (Exception e) {
-            log.warn("❌ Redis 저장 실패 - key: {}, 이유: {}", redisKey, e.getMessage());
-        }
-
-        return new SentenceResponse(
-                word,
-                learning.getSentence(),
-                learning.getImgUrl(),
-                learning.getTtsUrl()
-        );
+        // 5️⃣ 응답 반환
+        return SentenceResponse.of(learning);
     }
-
-
-
-
-
-
 
 
 }
