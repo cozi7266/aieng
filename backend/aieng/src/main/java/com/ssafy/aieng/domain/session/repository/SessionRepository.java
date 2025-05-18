@@ -19,5 +19,6 @@ public interface SessionRepository extends JpaRepository<Session, Integer> {
 
     Optional<Session> findTopByChildIdAndThemeIdAndDeletedFalseOrderByStartedAtDesc(Integer childId, Integer themeId);
 
-    Optional<Session> findFirstByChildIdAndFinishedAtIsNull(Integer childId);
+    // childId와 storybookId(또는 themeId)가 일치하고, finishedAt이 null이 아닌 세션 조회
+    Optional<Session> findFirstByChildIdAndThemeIdAndFinishedAtIsNotNull(Integer childId, Integer themeId);
 }
