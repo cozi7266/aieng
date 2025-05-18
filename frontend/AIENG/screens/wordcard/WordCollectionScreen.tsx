@@ -32,15 +32,12 @@ import WordDetailModal from "../../components/common/wordcard/WordDetailModal";
 
 // 단어 데이터 타입
 interface WordData {
-  wordId: string;
+  wordId: number;
   wordEn: string;
   wordKo: string;
-  imageUrl: string;
-  isLearned: boolean;
-  pronunciation?: string;
-  example?: string;
-  exampleKo?: string;
-  audioUrl?: string;
+  imgUrl: string;
+  ttsUrl: string;
+  learned: boolean;
 }
 
 // 라우트 파라미터 타입
@@ -82,9 +79,8 @@ const WordCollectionScreen: React.FC = () => {
       if (!token || !selectedChildId)
         throw new Error("로그인 정보가 없습니다.");
 
-      // API 엔드포인트는 실제 앱에 맞게 수정해야 합니다
       const response = await axios.get(
-        `https://www.aieng.co.kr/api/wordcards/themes/${themeId}/words`,
+        `https://www.aieng.co.kr/api/dictionaries/themes/${themeId}/words`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -150,7 +146,7 @@ const WordCollectionScreen: React.FC = () => {
 
   // 단어 카드 클릭 핸들러
   const handleWordCardPress = (word: WordData) => {
-    if (word.isLearned) {
+    if (word.learned) {
       setSelectedWord(word);
       setModalVisible(true);
     }
@@ -159,7 +155,7 @@ const WordCollectionScreen: React.FC = () => {
 
   // 발음 듣기 버튼 클릭 핸들러
   const playWordAudio = async () => {
-    if (!selectedWord?.audioUrl) return;
+    if (!selectedWord?.ttsUrl) return;
 
     try {
       // 이전 사운드가 있으면 언로드
@@ -169,14 +165,14 @@ const WordCollectionScreen: React.FC = () => {
 
       // 새 사운드 로드 및 재생
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: selectedWord.audioUrl },
+        { uri: selectedWord.ttsUrl },
         { shouldPlay: true }
       );
       setSound(newSound);
 
       // 재생 완료 이벤트 리스너
       newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.didJustFinish) {
+        if (status.isLoaded && status.didJustFinish) {
           newSound.unloadAsync();
         }
       });
@@ -187,7 +183,16 @@ const WordCollectionScreen: React.FC = () => {
 
   // 단어 카드 렌더링
   const renderWordCard = ({ item }: { item: WordData }) => (
-    <WordCard word={item} onPress={() => handleWordCardPress(item)} />
+    <WordCard
+      word={{
+        id: item.wordId.toString(),
+        wordEn: item.wordEn,
+        wordKo: item.wordKo,
+        imageUrl: item.imgUrl,
+        isLearned: item.learned,
+      }}
+      onPress={() => handleWordCardPress(item)}
+    />
   );
 
   if (isLoading) {
@@ -208,7 +213,7 @@ const WordCollectionScreen: React.FC = () => {
   }
 
   // 학습한 단어와 학습하지 않은 단어 통계
-  const learnedCount = words.filter((word) => word.isLearned).length;
+  const learnedCount = words.filter((word) => word.learned).length;
   const totalCount = words.length;
   const progressPercentage =
     totalCount > 0 ? Math.round((learnedCount / totalCount) * 100) : 0;
@@ -255,7 +260,7 @@ const WordCollectionScreen: React.FC = () => {
             <FlatList
               data={words}
               renderItem={renderWordCard}
-              keyExtractor={(item) => item.wordId}
+              keyExtractor={(item) => item.wordId.toString()}
               numColumns={numColumns}
               contentContainerStyle={styles.listContainer}
               columnWrapperStyle={styles.columnWrapper}
@@ -266,7 +271,17 @@ const WordCollectionScreen: React.FC = () => {
           <WordDetailModal
             visible={modalVisible}
             onClose={() => setModalVisible(false)}
-            word={selectedWord}
+            word={
+              selectedWord
+                ? {
+                    id: selectedWord.wordId.toString(),
+                    wordEn: selectedWord.wordEn,
+                    wordKo: selectedWord.wordKo,
+                    imageUrl: selectedWord.imgUrl,
+                    audioUrl: selectedWord.ttsUrl,
+                  }
+                : null
+            }
             onListenPress={playWordAudio}
           />
         </Animated.View>
