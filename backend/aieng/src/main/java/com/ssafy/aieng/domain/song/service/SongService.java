@@ -59,7 +59,7 @@ public class SongService {
 
     // 동요 생성
     @Transactional
-    public void generateSong(Integer userId, Integer childId, Integer sessionId, Integer storybookId, SongGenerateRequestDto requestDto) {
+    public void generateSong(Integer userId, Integer childId, Integer storybookId, SongGenerateRequestDto requestDto) {
         // 1. 유저와 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -86,7 +86,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 4. 세션 조회 (sessionId와 storybookId로 세션 조회)
+        // 4. 세션 조회 (storybookId와 childId로 세션 조회)
         log.info("📌 세션 조회 시작: childId={}, storybookId={}", childId, storybookId);
         Session session = sessionRepository.findFirstByChildIdAndStorybookIdAndFinishedAtIsNotNull(childId, storybookId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
@@ -104,7 +104,7 @@ public class SongService {
         // 5. FastAPI 요청 구성 및 전송 (결과는 Redis에 저장됨)
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
-                "sessionId", session.getId(),  // sessionId 사용
+                "sessionId", session.getId(),
                 "moodName", mood.getName(),
                 "voiceName", voice.getName()
         );
@@ -140,12 +140,9 @@ public class SongService {
 
 
 
-
-
-
     // 동요 저장 (Redis -> RDB)
     @Transactional
-    public SongGenerateResponseDto saveSongFromRedis(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
+    public SongGenerateResponseDto saveSongFromRedis(Integer userId, Integer childId, Integer storybookId) {
         // 1️⃣ 자녀 소유자 검증
         log.info("📌 자녀 검증 시작: childId={}", childId);
         Child child = childRepository.findById(childId)
@@ -155,15 +152,15 @@ public class SongService {
         }
         log.info("✅ 자녀 검증 완료: childId={}", childId);
 
-        // 2️⃣ 세션 조회 (sessionId와 storybookId를 사용하여 세션을 조회)
+        // 2️⃣ 세션 조회 (storybookId와 childId를 사용하여 세션을 조회)
         log.info("📌 세션 조회 시작: childId={}, storybookId={}", childId, storybookId);
         Session session = sessionRepository.findFirstByChildIdAndStorybookIdAndFinishedAtIsNotNull(childId, storybookId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         log.info("✅ 세션 조회 완료: sessionId={}", session.getId());
 
         // 3️⃣ Redis polling (최대 10번 시도, 0.5초 간격)
-        log.info("📌 Redis에서 동요 정보 조회 시작: redisKey={}", RedisKeyUtil.getGeneratedSongKey(userId, sessionId));
-        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId);
+        log.info("📌 Redis에서 동요 정보 조회 시작: redisKey={}", RedisKeyUtil.getGeneratedSongKey(userId, session.getId()));
+        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, session.getId());
         String json = null;
         int retry = 0;
         while (retry < 10) {
@@ -237,6 +234,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
 
