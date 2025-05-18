@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @Slf4j
@@ -106,17 +107,28 @@ public class SongService {
             );
 
             log.info("✅ FastAPI 응답 코드: {}", fastApiResponse.getStatusCodeValue());
+
             if (fastApiResponse.getStatusCode().isError()) {
+                // FastAPI 서버 오류가 발생한 경우
+                String errorMessage = "FastAPI 응답 오류: " + fastApiResponse.getStatusCode().toString();
+                log.error("❌ FastAPI 동요 생성 요청 실패: {}", errorMessage);
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
             log.info("🎵 동요 생성 요청 완료 (FastAPI가 Redis에 저장 예정)");
 
+        } catch (JsonProcessingException e) {
+            log.error("❌ FastAPI 요청 데이터 변환 실패", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        } catch (HttpServerErrorException e) {
+            log.error("❌ FastAPI 서버 오류", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            log.error("❌ FastAPI 동요 생성 요청 실패", e);
+            log.error("❌ 동요 생성 중 오류 발생", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
     @Transactional
