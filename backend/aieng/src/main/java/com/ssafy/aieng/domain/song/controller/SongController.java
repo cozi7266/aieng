@@ -40,6 +40,17 @@ public class SongController {
         return ApiResponse.success(HttpStatus.OK);
     }
 
+    @GetMapping("/sessions/{sessionId}/save-song")
+    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> getGeneratedSongFromRedis(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId
+    ) {
+        SongGenerateResponseDto response = songService.saveSongFromRedis(user.getId(), childId, sessionId);
+        return ApiResponse.success(response);
+    }
+
+
 
     @GetMapping("/voice")
     public ResponseEntity<ApiResponse<List<VoiceResponseDto>>> getDefaultVoices() {
