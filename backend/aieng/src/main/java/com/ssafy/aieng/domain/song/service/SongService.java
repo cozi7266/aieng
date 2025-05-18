@@ -74,7 +74,13 @@ public class SongService {
         Mood mood = moodRepository.findById(requestDto.getMood())
                 .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
-        // 4. FastAPI 요청 준비
+        if (voice.getName() == null || voice.getName().isBlank() ||
+                mood.getName() == null || mood.getName().isBlank()) {
+            log.error("❌ Voice 또는 Mood 이름이 비어 있음 - voiceName={}, moodName={}", voice.getName(), mood.getName());
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        // 4. FastAPI 요청 구성
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
                 "sessionId", sessionId,
@@ -83,15 +89,22 @@ public class SongService {
         );
 
         try {
+            ObjectMapper mapper = new ObjectMapper();
+            String jsonPayload = mapper.writeValueAsString(fastApiRequest);
+            log.info("📤 FastAPI 전송 데이터: {}", jsonPayload);
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(fastApiRequest, headers);
+            HttpEntity<String> entity = new HttpEntity<>(jsonPayload, headers);
 
             ResponseEntity<String> fastApiResponse = new RestTemplate().postForEntity(
                     FASTAPI_URL,
                     entity,
                     String.class
             );
+
+            log.info("✅ FastAPI 응답 코드: {}", fastApiResponse.getStatusCodeValue());
+            log.info("✅ FastAPI 응답 본문: {}", fastApiResponse.getBody());
 
             if (fastApiResponse.getStatusCode().isError()) {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -104,12 +117,12 @@ public class SongService {
 
             JsonNode json = objectMapper.readTree(responseBody);
 
-            // ✅ FastAPI 응답 필드 이름에 맞게 수정
+            // 5. Song 저장
             Song song = Song.builder()
                     .storybookId(requestDto.getStorybookId())
                     .voice(voice)
                     .mood(mood)
-                    .title("AI Generated Song") // 고정값 또는 추후 FastAPI 응답 필드 추가 시 변경
+                    .title("AI Generated Song")
                     .lyric(json.get("lyricsEn").asText())
                     .description(json.get("lyricsKo").asText())
                     .songUrl(json.get("songUrl").asText())
