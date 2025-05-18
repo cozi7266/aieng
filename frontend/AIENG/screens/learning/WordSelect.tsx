@@ -245,6 +245,11 @@ const WordSelectScreen: React.FC = () => {
 
         // 세션 ID 저장
         setSessionId(sessionData.sessionId);
+        // AsyncStorage에도 세션 ID 저장
+        await AsyncStorage.setItem(
+          "currentSessionId",
+          sessionData.sessionId.toString()
+        );
 
         // 테마 정보 업데이트
         setThemeInfo({
@@ -407,6 +412,7 @@ const WordSelectScreen: React.FC = () => {
         wordId: selectedWord.id,
         themeId: themeId,
         theme: selectedTheme,
+        sessionId: sessionId, // 세션 ID 전달
       });
     } catch (error) {
       console.error("학습 시작 실패:", error);

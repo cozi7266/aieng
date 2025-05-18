@@ -28,18 +28,38 @@ import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
 // 라우트 파라미터 타입 정의
 type WordSentenceParams = {
   wordId: string;
   themeId: string;
   theme: string;
+  sessionId: number;
 };
 
 type WordSentenceScreenRouteProp = RouteProp<
   { WordSentence: WordSentenceParams },
   "WordSentence"
 >;
+
+// API 응답 타입 정의
+interface SentenceApiResponse {
+  success: boolean;
+  data: {
+    word: string;
+    sentence: string;
+    translation: string;
+    image_url: string;
+    audio_url: string;
+    cached_at: string;
+  } | null;
+  error: {
+    code: string;
+    message: string;
+  } | null;
+}
 
 // 단어 및 문장 데이터 타입 정의
 interface SentenceData {
@@ -54,7 +74,7 @@ interface SentenceData {
 const WordSentenceScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<WordSentenceScreenRouteProp>();
-  const { wordId, themeId, theme: themeName } = route.params;
+  const { wordId, themeId, theme: themeName, sessionId } = route.params;
   const { stopBgm } = useAudio();
 
   const [sentence, setSentence] = useState<SentenceData | null>(null);
@@ -63,6 +83,7 @@ const WordSentenceScreen: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasListened, setHasListened] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
+  const [currentWord, setCurrentWord] = useState<string>("");
 
   // 진행 단계 (2/3 표시를 위한 변수)
   const currentStep = 2;
@@ -124,64 +145,124 @@ const WordSentenceScreen: React.FC = () => {
     const fetchSentenceData = async () => {
       try {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-        // 목업 데이터
-        const mockSentences = [
-          {
-            word: "cat",
-            sentence: "The cat is sleeping.",
-            sentenceKorean: "고양이가 자고 있어요.",
-          },
-          {
-            word: "dog",
-            sentence: "The dog is barking.",
-            sentenceKorean: "개가 짖고 있어요.",
-          },
-          {
-            word: "rabbit",
-            sentence: "The rabbit is jumping.",
-            sentenceKorean: "토끼가 뛰고 있어요.",
-          },
-          {
-            word: "bird",
-            sentence: "The bird is flying.",
-            sentenceKorean: "새가 날고 있어요.",
-          },
-          {
-            word: "fish",
-            sentence: "The fish is swimming.",
-            sentenceKorean: "물고기가 수영하고 있어요.",
-          },
-          {
-            word: "lion",
-            sentence: "The lion is roaring.",
-            sentenceKorean: "사자가 으르렁거려요.",
-          },
-        ];
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
 
-        const mockWord =
-          ["cat", "dog", "rabbit", "bird", "fish", "lion"][
-            parseInt(wordId) - 1
-          ] || "cat";
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
 
-        const mockSentence =
-          mockSentences.find((item) => item.word === mockWord) ||
-          mockSentences[0];
+        if (!sessionId) {
+          throw new Error("세션 ID가 없습니다.");
+        }
 
-        setSentence({
-          id: wordId,
-          word: mockWord,
-          sentence: mockSentence.sentence,
-          sentenceKorean: mockSentence.sentenceKorean,
-          imageUrl: require("../../assets/images/themes/animals.png"),
-          audioUrl: require("../../assets/sounds/background-music.mp3"),
+        console.log("[세션 ID 확인]", sessionId);
+        console.log("[단어 ID 확인]", wordId);
+
+        // 먼저 단어 정보를 가져옵니다
+        console.log("[단어 정보 API 요청]");
+        const wordUrl = `https://www.aieng.co.kr/api/words/${wordId}`;
+        console.log("URL:", wordUrl);
+        console.log("Headers:", {
+          Authorization: `Bearer ${token}`,
+          "X-Child-Id": selectedChildId,
+          "Content-Type": "application/json",
         });
 
-        setIsLoading(false);
-      } catch (error) {
-        console.error("API 요청 실패:", error);
-        setError("문장 데이터를 불러오는데 실패했습니다");
+        const wordResponse = await axios.get(wordUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        });
+
+        console.log("[단어 정보 API 응답]");
+        console.log("Status:", wordResponse.status);
+        console.log("Data:", JSON.stringify(wordResponse.data, null, 2));
+
+        if (!wordResponse.data.success) {
+          throw new Error("단어 정보를 가져오는데 실패했습니다.");
+        }
+
+        const wordData = wordResponse.data.data;
+        setCurrentWord(wordData.wordEn);
+
+        // 문장 생성 API 요청
+        console.log("[문장 생성 API 요청]");
+        const sentenceUrl = `https://www.aieng.co.kr/api/learning/sessions/${sessionId}/words/${wordData.wordEn}/generation`;
+        console.log("URL:", sentenceUrl);
+        console.log("Headers:", {
+          Authorization: `Bearer ${token}`,
+          "X-Child-Id": selectedChildId,
+          "Content-Type": "application/json",
+        });
+        console.log("Path Variables:", {
+          sessionId,
+          wordEn: wordData.wordEn,
+        });
+
+        const response = await axios.post<SentenceApiResponse>(
+          sentenceUrl,
+          {}, // 빈 body
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Child-Id": selectedChildId,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("[문장 생성 API 응답]");
+        console.log("Status:", response.status);
+        console.log("Data:", JSON.stringify(response.data, null, 2));
+
+        if (response.data.success && response.data.data) {
+          const sentenceData = response.data.data;
+          setSentence({
+            id: wordId,
+            word: sentenceData.word,
+            sentence: sentenceData.sentence,
+            sentenceKorean: sentenceData.translation,
+            imageUrl: { uri: sentenceData.image_url },
+            audioUrl: sentenceData.audio_url,
+          });
+        } else {
+          throw new Error(
+            response.data.error?.message ||
+              "문장 데이터를 불러오는데 실패했습니다"
+          );
+        }
+      } catch (error: any) {
+        console.error("[API 에러 상세 정보]");
+        if (error.response) {
+          // 서버가 응답을 반환한 경우
+          console.error("Status:", error.response.status);
+          console.error("Data:", JSON.stringify(error.response.data, null, 2));
+          console.error(
+            "Headers:",
+            JSON.stringify(error.response.headers, null, 2)
+          );
+        } else if (error.request) {
+          // 요청은 보냈지만 응답을 받지 못한 경우
+          console.error("Request:", error.request);
+        } else {
+          // 요청 설정 중 에러가 발생한 경우
+          console.error("Error Message:", error.message);
+        }
+        console.error("Config:", JSON.stringify(error.config, null, 2));
+
+        setError(
+          error.response?.data?.error?.message ||
+            error.message ||
+            "문장 데이터를 불러오는데 실패했습니다"
+        );
+      } finally {
         setIsLoading(false);
       }
     };
@@ -193,7 +274,7 @@ const WordSentenceScreen: React.FC = () => {
         sound.current.unloadAsync();
       }
     };
-  }, [wordId, themeId]);
+  }, [wordId, themeId, sessionId]);
 
   // 재생 버튼 애니메이션
   useEffect(() => {
@@ -297,24 +378,29 @@ const WordSentenceScreen: React.FC = () => {
         return;
       }
 
+      if (!sentence?.audioUrl) {
+        throw new Error("오디오 URL이 없습니다");
+      }
+
       setIsPlaying(true);
 
       if (sound.current) {
-        await sound.current.playAsync();
-      } else {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          sentence.audioUrl,
-          { shouldPlay: true }
-        );
-
-        sound.current = newSound;
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            setHasListened(true);
-          }
-        });
+        await sound.current.unloadAsync();
+        sound.current = null;
       }
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: sentence.audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.current = newSound;
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+          setHasListened(true);
+        }
+      });
     } catch (error) {
       console.error("오디오 재생 실패:", error);
       setIsPlaying(false);

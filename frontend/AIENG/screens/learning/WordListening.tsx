@@ -37,6 +37,7 @@ type WordListeningParams = {
   wordId: string;
   themeId: string;
   theme: string;
+  sessionId: number;
 };
 
 type WordListeningScreenRouteProp = RouteProp<
@@ -71,7 +72,7 @@ interface WordData {
 const WordListeningScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<WordListeningScreenRouteProp>();
-  const { wordId, themeId, theme: themeName } = route.params;
+  const { wordId, themeId, theme: themeName, sessionId } = route.params;
   const { stopBgm } = useAudio();
 
   const [word, setWord] = useState<WordData | null>(null);
@@ -242,6 +243,13 @@ const WordListeningScreen: React.FC = () => {
       ).start();
     }
   }, [hasListened]);
+
+  // 세션 ID를 AsyncStorage에 저장
+  useEffect(() => {
+    if (sessionId) {
+      AsyncStorage.setItem("currentSessionId", sessionId.toString());
+    }
+  }, [sessionId]);
 
   // 가로 모드 고정
   useEffect(() => {
@@ -508,6 +516,7 @@ const WordListeningScreen: React.FC = () => {
                     wordId: word.id,
                     themeId: themeId,
                     theme: themeName,
+                    sessionId: sessionId,
                   })
                 }
               >
