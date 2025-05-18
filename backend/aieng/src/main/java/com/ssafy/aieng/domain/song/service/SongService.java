@@ -121,6 +121,7 @@ public class SongService {
     }
 
 
+    // 동요 저장 (Redis -> RDB)
     @Transactional
     public SongGenerateResponseDto saveSongFromRedis(Integer userId, Integer childId, Integer sessionId) {
         // 1️⃣ 자녀 소유자 검증
