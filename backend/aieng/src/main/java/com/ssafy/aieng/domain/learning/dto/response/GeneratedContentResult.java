@@ -23,5 +23,6 @@ public class GeneratedContentResult {
     @JsonProperty("audio_url")
     private String audioUrl;
 
-
+    @JsonProperty("cached_at")
+    private String cachedAt;  // 또는 LocalDateTime으로 매핑 가능
 }
