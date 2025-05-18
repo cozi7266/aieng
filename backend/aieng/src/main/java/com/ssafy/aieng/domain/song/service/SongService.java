@@ -76,11 +76,11 @@ public class SongService {
 
         if (voice.getName() == null || voice.getName().isBlank() ||
                 mood.getName() == null || mood.getName().isBlank()) {
-            log.error("❌ Voice 또는 Mood 이름이 비어 있습니다. voiceName={}, moodName={}", voice.getName(), mood.getName());
+            log.error("❌ Voice 또는 Mood 이름이 비어 있음 - voiceName={}, moodName={}", voice.getName(), mood.getName());
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 4. FastAPI 요청 준비
+        // 4. FastAPI 요청 구성
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
                 "sessionId", sessionId,
@@ -89,7 +89,6 @@ public class SongService {
         );
 
         try {
-            // JSON 확인용 로그 추가
             ObjectMapper mapper = new ObjectMapper();
             String jsonPayload = mapper.writeValueAsString(fastApiRequest);
             log.info("📤 FastAPI 전송 데이터: {}", jsonPayload);
@@ -118,6 +117,7 @@ public class SongService {
 
             JsonNode json = objectMapper.readTree(responseBody);
 
+            // 5. Song 저장
             Song song = Song.builder()
                     .storybookId(requestDto.getStorybookId())
                     .voice(voice)
