@@ -195,7 +195,7 @@ const LearningScreen: React.FC = () => {
 
   // 테마 선택 처리 및 완료 상태 확인
   const handleThemeSelection = (item: ThemeData) => {
-    if (item.isFinished) {
+    if (item.totalWordCount === item.learnedWordCount) {
       // 완료된 테마는 퀴즈 이동 알림 표시
       NavigationWarningAlert.show({
         title: "퀴즈 도전",
@@ -230,7 +230,7 @@ const LearningScreen: React.FC = () => {
         imageSource={{ uri: item.themeImgUrl }}
         completed={item.learnedWordCount}
         total={item.totalWordCount}
-        isCompleted={item.isFinished}
+        isCompleted={item.totalWordCount === item.learnedWordCount}
         onPress={() => handleThemeSelection(item)}
       />
     );
