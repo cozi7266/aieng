@@ -53,6 +53,8 @@ public class SessionService {
         return child;
     }
 
+
+    // 학습 세션 생성
     @Transactional
     public CreateSessionResponse createLearningSession(Integer userId, Integer childId, Integer themeId) {
         // 1. 아이 소유자 검증
