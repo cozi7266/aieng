@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/books")
@@ -20,9 +22,8 @@ import org.springframework.web.bind.annotation.*;
 public class StorybookController {
 
     private final StorybookService storybookService;
-    private final AuthenticationUtil authenticationUtil;
 
-    // 그림책  생성
+    // 그림책 생성
     @PostMapping("/sessions/{sessionId}/storybook")
     public ResponseEntity<ApiResponse<StorybookResponse>> createStorybook(
             @PathVariable Integer sessionId,
@@ -34,6 +35,36 @@ public class StorybookController {
         StorybookResponse response = storybookService.createStorybook(userId, childId, sessionId);
 
         return ApiResponse.success(response);
+    }
+
+    // 그림책 목록 조회
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<StorybookResponse>>> getStorybooksByChild(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+        List<StorybookResponse> response = storybookService.getStorybooksByChild(userId, childId);
+        return ApiResponse.success(response);
+    }
+
+    // 그림책 상세 조회
+    @GetMapping("/{storybookId}")
+    public ResponseEntity<ApiResponse<StorybookResponse>> getStorybookDetail(
+            @PathVariable Integer storybookId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+        StorybookResponse response = storybookService.getStorybookDetail(userId, storybookId);
+        return ApiResponse.success(response);
+    }
+
+    // 4. 그림책 삭제
+    @DeleteMapping("/{storybookId}")
+    public ResponseEntity<ApiResponse<Void>> deleteStorybook(
+            @PathVariable Integer storybookId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+        storybookService.deleteStorybook(userId, storybookId);
+        return ApiResponse.success(HttpStatus.NO_CONTENT);
     }
 
 } 

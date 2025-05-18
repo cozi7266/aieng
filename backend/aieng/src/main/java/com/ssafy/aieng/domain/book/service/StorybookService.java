@@ -18,6 +18,7 @@ import com.ssafy.aieng.global.common.CustomAuthentication;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -86,4 +87,35 @@ public class StorybookService {
         storybookRepository.save(storybook);
         return StorybookResponse.from(storybook);
     }
+
+
+    // 자녀의 그림책 목록 조회
+    @Transactional(readOnly = true)
+    public List<StorybookResponse> getStorybooksByChild(Integer userId, Integer childId) {
+        customAuthentication.validateChildOwnership(userId, childId);
+        List<Storybook> storybooks = storybookRepository.findAllByChildIdOrderByCreatedAtDesc(childId);
+        return storybooks.stream()
+                .map(StorybookResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    // 그림책 상세 조회
+    @Transactional(readOnly = true)
+    public StorybookResponse getStorybookDetail(Integer userId, Integer storybookId) {
+        Storybook storybook = storybookRepository.findById(storybookId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
+        customAuthentication.validateChildOwnership(userId, storybook.getChild().getId());
+        return StorybookResponse.from(storybook);
+    }
+
+    // 그림책 삭제
+    @Transactional
+    public void deleteStorybook(Integer userId, Integer storybookId) {
+        Storybook storybook = storybookRepository.findById(storybookId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
+        customAuthentication.validateChildOwnership(userId, storybook.getChild().getId());
+        storybook.softDelete();
+        storybookRepository.save(storybook);
+    }
+
 }
