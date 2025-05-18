@@ -51,7 +51,6 @@ public enum  ErrorCode {
     QUIZ_NOT_FOUND(404, "Q002", "퀴즈가 존재하지 않습니다."),
     QUIZ_CREATION_FAILED(400, "Q003", "퀴즈 생성 조건을 만족하지 않습니다."),
 
-
     // Theme
     THEME_NOT_FOUND(404, "T001", "테마를 찾을 수 없습니다."),
     THEME_ALREADY_EXISTS(409, "T002", "이미 존재하는 테마입니다."),
@@ -97,7 +96,7 @@ public enum  ErrorCode {
 
     // Song 관련 에러
     SONG_NOT_FOUND(404, "SG001", "동요를 찾을 수 없습니다."),
-    SONG_ALREADY_DELETED(400, "SG002", "이미 삭제된 동요입니다.");
+    SONG_ALREADY_DELETED(400, "SG002", "이미 삭제된 동요입니다."),;
 
 
     private final int status;
