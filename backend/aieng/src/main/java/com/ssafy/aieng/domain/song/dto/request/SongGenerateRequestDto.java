@@ -18,5 +18,7 @@ public class SongGenerateRequestDto {
     @JsonProperty("moodId")
     private Integer mood;
 
+    @JsonProperty("storybookId")
     private Integer storybookId;
+
 }
