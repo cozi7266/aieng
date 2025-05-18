@@ -25,6 +25,7 @@ import WordSelectScreen from "./screens/learning/WordSelect";
 import WordListeningScreen from "./screens/learning/WordListening";
 import WordSentenceScreen from "./screens/learning/WordSentence";
 import WordQuizScreen from "./screens/learning/WordQuiz";
+import WordCollectionScreen from "./screens/wordcard/WordCollectionScreen";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { AlertProvider as WarningAlertProvider } from "./components/navigation/NavigationWarningAlert";
@@ -48,6 +49,7 @@ export type RootStackParamList = {
   SongScreen: undefined;
   SongSettingScreen: undefined;
   WordcardScreen: undefined;
+  WordCollectionScreen: { theme: string; themeId: string };
   WordSelect: { theme: string; themeId: string };
   WordListening: {
     wordId: string;
@@ -190,6 +192,10 @@ export default function App() {
                     <Stack.Screen
                       name="WordcardScreen"
                       component={WordcardScreen}
+                    />
+                    <Stack.Screen
+                      name="WordCollectionScreen"
+                      component={WordCollectionScreen}
                     />
                     <Stack.Screen
                       name="WordSelect"
