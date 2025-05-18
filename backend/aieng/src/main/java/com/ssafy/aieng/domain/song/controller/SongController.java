@@ -29,27 +29,25 @@ public class SongController {
     private final VoiceService voiceService;
 
     // 동요 생성 요청(FastAPI로 요청만)
-    @PostMapping("/sessions/{sessionId}/storybooks/{storybookId}/generate-song")
+    @PostMapping("/storybooks/{storybookId}/generate-song")
     public ResponseEntity<ApiResponse<Void>> generateSongRequest(
             @RequestBody SongGenerateRequestDto requestDto,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer storybookId,
-            @PathVariable Integer sessionId  // sessionId 추가
+            @PathVariable Integer storybookId
     ) {
-        songService.generateSong(user.getId(), childId, sessionId, storybookId, requestDto);
+        songService.generateSong(user.getId(), childId, storybookId, requestDto);
         return ApiResponse.success(HttpStatus.OK);
     }
 
     // 동요 (Redis -> RDB 저장)
-    @GetMapping("/sessions/{sessionId}/storybooks/{storybookId}/save-song")
+    @GetMapping("/storybooks/{storybookId}/save-song")
     public ResponseEntity<ApiResponse<SongGenerateResponseDto>> getGeneratedSongFromRedis(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer storybookId,
-            @PathVariable Integer sessionId  // sessionId 추가
+            @PathVariable Integer storybookId
     ) {
-        SongGenerateResponseDto response = songService.saveSongFromRedis(user.getId(), childId, sessionId, storybookId);
+        SongGenerateResponseDto response = songService.saveSongFromRedis(user.getId(), childId, storybookId);
         return ApiResponse.success(response);
     }
 
