@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.book.service;
 
+import com.ssafy.aieng.domain.book.dto.response.StorybookListResponse;
 import com.ssafy.aieng.domain.book.dto.response.StorybookResponse;
 import com.ssafy.aieng.domain.book.entity.LearningStorybook;
 import com.ssafy.aieng.domain.book.entity.Storybook;
@@ -91,11 +92,11 @@ public class StorybookService {
 
     // 자녀의 그림책 목록 조회
     @Transactional(readOnly = true)
-    public List<StorybookResponse> getStorybooksByChild(Integer userId, Integer childId) {
+    public List<StorybookListResponse> getStorybooksByChild(Integer userId, Integer childId) {
         customAuthentication.validateChildOwnership(userId, childId);
-        List<Storybook> storybooks = storybookRepository.findAllByChildIdOrderByCreatedAtDesc(childId);
-        return storybooks.stream()
-                .map(StorybookResponse::from)
+
+        return storybookRepository.findAllByChildIdAndDeletedFalseOrderByCreatedAtDesc(childId).stream()
+                .map(StorybookListResponse::from)
                 .collect(Collectors.toList());
     }
 

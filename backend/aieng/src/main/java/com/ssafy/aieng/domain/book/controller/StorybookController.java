@@ -1,6 +1,7 @@
 package com.ssafy.aieng.domain.book.controller;
 
 import com.ssafy.aieng.domain.book.dto.request.StorybookCreateRequest;
+import com.ssafy.aieng.domain.book.dto.response.StorybookListResponse;
 import com.ssafy.aieng.domain.book.dto.response.StorybookResponse;
 import com.ssafy.aieng.domain.book.service.StorybookService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
@@ -39,11 +40,11 @@ public class StorybookController {
 
     // 그림책 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<List<StorybookResponse>>> getStorybooksByChild(
+    public ResponseEntity<ApiResponse<List<StorybookListResponse>>> getStorybooksByChild(
             @RequestHeader("X-Child-Id") Integer childId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         Integer userId = userPrincipal.getId();
-        List<StorybookResponse> response = storybookService.getStorybooksByChild(userId, childId);
+        List<StorybookListResponse> response = storybookService.getStorybooksByChild(userId, childId);
         return ApiResponse.success(response);
     }
 
