@@ -196,9 +196,6 @@ public class SessionService {
     }
 
 
-
-
-
     // 자녀의 세션 목록 조회 (정렬 필드도 유연하게 처리 가능)
     public List<ChildThemeProgressResponse> getAllThemesWithProgress(Integer userId, Integer childId) {
         getVerifiedChild(userId, childId);

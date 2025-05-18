@@ -134,11 +134,26 @@ public class LearningService {
      * - 프론트에서 /generate/result 호출 시 자동으로 저장됨
      */
     @Transactional
-    public GeneratedContentResult getAndSaveGeneratedResult(Integer userId, Integer childId, Integer sessionId, String wordEn) {
+    public GeneratedContentResult sendRequestAndSave(Integer userId, Integer childId, Integer sessionId, String wordEn) {
         validateChildOwnership(userId, childId);
 
+        // FastAPI 요청 보내기
+        sendFastApiRequest(userId, childId, sessionId, wordEn);
+
+        // Redis polling
         String key = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, wordEn);
-        String json = stringRedisTemplate.opsForValue().get(key);
+        String json = null;
+
+        int retry = 0;
+        while (retry < 10) {
+            json = stringRedisTemplate.opsForValue().get(key);
+            if (json != null) break;
+            try {
+                Thread.sleep(500); // 0.5초 대기 후 재시도
+            } catch (InterruptedException ignored) {}
+            retry++;
+        }
+
         if (json == null) throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
 
         GeneratedContentResult result;
@@ -149,6 +164,7 @@ public class LearningService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
+        // DB 저장 처리
         Session session = sessionRepository.findByIdAndDeletedFalse(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         Word wordEntity = wordRepository.findByWordEn(wordEn)
