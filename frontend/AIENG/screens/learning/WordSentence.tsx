@@ -16,6 +16,7 @@ import {
   useRoute,
   RouteProp,
   CommonActions,
+  NavigationAction,
 } from "@react-navigation/native";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { Audio } from "expo-av";
@@ -71,6 +72,14 @@ interface SentenceData {
   audioUrl: string;
 }
 
+// 네비게이션 액션 타입 정의
+type NavigationActionWithPayload = NavigationAction & {
+  payload?: {
+    name: string;
+    params?: any;
+  };
+};
+
 const WordSentenceScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<WordSentenceScreenRouteProp>();
@@ -84,6 +93,7 @@ const WordSentenceScreen: React.FC = () => {
   const [hasListened, setHasListened] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [currentWord, setCurrentWord] = useState<string>("");
+  const [isCompleted, setIsCompleted] = useState(false);
 
   // 진행 단계 (2/3 표시를 위한 변수)
   const currentStep = 2;
@@ -345,12 +355,8 @@ const WordSentenceScreen: React.FC = () => {
   // React Navigation의 beforeRemove 이벤트 처리 (useEffect 추가)
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      // 다음 학습 단계로 이동 시에는 경고 표시 안 함
-      if (
-        e.data.action.type === "NAVIGATE" &&
-        (e.data.action.payload?.name === "WordQuiz" ||
-          e.data.action.payload?.name === "WordSelect")
-      ) {
+      const action = e.data.action as NavigationActionWithPayload;
+      if (action.type === "NAVIGATE" && action.payload?.name === "WordSelect") {
         return;
       }
 
@@ -374,7 +380,6 @@ const WordSentenceScreen: React.FC = () => {
       if (isPlaying && sound.current) {
         await sound.current.pauseAsync();
         setIsPlaying(false);
-        setHasListened(true);
         return;
       }
 
@@ -398,7 +403,36 @@ const WordSentenceScreen: React.FC = () => {
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           setIsPlaying(false);
-          setHasListened(true);
+          setIsCompleted(true);
+        }
+      });
+    } catch (error) {
+      console.error("오디오 재생 실패:", error);
+      setIsPlaying(false);
+    }
+  };
+
+  // 문장 카드 재생 처리 (단순 재생만)
+  const handleCardPlay = async () => {
+    try {
+      if (!sentence?.audioUrl) {
+        throw new Error("오디오 URL이 없습니다");
+      }
+
+      if (sound.current) {
+        await sound.current.unloadAsync();
+        sound.current = null;
+      }
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: sentence.audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.current = newSound;
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
         }
       });
     } catch (error) {
@@ -518,8 +552,19 @@ const WordSentenceScreen: React.FC = () => {
                 resizeMode="contain"
               />
             </View>
-            <View style={styles.sentenceContainer}>
+            <View style={styles.textContainer}>
               {renderHighlightedSentence()}
+              <TouchableOpacity
+                onPress={handleCardPlay}
+                style={styles.playButton}
+              >
+                <FontAwesome5
+                  name="volume-up"
+                  size={27}
+                  color={theme.colors.primary}
+                  style={styles.soundIcon}
+                />
+              </TouchableOpacity>
               <Text style={styles.koreanSentence}>
                 {sentence.sentenceKorean}
               </Text>
@@ -537,16 +582,21 @@ const WordSentenceScreen: React.FC = () => {
               ]}
             >
               <TouchableOpacity
-                style={[styles.actionButton, isPlaying && styles.playingButton]}
-                onPress={handlePlayAudio}
+                style={[
+                  styles.actionButton,
+                  isCompleted && styles.playingButton,
+                ]}
+                onPress={
+                  isCompleted ? () => setHasListened(true) : handlePlayAudio
+                }
               >
                 <FontAwesome5
-                  name={isPlaying ? "check-circle" : "volume-up"}
+                  name={isCompleted ? "check-circle" : "volume-up"}
                   size={32}
                   color={theme.colors.buttonText}
                 />
                 <Text style={styles.buttonText}>
-                  {isPlaying ? "완료" : "문장 듣기"}
+                  {isCompleted ? "완료" : "문장 듣기"}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -579,7 +629,7 @@ const WordSentenceScreen: React.FC = () => {
                   size={28}
                   color={theme.colors.buttonText}
                 />
-                <Text style={styles.buttonText}>다음 단계</Text>
+                <Text style={styles.buttonText}>학습 마치기</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -621,8 +671,8 @@ const WordSentenceScreen: React.FC = () => {
               <View style={styles.helpSection}>
                 <Text style={styles.helpSectionTitle}>학습 팁</Text>
                 <Text style={styles.helpText}>
-                  문장을 들으면 다음 단계로 넘어갈 수 있어요! 여러 번 들어보고
-                  문장을 따라해 보세요.
+                  문장을 들으면 학습을 끝낼 수 있어요! 여러 번 들어보고 문장을
+                  따라해 보세요.
                 </Text>
               </View>
             </ScrollView>
@@ -712,7 +762,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   imageContainer: {
-    width: "40%",
+    width: "35%",
     height: "80%",
     justifyContent: "center",
     alignItems: "center",
@@ -721,7 +771,7 @@ const styles = StyleSheet.create({
     width: "90%",
     height: "90%",
   },
-  sentenceContainer: {
+  textContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -829,6 +879,13 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "rgba(81, 75, 242, 0.15)",
     zIndex: 0,
+  },
+  playButton: {
+    // marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.m,
+  },
+  soundIcon: {
+    // paddingTop: theme.spacing.xs,
   },
 });
 
