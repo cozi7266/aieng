@@ -122,29 +122,27 @@ public class SongService {
         }
     }
 
-
-
-    // 동요 저장 (Redis -> RDB)
     // 동요 저장 (Redis -> RDB)
     @Transactional
     public SongGenerateResponseDto saveSongFromRedis(Integer userId, Integer childId, Integer storybookId) {
         // 1️⃣ 자녀 소유자 검증
+        log.info("📌 자녀 검증 시작: childId={}", childId);
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
+        log.info("✅ 자녀 검증 완료: childId={}", childId);
 
-        // 2️⃣ Storybook 조회 (세션 대신 storybookId 사용)
-        Storybook storybook = storybookRepository.findById(storybookId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
-
-        if (!storybook.getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
-        }
+        // 2️⃣ 세션 조회 (세션이 없으면 오류)
+        log.info("📌 세션 조회 시작: childId={}", childId);
+        Session session = sessionRepository.findFirstByChildIdAndFinishedAtIsNull(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        log.info("✅ 세션 조회 완료: sessionId={}", session.getId());
 
         // 3️⃣ Redis polling (최대 10번 시도, 0.5초 간격)
-        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, storybookId);  // ex: Song:user:{userId}:storybook:{storybookId}
+        log.info("📌 Redis에서 동요 정보 조회 시작: redisKey={}", RedisKeyUtil.getGeneratedSongKey(userId, session.getId()));
+        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, session.getId());
         String json = null;
         int retry = 0;
         while (retry < 10) {
@@ -157,12 +155,16 @@ public class SongService {
         }
 
         if (json == null) {
-            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND); // 결과 없음
+            log.error("❌ Redis에서 동요 정보를 찾을 수 없습니다. redisKey={}", redisKey);
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
         }
+        log.info("✅ Redis에서 동요 정보 조회 완료");
 
         try {
+            // 4️⃣ JSON 파싱
             objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
             Map<String, String> data = objectMapper.readValue(json, new TypeReference<>() {});
+            log.info("📌 동요 정보 파싱 완료: songUrl={}, mood={}, voice={}", data.get("song_url"), data.get("mood"), data.get("voice"));
 
             String songUrl = data.get("song_url");
             String lyricsEn = data.get("lyrics_en");
@@ -171,20 +173,32 @@ public class SongService {
             String voiceName = data.get("voice");
 
             if (songUrl == null || lyricsEn == null || lyricsKo == null) {
+                log.error("❌ 동요 정보가 불완전합니다. songUrl={}, lyricsEn={}, lyricsKo={}", songUrl, lyricsEn, lyricsKo);
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            // 4️⃣ Voice, Mood 조회
+            // 5️⃣ Voice, Mood, Storybook 조회
+            log.info("📌 Voice 조회 시작: voiceName={}", voiceName);
             Voice voice = voiceRepository.findByName(voiceName)
                     .orElseThrow(() -> new CustomException(ErrorCode.VOICE_NOT_FOUND));
+            log.info("✅ Voice 조회 완료: voiceId={}", voice.getId());
+
+            log.info("📌 Mood 조회 시작: moodName={}", moodName);
             Mood mood = moodRepository.findByName(moodName)
                     .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
+            log.info("✅ Mood 조회 완료: moodId={}", mood.getId());
 
-            // 5️⃣ Song 저장
+            log.info("📌 Storybook 조회 시작: storybookId={}", storybookId);
+            Storybook storybook = storybookRepository.findById(storybookId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
+            log.info("✅ Storybook 조회 완료: storybookId={}", storybook.getId());
+
+            // 6️⃣ Song 저장
+            log.info("📌 Song 저장 시작");
             Song song = Song.builder()
                     .voice(voice)
                     .mood(mood)
-                    .storybook(storybook)  // storybook 추가
+                    .storybook(storybook)
                     .title("AI Generated Song")
                     .lyric(lyricsEn)
                     .description(lyricsKo)
@@ -192,17 +206,18 @@ public class SongService {
                     .build();
 
             songRepository.save(song);
-            storybook.addLearningStorybook(new LearningStorybook(storybook, null, 0));  // Optional: LearningStorybook 추가
-
-            log.info("🎵 동요 저장 완료: storybookId={}, songUrl={}", storybookId, songUrl);
+            session.markSongDoneAndFinish();
+            log.info("✅ 동요 저장 완료: songId={}, sessionId={}", song.getId(), session.getId());
 
             return SongGenerateResponseDto.of(song);
 
         } catch (Exception e) {
-            log.error("❌ Redis 동요 파싱 실패", e);
+            log.error("❌ 동요 저장 실패", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
+
 
 
 
