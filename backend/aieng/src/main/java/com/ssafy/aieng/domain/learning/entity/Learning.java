@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.learning.entity;
 
+import com.ssafy.aieng.domain.book.entity.LearningStorybook;
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.word.entity.Word;
@@ -8,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -24,6 +26,9 @@ public class Learning extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "word_id", nullable = false)
     private Word word;
+
+    @OneToMany(mappedBy = "learning", fetch = FetchType.LAZY)
+    private List<LearningStorybook> learningStorybooks;
 
     @Column(name = "sentence")
     private String sentence;

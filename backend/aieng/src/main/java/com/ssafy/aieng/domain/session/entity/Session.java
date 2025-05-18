@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.session.entity;
 
+import com.ssafy.aieng.domain.book.entity.Storybook;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.session.SessionStatus;
@@ -29,6 +30,10 @@ public class Session extends BaseEntity {
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Learning> learnings;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "storybook_id", nullable = false)
+    private Storybook storybook;
 
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
