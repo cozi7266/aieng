@@ -1,5 +1,6 @@
 package com.ssafy.aieng.domain.learning.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,8 +33,6 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
     Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
                                                 @Param("wordId") Integer wordId);
 
-    Optional<Learning> findBySession_Child_IdAndWord_IdAndLearnedTrue(Integer childId, Integer wordId);
-
 
 
 
@@ -44,4 +43,7 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
     List<Learning> findAllBySessionIdAndLearnedTrue(Integer sessionId);
 
     List<Learning> findAllBySessionIdAndLearnedTrueOrderByPageOrder(Integer sessionId);
+
+    List<Learning> findAllBySession_Child_IdAndLearnedTrue(Integer childId);
+
 }
