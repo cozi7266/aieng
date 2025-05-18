@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Builder
 public class SongDetailResponseDto {
+
     // 동요 정보
     private Integer id;
     private String title;

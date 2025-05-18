@@ -7,7 +7,7 @@ import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.mood.repository.MoodRepository;
 import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.SongGenerateResponseDto;
-import com.ssafy.aieng.domain.song.dto.response.SongListResponseDto;
+import com.ssafy.aieng.domain.song.dto.response.SongResponseList;
 import com.ssafy.aieng.domain.song.entity.Song;
 import com.ssafy.aieng.domain.song.repository.SongRepository;
 import com.ssafy.aieng.domain.voice.entity.Voice;
@@ -130,7 +130,7 @@ public class SongService {
     }
 
 
-
+    // 동요 저장(Redis -> RDB)
     @Transactional
     public SongGenerateResponseDto getGeneratedSong(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
         // 1. 자녀 검증
@@ -210,6 +210,67 @@ public class SongService {
         }
     }
 
+    // 동요 목록 조회
+    @Transactional(readOnly = true)
+    public SongResponseList getSongsByChild(Integer userId, Integer childId) {
+        // 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 동요 목록 조회
+        List<Song> songs = songRepository.findAllByStorybookChildIdOrderByCreatedAtDesc(childId);
+
+        return SongResponseList.of(childId, songs);
+    }
+
+    // 동요 상세 조회
+    @Transactional(readOnly = true)
+    public SongDetailResponseDto getSongDetail(Integer userId, Integer childId, Integer songId) {
+        // 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 동요 조회
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
+        if (!song.getStorybook().getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
+        }
+
+        // 그림책 정보 가져오기
+        Storybook storybook = song.getStorybook();
+
+        return SongDetailResponseDto.from(song, storybook);
+    }
+
+    // 동요 삭제(Soft Delete)
+    @Transactional
+    public void deleteSong(Integer userId, Integer childId, Integer songId) {
+        // 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 동요 조회
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
+
+        // 자녀의 그림책 소유 여부 검증
+        if (!song.getStorybook().getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
+        }
+
+        // 소프트 딜리트 처리
+        song.softDelete();
+    }
 
 
 

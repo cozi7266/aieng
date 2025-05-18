@@ -1,13 +1,17 @@
 package com.ssafy.aieng.domain.mood.service;
 
+import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.mood.dto.MoodResponseDto;
+import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.mood.repository.MoodRepository;
+import com.ssafy.aieng.global.common.util.AuthenticationUtil;
+import com.ssafy.aieng.global.error.exception.CustomException;
+import com.ssafy.aieng.global.error.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -15,10 +19,25 @@ import java.util.stream.Collectors;
 public class MoodService {
 
     private final MoodRepository moodRepository;
+    private final ChildRepository childRepository;
+    private final AuthenticationUtil authenticationUtil;
 
-    public List<MoodResponseDto> getAllMoods() {
+    // 전체 Mood 조회
+    public List<MoodResponseDto> getAllMoods(Integer userId, Integer childId) {
+        authenticationUtil.validateChildOwnership(userId, childId);
+
         return moodRepository.findAll().stream()
                 .map(MoodResponseDto::from)
-                .collect(Collectors.toList());
+                .toList();
     }
-} 
+
+    // 단건 Mood 조회
+    public MoodResponseDto getMood(Integer userId, Integer childId, Integer moodId) {
+        authenticationUtil.validateChildOwnership(userId, childId);
+
+        Mood mood = moodRepository.findById(moodId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
+
+        return MoodResponseDto.from(mood);
+    }
+}

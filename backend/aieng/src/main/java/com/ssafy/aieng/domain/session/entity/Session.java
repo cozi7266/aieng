@@ -31,7 +31,6 @@ public class Session extends BaseEntity {
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Learning> learnings;
 
-
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
 
