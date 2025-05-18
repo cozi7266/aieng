@@ -33,7 +33,7 @@ public class Song extends BaseEntity {
     @Column(name = "title", length = 50, nullable = false)
     private String title;
 
-    @Column(name = "lyric", length = 200, nullable = false)
+    @Column(name = "lyric", columnDefinition = "TEXT", nullable = false)
     private String lyric;
 
     @Column(name = "description", length = 255)
@@ -47,7 +47,8 @@ public class Song extends BaseEntity {
     private SongStatus status = SongStatus.CREATED;
 
     @Builder
-    public Song(Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
+    public Song(Storybook storybook, Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
+        this.storybook = storybook; // ✅ 꼭 추가!
         this.voice = voice;
         this.mood = mood;
         this.title = title;
@@ -56,4 +57,5 @@ public class Song extends BaseEntity {
         this.songUrl = songUrl;
         this.status = SongStatus.CREATED;
     }
+
 } 
