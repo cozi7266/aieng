@@ -13,8 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SongGenerateResponseDto {
-    private Integer id;
-    private Integer storybookId;
+    private Integer songId;
     private Integer voiceId;
     private Integer moodId;
     private String songUrl;
@@ -25,8 +24,7 @@ public class SongGenerateResponseDto {
 
     public static SongGenerateResponseDto of(Song song) {
         return SongGenerateResponseDto.builder()
-                .id(song.getId())
-                .storybookId(song.getStorybookId())
+                .songId(song.getId())
                 .voiceId(song.getVoice().getId())
                 .moodId(song.getMood().getId())
                 .songUrl(song.getSongUrl())
