@@ -28,10 +28,9 @@ interface ThemeData {
   themeId: number;
   themeKo: string;
   themeEn: string;
-  themeImgUrl: string;
-  totalWordCount: number;
-  learnedWordCount: number;
-  isFinished: boolean;
+  imageUrl: string;
+  totalWords: number;
+  learnedWords: number;
 }
 
 type WordcardScreenNavigationProp = NativeStackNavigationProp<
@@ -61,7 +60,7 @@ const WordcardScreen: React.FC = () => {
         throw new Error("로그인 정보가 없습니다.");
 
       const response = await axios.get(
-        "https://www.aieng.co.kr/api/sessions/themes",
+        "https://www.aieng.co.kr/api/dictionaries/themes",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -119,10 +118,10 @@ const WordcardScreen: React.FC = () => {
   const renderCard = ({ item }: { item: ThemeData }) => (
     <LearningThemeCard
       title={`${item.themeKo} (${item.themeEn})`}
-      imageSource={{ uri: item.themeImgUrl }}
-      completed={item.learnedWordCount}
-      total={item.totalWordCount}
-      isCompleted={item.isFinished}
+      imageSource={{ uri: item.imageUrl }}
+      completed={item.learnedWords}
+      total={item.totalWords}
+      isCompleted={item.learnedWords === item.totalWords && item.totalWords > 0}
       onPress={() => handleThemePress(item)}
     />
   );
