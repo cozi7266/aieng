@@ -66,7 +66,7 @@ const WordCollectionScreen: React.FC = () => {
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
-  const numColumns = 6; // 태블릿 가로 모드 기준 - 한 줄에 6개 카드 표시
+  const numColumns = 5; // 태블릿 가로 모드 기준 - 한 줄에 5개 카드 표시
 
   // 테마에 해당하는 단어 데이터 불러오기
   const fetchWords = async () => {
