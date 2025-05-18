@@ -43,14 +43,14 @@ public class LearningController {
     }
 
     // 아이가 생성한 문장 정보 반환
-    @GetMapping("/sessions/{sessionId}/words/{word}/sentence")
+    @GetMapping("/sessions/{sessionId}/words/{wordEn}/sentence")
     public ResponseEntity<ApiResponse<SentenceResponse>> getGeneratedSentence(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
             @PathVariable Integer sessionId,
-            @PathVariable String word
+            @PathVariable String wordEn
     ) {
-        SentenceResponse sentenceResponse = learningService.getSentenceResponse(user.getId(), sessionId, word);
+        SentenceResponse sentenceResponse = learningService.getSentenceResponse(user.getId(), childId, sessionId, wordEn);
         return ApiResponse.success(sentenceResponse);
     }
 }
