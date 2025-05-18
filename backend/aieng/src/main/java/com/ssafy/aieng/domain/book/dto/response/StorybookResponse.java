@@ -14,15 +14,10 @@ import java.util.Comparator;
 @Builder
 public class StorybookResponse {
 
-    @JsonProperty("storybook_id")
     private Integer storybookId;
-
-    @JsonProperty("cover_url")
     private String coverUrl;
-
     private String title;
     private String description;
-
     private List<PageResponse> pages;
 
     public static StorybookResponse from(Storybook storybook) {
