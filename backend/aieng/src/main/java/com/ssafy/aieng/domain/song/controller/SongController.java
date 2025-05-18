@@ -28,17 +28,29 @@ public class SongController {
     private final MoodService moodService;
     private final VoiceService voiceService;
 
-    // 동요 생성
-    @PostMapping("/sessions/{sessionId}")
-    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> generateSong(
+    // 동요 생성 요청(FastAPI로 요청만)
+    @PostMapping("/sessions/{sessionId}/generate-song")
+    public ResponseEntity<ApiResponse<Void>> generateSongRequest(
             @RequestBody SongGenerateRequestDto requestDto,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
             @PathVariable Integer sessionId
     ) {
-        SongGenerateResponseDto response = songService.generateSong(user.getId(), childId, sessionId, requestDto);
+        songService.generateSong(user.getId(), childId, sessionId, requestDto);
+        return ApiResponse.success(HttpStatus.OK);
+    }
+
+    @GetMapping("/sessions/{sessionId}/save-song")
+    public ResponseEntity<ApiResponse<SongGenerateResponseDto>> getGeneratedSongFromRedis(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId
+    ) {
+        SongGenerateResponseDto response = songService.saveSongFromRedis(user.getId(), childId, sessionId);
         return ApiResponse.success(response);
     }
+
+
 
     @GetMapping("/voice")
     public ResponseEntity<ApiResponse<List<VoiceResponseDto>>> getDefaultVoices() {
@@ -52,30 +64,5 @@ public class SongController {
         return ApiResponse.success(response);
     }
 
-    @GetMapping("/{songId}")
-    public ResponseEntity<ApiResponse<SongDetailResponseDto>> getSongDetail(@PathVariable Integer songId) {
-        try {
-            SongDetailResponseDto response = songService.getSongDetail(songId);
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            return ApiResponse.fail(e.getMessage());
-        }
-    }
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<SongListResponseDto>>> getSongList() {
-        List<SongListResponseDto> response = songService.getSongList();
-        return ApiResponse.success(response);
-    }
-
-
-    @PutMapping("/{songId}/delete")
-    public ResponseEntity<ApiResponse<Void>> deleteSong(@PathVariable Integer songId) {
-        try {
-            songService.deleteSong(songId);
-            return ApiResponse.success(null, HttpStatus.OK);
-        } catch (Exception e) {
-            return ApiResponse.fail(e.getMessage());
-        }
-    }
 } 
