@@ -79,6 +79,7 @@ const WordListeningScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasListened, setHasListened] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
 
   // 진행 단계 (1/3 표시를 위한 변수)
@@ -283,7 +284,6 @@ const WordListeningScreen: React.FC = () => {
       if (isPlaying && sound.current) {
         await sound.current.pauseAsync();
         setIsPlaying(false);
-        setHasListened(true);
         return;
       }
 
@@ -293,22 +293,56 @@ const WordListeningScreen: React.FC = () => {
 
       setIsPlaying(true);
 
+      // 기존 사운드가 있다면 해제
       if (sound.current) {
-        await sound.current.playAsync();
-      } else {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: word.audioUrl },
-          { shouldPlay: true }
-        );
-
-        sound.current = newSound;
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setIsPlaying(false);
-            setHasListened(true);
-          }
-        });
+        await sound.current.unloadAsync();
+        sound.current = null;
       }
+
+      // 새로운 사운드 로드 및 재생
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: word.audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.current = newSound;
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+          setIsCompleted(true);
+        }
+      });
+    } catch (error) {
+      console.error("오디오 재생 실패:", error);
+      setIsPlaying(false);
+    }
+  };
+
+  // 카드 재생 처리 (단순 재생만)
+  const handleCardPlay = async () => {
+    try {
+      if (!word?.audioUrl) {
+        throw new Error("오디오 URL이 없습니다");
+      }
+
+      // 기존 사운드가 있다면 해제
+      if (sound.current) {
+        await sound.current.unloadAsync();
+        sound.current = null;
+      }
+
+      // 새로운 사운드 로드 및 재생
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: word.audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.current = newSound;
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
     } catch (error) {
       console.error("오디오 재생 실패:", error);
       setIsPlaying(false);
@@ -399,7 +433,6 @@ const WordListeningScreen: React.FC = () => {
 
       {/* 메인 콘텐츠 */}
       <View style={styles.mainContainer}>
-        {/* 중앙 단어 카드 */}
         <Animated.View
           style={[
             styles.cardContainer,
@@ -417,13 +450,20 @@ const WordListeningScreen: React.FC = () => {
               />
             </View>
             <View style={styles.wordInfo}>
-              <Text style={styles.englishWord}>{word?.english}</Text>
+              <TouchableOpacity onPress={handleCardPlay} style={styles.wordRow}>
+                <FontAwesome5
+                  name="volume-up"
+                  size={27}
+                  color={theme.colors.primary}
+                  style={styles.soundIcon}
+                />
+                <Text style={styles.englishWord}>{word?.english}</Text>
+              </TouchableOpacity>
               <Text style={styles.koreanWord}>({word?.korean})</Text>
             </View>
           </View>
         </Animated.View>
 
-        {/* 컨트롤 버튼 영역 */}
         <View style={styles.controlsContainer}>
           {!hasListened ? (
             <Animated.View
@@ -433,16 +473,21 @@ const WordListeningScreen: React.FC = () => {
               ]}
             >
               <TouchableOpacity
-                style={[styles.actionButton, isPlaying && styles.playingButton]}
-                onPress={handlePlayAudio}
+                style={[
+                  styles.actionButton,
+                  isCompleted && styles.playingButton,
+                ]}
+                onPress={
+                  isCompleted ? () => setHasListened(true) : handlePlayAudio
+                }
               >
                 <FontAwesome5
-                  name={isPlaying ? "check-circle" : "volume-up"}
+                  name={isCompleted ? "check-circle" : "volume-up"}
                   size={32}
                   color={theme.colors.buttonText}
                 />
                 <Text style={styles.buttonText}>
-                  {isPlaying ? "완료" : "단어 듣기"}
+                  {isCompleted ? "완료" : "단어 듣기"}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -632,7 +677,6 @@ const styles = StyleSheet.create({
   controlsContainer: {
     alignItems: "center",
     justifyContent: "center",
-    height: 120,
   },
   buttonContainer: {
     marginBottom: theme.spacing.l,
@@ -712,6 +756,14 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "rgba(81, 75, 242, 0.15)",
     zIndex: 0, // 기존 요소들보다 낮은 z-index
+  },
+  wordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  soundIcon: {
+    padding: theme.spacing.s,
   },
 });
 
