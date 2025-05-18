@@ -1,10 +1,14 @@
 package com.ssafy.aieng.domain.dictionary.service;
 
-import com.ssafy.aieng.domain.dictionary.dto.DictionaryResponse;
-import com.ssafy.aieng.domain.dictionary.dto.DictionaryDetailResponse;
+import com.ssafy.aieng.domain.dictionary.dto.response.DictionaryDetailResponse;
+import com.ssafy.aieng.domain.dictionary.dto.response.DictionaryThemesResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
+import com.ssafy.aieng.domain.theme.entity.Theme;
+import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
+import com.ssafy.aieng.domain.word.entity.Word;
+import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -23,54 +27,62 @@ public class DictionaryService {
 
     private final LearningRepository learningRepository;
     private final ChildRepository childRepository;
+    private final ThemeRepository themeRepository;
+    private final WordRepository wordRepository;
 
+    // ✅ 단어도감 내의 테마 목록 조회 (각 테마별 총 단어 수 + 학습한 단어 수 포함)
     @Transactional(readOnly = true)
-    public List<DictionaryResponse> getDictionaryByChildId(Integer childId, Integer userId) {
-        log.info("[DictionaryService] Checking child access - childId: {}, userId: {}", childId, userId);
-        // 1. childId가 해당 userId의 자녀인지 확인
+    public List<DictionaryThemesResponse> getThemesWithProgress(Integer childId, Integer userId) {
+        // 1️⃣ 자녀 소유 검증
         if (!childRepository.existsByIdAndUserId(childId, userId)) {
-            log.warn("[DictionaryService] Invalid child access attempt - childId: {}, userId: {}", childId, userId);
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);
         }
 
-        // 2. 학습한 단어 목록 조회
-        List<Learning> learnings = learningRepository.findAllByChildIdAndLearnedTrueOrderByLearnedAtDesc(childId);
-        log.info("[DictionaryService] Found {} learned words for childId: {}", learnings.size(), childId);
-        
-        if (learnings.isEmpty()) {
-            log.warn("[DictionaryService] No learned words found - childId: {}", childId);
-            throw new CustomException(ErrorCode.DICTIONARY_NO_LEARNED_WORDS);
-        }
+        // 2️⃣ 전체 테마 조회
+        List<Theme> themes = themeRepository.findAll();
 
-        return learnings.stream()
-                .map(DictionaryResponse::from)
+        // 3️⃣ 자녀가 학습한 단어 목록 조회
+        List<Learning> learnings = learningRepository.findAllBySession_Child_IdAndLearnedTrue(childId);
+
+        // 4️⃣ 테마별 응답 생성
+        return themes.stream()
+                .map(theme -> {
+                    int totalWords = theme.getTotalWords();
+                    int learnedCount = (int) learnings.stream()
+                            .filter(learning -> learning.getWord().getTheme().getId().equals(theme.getId()))
+                            .count();
+
+                    return DictionaryThemesResponse.of(
+                            theme.getId(),
+                            theme.getThemeKo(),
+                            theme.getThemeEn(),
+                            theme.getImageUrl(),
+                            totalWords,
+                            learnedCount
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
+    // ✅ 단어도감 특정 테마의 전체 단어 조회 (단어별 학습 여부 포함)
     @Transactional(readOnly = true)
-    public DictionaryDetailResponse getDictionaryDetail(Integer childId, Integer wordId, Integer userId) {
-        log.info("[DictionaryService] Checking child access for word detail - childId: {}, wordId: {}, userId: {}", 
-                childId, wordId, userId);
-        // 1. childId가 해당 userId의 자녀인지 확인
+    public List<DictionaryDetailResponse> getWordsByTheme(Integer childId, Integer themeId, Integer userId) {
+        // 1️⃣ 자녀 소유 검증
         if (!childRepository.existsByIdAndUserId(childId, userId)) {
-            log.warn("[DictionaryService] Invalid child access attempt for word detail - childId: {}, userId: {}", 
-                    childId, userId);
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);
         }
 
-        // 2. 특정 단어의 학습 정보 조회
-        Optional<Learning> learningOpt = learningRepository.findBySession_Child_IdAndWord_IdAndLearnedTrue(childId, wordId);
-        log.info("[DictionaryService] Learning record found: {}", learningOpt.isPresent());
-        
-        if (learningOpt.isEmpty()) {
-            log.warn("[DictionaryService] Word not found or not learned - childId: {}, wordId: {}", childId, wordId);
-            throw new CustomException(ErrorCode.DICTIONARY_WORD_NOT_FOUND);
-        }
+        // 2️⃣ 해당 테마의 단어 목록 조회
+        List<Word> words = wordRepository.findAllByThemeId(themeId);
 
-        Learning learning = learningOpt.get();
-        log.info("[DictionaryService] Found word detail - childId: {}, wordId: {}, learned: {}, learnedAt: {}", 
-                childId, wordId, learning.isLearned(), learning.getLearnedAt());
-        
-        return DictionaryDetailResponse.from(learning);
+        // 3️⃣ 자녀가 학습한 단어 ID 목록 조회
+        Set<Integer> learnedWordIds = learningRepository.findAllBySession_Child_IdAndLearnedTrue(childId).stream()
+                .map(learning -> learning.getWord().getId())
+                .collect(Collectors.toSet());
+
+        // 4️⃣ 응답 생성
+        return words.stream()
+                .map(word -> DictionaryDetailResponse.of(word, learnedWordIds.contains(word.getId())))
+                .collect(Collectors.toList());
     }
-} 
+}
