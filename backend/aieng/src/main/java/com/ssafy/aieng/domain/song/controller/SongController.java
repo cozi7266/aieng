@@ -34,7 +34,7 @@ public class SongController {
             @RequestBody SongGenerateRequestDto requestDto,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer storybookId // storybookId로 PathVariable 수정
+            @PathVariable Integer storybookId
     ) {
         songService.generateSong(user.getId(), childId, storybookId, requestDto);
         return ApiResponse.success(HttpStatus.OK);
@@ -45,7 +45,7 @@ public class SongController {
     public ResponseEntity<ApiResponse<SongGenerateResponseDto>> getGeneratedSongFromRedis(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer storybookId // storybookId로 PathVariable 수정
+            @PathVariable Integer storybookId
     ) {
         SongGenerateResponseDto response = songService.saveSongFromRedis(user.getId(), childId, storybookId);
         return ApiResponse.success(response);
