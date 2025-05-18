@@ -29,6 +29,8 @@ import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 라우트 파라미터 타입 정의
 type WordListeningParams = {
@@ -42,13 +44,28 @@ type WordListeningScreenRouteProp = RouteProp<
   "WordListening"
 >;
 
+// API 응답 타입 정의
+interface WordApiResponse {
+  success: boolean;
+  data: {
+    wordId: number;
+    wordEn: string;
+    wordKo: string;
+    wordImgUrl: string;
+    wordTtsUrl: string;
+    isLearned: boolean;
+  };
+  error: null | string;
+}
+
 // 단어 데이터 타입 정의
 interface WordData {
   id: string;
   english: string;
   korean: string;
-  imageUrl: any;
+  imageUrl: string;
   audioUrl: string;
+  isLearned: boolean;
 }
 
 const WordListeningScreen: React.FC = () => {
@@ -125,35 +142,47 @@ const WordListeningScreen: React.FC = () => {
     const fetchWordData = async () => {
       try {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-        // 목업 데이터
-        const mockData = {
-          id: wordId,
-          english:
-            ["cat", "dog", "rabbit", "bird", "fish", "lion"][
-              parseInt(wordId) - 1
-            ] || "cat",
-          korean:
-            ["고양이", "강아지", "토끼", "새", "물고기", "사자"][
-              parseInt(wordId) - 1
-            ] || "고양이",
-          image_url: require("../../assets/images/main_mascot.png"),
-          audio_url: require("../../assets/sounds/background-music.mp3"),
-        };
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
 
-        setWord({
-          id: mockData.id,
-          english: mockData.english,
-          korean: mockData.korean,
-          imageUrl: mockData.image_url,
-          audioUrl: mockData.audio_url,
-        });
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
 
-        setIsLoading(false);
+        const response = await axios.get<WordApiResponse>(
+          `https://www.aieng.co.kr/api/words/${wordId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Child-Id": selectedChildId,
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          const wordData = response.data.data;
+          setWord({
+            id: wordData.wordId.toString(),
+            english: wordData.wordEn,
+            korean: wordData.wordKo,
+            imageUrl: wordData.wordImgUrl,
+            audioUrl: wordData.wordTtsUrl,
+            isLearned: wordData.isLearned,
+          });
+        } else {
+          setError("단어 데이터를 불러오는데 실패했습니다");
+        }
       } catch (error) {
         console.error("API 요청 실패:", error);
         setError("단어 데이터를 불러오는데 실패했습니다");
+      } finally {
         setIsLoading(false);
       }
     };
@@ -254,8 +283,12 @@ const WordListeningScreen: React.FC = () => {
       if (isPlaying && sound.current) {
         await sound.current.pauseAsync();
         setIsPlaying(false);
-        setHasListened(true); // 멈추기 버튼을 눌렀을 때 다음 단계로 이동 가능하게 설정
+        setHasListened(true);
         return;
+      }
+
+      if (!word?.audioUrl) {
+        throw new Error("오디오 URL이 없습니다");
       }
 
       setIsPlaying(true);
@@ -264,13 +297,13 @@ const WordListeningScreen: React.FC = () => {
         await sound.current.playAsync();
       } else {
         const { sound: newSound } = await Audio.Sound.createAsync(
-          word.audioUrl,
+          { uri: word.audioUrl },
           { shouldPlay: true }
         );
 
         sound.current = newSound;
         newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
+          if (status.isLoaded && status.didJustFinish) {
             setIsPlaying(false);
             setHasListened(true);
           }
@@ -378,14 +411,14 @@ const WordListeningScreen: React.FC = () => {
           <View style={styles.card}>
             <View style={styles.imageContainer}>
               <Image
-                source={word.imageUrl}
+                source={{ uri: word?.imageUrl }}
                 style={styles.image}
                 resizeMode="contain"
               />
             </View>
             <View style={styles.wordInfo}>
-              <Text style={styles.englishWord}>{word.english}</Text>
-              <Text style={styles.koreanWord}>({word.korean})</Text>
+              <Text style={styles.englishWord}>{word?.english}</Text>
+              <Text style={styles.koreanWord}>({word?.korean})</Text>
             </View>
           </View>
         </Animated.View>
