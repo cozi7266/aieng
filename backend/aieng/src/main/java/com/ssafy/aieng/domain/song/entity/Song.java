@@ -48,7 +48,7 @@ public class Song extends BaseEntity {
 
     @Builder
     public Song(Storybook storybook, Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
-        this.storybook = storybook; // ✅ 꼭 추가!
+        this.storybook = storybook;
         this.voice = voice;
         this.mood = mood;
         this.title = title;

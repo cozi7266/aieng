@@ -29,25 +29,27 @@ public class SongController {
     private final VoiceService voiceService;
 
     // 동요 생성 요청(FastAPI로 요청만)
-    @PostMapping("/storybooks/{storybookId}/generate-song")
+    @PostMapping("/sessions/{sessionId}/generate-song")
     public ResponseEntity<ApiResponse<Void>> generateSongRequest(
             @RequestBody SongGenerateRequestDto requestDto,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer storybookId
+            @PathVariable Integer sessionId
     ) {
-        songService.generateSong(user.getId(), childId, storybookId, requestDto);
+        songService.generateSong(user.getId(), childId, sessionId, requestDto);
         return ApiResponse.success(HttpStatus.OK);
     }
 
     // 동요 (Redis -> RDB 저장)
-    @GetMapping("/storybooks/{storybookId}/save-song")
+    @GetMapping("/sessions/{sessionId}/storybooks/{storybookId}/save-song")
     public ResponseEntity<ApiResponse<SongGenerateResponseDto>> getGeneratedSongFromRedis(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId,
             @PathVariable Integer storybookId
+
     ) {
-        SongGenerateResponseDto response = songService.saveSongFromRedis(user.getId(), childId, storybookId);
+        SongGenerateResponseDto response = songService.getGeneratedSong(user.getId(), childId, sessionId, storybookId);
         return ApiResponse.success(response);
     }
 
@@ -67,4 +69,4 @@ public class SongController {
     }
 
 
-} 
+}
