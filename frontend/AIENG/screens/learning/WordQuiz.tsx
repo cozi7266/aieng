@@ -533,8 +533,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.l,
+    paddingHorizontal: theme.spacing.l,
     paddingTop: theme.spacing.xxl,
+    paddingBottom: 0,
   },
   imageContainer: {
     width: 500,
