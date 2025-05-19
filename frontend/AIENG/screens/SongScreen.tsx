@@ -71,6 +71,18 @@ interface ApiResponse {
   error: null | string;
 }
 
+interface SongStatusResponse {
+  success: boolean;
+  data: {
+    storybookCreated: boolean;
+    songStatus: "CREATED" | "GENERATING" | "FAILED";
+  } | null;
+  error: {
+    code: string;
+    message: string;
+  } | null;
+}
+
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
   const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
@@ -199,8 +211,7 @@ const SongScreen: React.FC = () => {
           throw new Error("선택된 자녀 ID가 없습니다.");
         }
 
-        console.log("API 요청 시작");
-        console.log("URL:", "https://www.aieng.co.kr/api/books");
+        console.log("[동화책 목록 요청]");
 
         const response = await axios.get<ApiResponse>(
           "https://www.aieng.co.kr/api/books",
@@ -215,23 +226,23 @@ const SongScreen: React.FC = () => {
           }
         );
 
-        console.log("API 응답:", response);
-
         if (response.data.success) {
-          console.log("동화책 데이터:", response.data.data);
-          setStorybooks(response.data.data);
+          const books = response.data.data;
+          console.log(
+            "[동화책 목록]",
+            books.map((book) => ({
+              id: book.storybookId,
+              title: book.title,
+              coverUrl: book.coverUrl,
+            }))
+          );
+          setStorybooks(books);
         }
       } catch (error) {
         if (axios.isAxiosError(error)) {
-          console.error("API 에러 상세:", {
-            message: error.message,
+          console.error("[동화책 목록 조회 실패]", {
+            message: error.response?.data?.error?.message || error.message,
             status: error.response?.status,
-            data: error.response?.data,
-            config: {
-              url: error.config?.url,
-              method: error.config?.method,
-              headers: error.config?.headers,
-            },
           });
         } else {
           console.error("알 수 없는 에러:", error);
@@ -254,9 +265,93 @@ const SongScreen: React.FC = () => {
     };
   }, []);
 
-  const handleSongPress = (song: Song) => {
-    setCurrentSong(song);
-    // setIsPlaying(true); // 자동 재생 제거
+  const checkSongStatus = async (sessionId: number, storybookId: number) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      console.log("[동요 상태 확인]", { sessionId, storybookId });
+
+      const response = await axios.get<SongStatusResponse>(
+        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/storybook/${storybookId}/status`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const { storybookCreated, songStatus } = response.data.data!;
+        console.log("[동요 상태]", { storybookCreated, songStatus });
+        return response.data.data;
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 상태 확인에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 상태 확인 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      } else {
+        console.error("알 수 없는 에러:", error);
+      }
+      throw error;
+    }
+  };
+
+  const handleSongPress = async (song: Song) => {
+    try {
+      const sessionId = await AsyncStorage.getItem("currentSessionId");
+
+      if (!sessionId) {
+        console.error("현재 세션 ID가 없습니다.");
+        // TODO: 세션 ID가 없는 경우의 처리 (예: 학습 화면으로 이동)
+        return;
+      }
+
+      const storybookId = parseInt(song.id);
+
+      console.log("[동요 상태 확인]", {
+        sessionId,
+        storybookId,
+        songId: song.id,
+      });
+
+      const status = await checkSongStatus(parseInt(sessionId), storybookId);
+      console.log("동화/동요 상태:", status);
+
+      setCurrentSong(song);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
+        console.error("동요 상태 확인 실패:", errorMessage);
+
+        // 404 에러인 경우 (세션을 찾을 수 없는 경우)
+        if (error.response?.status === 404) {
+          console.log("학습 세션이 만료되었거나 존재하지 않습니다.");
+          // TODO: 적절한 에러 처리 (예: 학습 화면으로 이동)
+        }
+      } else {
+        console.error("알 수 없는 에러:", error);
+      }
+    }
   };
 
   const handleNavigateToStory = (song: Song) => {
