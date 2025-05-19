@@ -65,6 +65,7 @@ export type RootStackParamList = {
     wordId: string;
     themeId: string;
     theme: string;
+    sessionId: string;
   };
 };
 

@@ -207,6 +207,7 @@ const LearningScreen: React.FC = () => {
             wordId: item.themeId.toString(),
             themeId: item.themeId.toString(),
             theme: `${item.themeKo} (${item.themeEn})`,
+            sessionId: item.sessionId?.toString() || "",
           });
         },
         onCancel: () => {

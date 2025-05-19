@@ -28,12 +28,41 @@ import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
 import QuizOptionButton from "../../components/common/learning/QuizOptionButton";
 import QuizFeedback from "../../components/common/learning/QuizFeedback";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// API 응답 타입 정의
+interface QuizQuestionResponse {
+  id: number;
+  ans_word: string;
+  ans_image_url: string;
+  ch1_word: string;
+  ch2_word: string;
+  ch3_word: string;
+  ch4_word: string;
+  ans_ch_id: number;
+}
+
+interface QuizResponse {
+  success: boolean;
+  data: {
+    id: number;
+    session_id: number;
+    created_at: string;
+    questions: QuizQuestionResponse[];
+  } | null;
+  error: {
+    code: string;
+    message: string;
+  } | null;
+}
 
 // 라우트 파라미터 타입 정의
 type WordQuizParams = {
   wordId: string;
   themeId: string;
   theme: string;
+  sessionId: string;
 };
 
 type WordQuizScreenRouteProp = RouteProp<
@@ -66,6 +95,10 @@ const WordQuizScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionResponse[]>(
+    []
+  );
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // 진행 단계 (3/3 표시)
   const currentStep = 3;
@@ -113,52 +146,104 @@ const WordQuizScreen: React.FC = () => {
     const fetchQuizData = async () => {
       try {
         setIsLoading(true);
-        // API 지연 시뮬레이션
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        setError(null);
 
-        // 목업 데이터
-        const mockWord =
-          ["cat", "dog", "rabbit", "bird", "fish", "lion"][
-            parseInt(wordId) - 1
-          ] || "cat";
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-        const mockKorean =
-          ["고양이", "강아지", "토끼", "새", "물고기", "사자"][
-            parseInt(wordId) - 1
-          ] || "고양이";
-
-        // 오답 옵션 생성
-        const allWords = ["cat", "dog", "rabbit", "bird", "fish", "lion"];
-        const wrongOptions = allWords.filter((word) => word !== mockWord);
-
-        // 무작위로 3개 오답 선택
-        const shuffledWrong = wrongOptions
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3);
-
-        // 정답 추가 후 모든 옵션 섞기
-        const allOptions = [...shuffledWrong, mockWord].sort(
-          () => 0.5 - Math.random()
+        console.log("[퀴즈 API 요청 정보]");
+        console.log(
+          "URL:",
+          `https://www.aieng.co.kr/api/quiz/create/${route.params.sessionId}`
         );
-
-        setCurrentQuestion({
-          questionId: wordId,
-          imageUrl: require("../../assets/images/themes/animals.png"), // 실제 이미지로 대체 필요
-          correctAnswer: mockWord,
-          options: allOptions,
-          correctAnswerKorean: mockKorean,
+        console.log("Headers:", {
+          Authorization: `Bearer ${token}`,
+          "X-Child-Id": selectedChildId,
+          "Content-Type": "application/json",
         });
 
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Failed to fetch quiz data:", error);
-        setError("퀴즈 데이터를 불러오는데 실패했습니다");
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
+
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
+
+        const response = await axios.post<QuizResponse>(
+          `https://www.aieng.co.kr/api/quiz/create/${route.params.sessionId}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Child-Id": selectedChildId,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("[퀴즈 API 응답 정보]");
+        console.log("Status:", response.status);
+        console.log("Data:", JSON.stringify(response.data, null, 2));
+
+        if (response.data.success && response.data.data) {
+          setQuizQuestions(response.data.data.questions);
+          const firstQuestion = response.data.data.questions[0];
+          console.log("[첫 번째 퀴즈 문제 정보]");
+          console.log("문제 ID:", firstQuestion.id);
+          console.log("정답 단어:", firstQuestion.ans_word);
+          console.log("이미지 URL:", firstQuestion.ans_image_url);
+          console.log("선택지:", {
+            ch1: firstQuestion.ch1_word,
+            ch2: firstQuestion.ch2_word,
+            ch3: firstQuestion.ch3_word,
+            ch4: firstQuestion.ch4_word,
+          });
+          console.log("정답 선택지 번호:", firstQuestion.ans_ch_id);
+
+          setCurrentQuestion({
+            questionId: firstQuestion.id.toString(),
+            imageUrl: { uri: firstQuestion.ans_image_url },
+            correctAnswer: firstQuestion.ans_word,
+            options: [
+              firstQuestion.ch1_word,
+              firstQuestion.ch2_word,
+              firstQuestion.ch3_word,
+              firstQuestion.ch4_word,
+            ],
+            correctAnswerKorean: "", // API에서 한글 단어 정보가 없으므로 빈 문자열로 설정
+          });
+        } else {
+          throw new Error(
+            response.data.error?.message ||
+              "퀴즈 데이터를 불러오는데 실패했습니다."
+          );
+        }
+      } catch (error: any) {
+        console.error("[퀴즈 API 에러 정보]");
+        console.error("Message:", error.message);
+        if (error.response) {
+          console.error("Status:", error.response.status);
+          console.error("Data:", JSON.stringify(error.response.data, null, 2));
+          setError(
+            `서버 오류: ${error.response.status} - ${
+              error.response.data.error?.message || "알 수 없는 오류"
+            }`
+          );
+        } else if (error.request) {
+          console.error("Request:", error.request);
+          setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+        } else {
+          console.error("Config:", error.config);
+          setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+        }
+      } finally {
         setIsLoading(false);
       }
     };
 
     fetchQuizData();
-  }, [wordId]);
+  }, [route.params.sessionId]);
 
   // 다음 버튼 애니메이션
   useEffect(() => {
@@ -224,9 +309,71 @@ const WordQuizScreen: React.FC = () => {
     return unsubscribe;
   }, [navigation]);
 
+  // 다음 문제로 이동
+  const handleContinue = () => {
+    if (!isAnswered) return;
+
+    const nextIndex = currentQuestionIndex + 1;
+    if (nextIndex < quizQuestions.length) {
+      setCurrentQuestionIndex(nextIndex);
+      const nextQuestion = quizQuestions[nextIndex];
+      console.log(`[${nextIndex + 1}번째 퀴즈 문제 정보]`);
+      console.log("문제 ID:", nextQuestion.id);
+      console.log("정답 단어:", nextQuestion.ans_word);
+      console.log("이미지 URL:", nextQuestion.ans_image_url);
+      console.log("선택지:", {
+        ch1: nextQuestion.ch1_word,
+        ch2: nextQuestion.ch2_word,
+        ch3: nextQuestion.ch3_word,
+        ch4: nextQuestion.ch4_word,
+      });
+      console.log("정답 선택지 번호:", nextQuestion.ans_ch_id);
+
+      setCurrentQuestion({
+        questionId: nextQuestion.id.toString(),
+        imageUrl: { uri: nextQuestion.ans_image_url },
+        correctAnswer: nextQuestion.ans_word,
+        options: [
+          nextQuestion.ch1_word,
+          nextQuestion.ch2_word,
+          nextQuestion.ch3_word,
+          nextQuestion.ch4_word,
+        ],
+        correctAnswerKorean: "", // API에서 한글 단어 정보가 없으므로 빈 문자열로 설정
+      });
+      setSelectedOption(null);
+      setIsCorrect(null);
+      setIsAnswered(false);
+    } else {
+      console.log("[퀴즈 완료]");
+      console.log("총 문제 수:", quizQuestions.length);
+      console.log(
+        "마지막 문제 ID:",
+        quizQuestions[quizQuestions.length - 1].id
+      );
+
+      // 모든 문제를 풀었을 때
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: "WordComplete",
+          params: {
+            themeId: themeId,
+            theme: themeName,
+          },
+        })
+      );
+    }
+  };
+
   // 옵션 선택 처리
   const handleOptionSelect = (option: string, index: number) => {
     if (isAnswered) return; // 이미 답변했으면 선택 방지
+
+    console.log("[사용자 답변 정보]");
+    console.log("선택한 답:", option);
+    console.log("선택지 번호:", index + 1);
+    console.log("정답:", currentQuestion?.correctAnswer);
+    console.log("정답 여부:", option === currentQuestion?.correctAnswer);
 
     setSelectedOption(option);
     const correct = option === currentQuestion?.correctAnswer;
@@ -246,21 +393,6 @@ const WordQuizScreen: React.FC = () => {
         useNativeDriver: true,
       }),
     ]).start();
-  };
-
-  // 다음 화면으로 이동 - React Navigation 6에 맞게 수정
-  const handleContinue = () => {
-    if (!isAnswered) return;
-
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: "WordSelect",
-        params: {
-          themeId: themeId,
-          theme: themeName,
-        },
-      })
-    );
   };
 
   // 노래 화면으로 이동하는 함수 - React Navigation 6에 맞게 수정
