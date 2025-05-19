@@ -58,11 +58,12 @@ public class QuizController {
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<Void>> submitAnswer(
             @RequestBody SubmitAnswerRequest request,
-            @AuthenticationPrincipal UserPrincipal user
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId
     ) {
         quizService.submitAnswer(
                 user.getId(),
-                request.getChildId(),
+                childId,
                 request.getQuizQuestionId(),
                 request.getSelectedChoiceId()
         );

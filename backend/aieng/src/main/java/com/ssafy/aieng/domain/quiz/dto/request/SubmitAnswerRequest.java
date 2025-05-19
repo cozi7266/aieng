@@ -10,5 +10,4 @@ import lombok.NoArgsConstructor;
 public class SubmitAnswerRequest {
     private Integer quizQuestionId;
     private Integer selectedChoiceId;
-    private Integer childId;
 }
