@@ -158,12 +158,13 @@ public class QuizService {
             throw new CustomException(ErrorCode.QUESTION_ALREADY_COMPLETED);
         }
 
-        // 정답 제출
+        // 선택한 답 제출
         question.submitAnswer(selectedChId);
 
-        // 퀴즈 전체 완료 여부 체크
+        // ✅ 퀴즈 완료 체크 및 처리 추가
         quiz.checkAndMarkQuizComplete();
     }
+
 
 
 }

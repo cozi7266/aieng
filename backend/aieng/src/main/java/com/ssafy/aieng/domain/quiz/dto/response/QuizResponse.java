@@ -17,6 +17,7 @@ import java.util.List;
 public class QuizResponse {
     private Integer id;
     private Integer sessionId;
+    private Integer quizId;
     private LocalDateTime createdAt;
     private List<QuizQuestionResponse> questions;
     private Boolean isCompleted;
