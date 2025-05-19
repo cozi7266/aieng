@@ -31,6 +31,19 @@ public class Quiz extends BaseEntity {
     @Builder.Default
     private List<QuizQuestion> questions = new ArrayList<>();
 
+    @Column(name = "is_completed", nullable = false)
+    private boolean isCompleted;
+
+    public void markAsCompleted() {
+        this.isCompleted = true;
+    }
+
+    public void checkAndMarkQuizComplete() {
+        if (questions.stream().allMatch(QuizQuestion::isCompleted)) {
+            markAsCompleted();
+        }
+    }
+
     public static Quiz createQuiz(Session session) {
         Quiz quiz = new Quiz();
         quiz.setSession(session);

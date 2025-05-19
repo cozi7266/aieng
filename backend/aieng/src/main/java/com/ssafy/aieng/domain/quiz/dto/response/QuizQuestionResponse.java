@@ -6,35 +6,44 @@ import lombok.Setter;
 @Getter
 @Setter
 public class QuizQuestionResponse {
-    private Integer id;
+    private Integer quizId;
     private String ansWord;
     private String ansImageUrl;
     private String ch1Word;
     private String ch2Word;
     private String ch3Word;
     private String ch4Word;
-    private Integer ansChId; // 정답 보기 번호 (1~4)
+    private Integer ansChId;     // 정답 보기 번호 (1~4)
+    private Boolean isCompleted; // 사용자가 이 문제를 푼 상태
 
     public static QuizQuestionResponse of(
-            Integer id,
+            Integer quizId,
             String ansWord,
             String ansImageUrl,
             String ch1Word,
             String ch2Word,
             String ch3Word,
             String ch4Word,
-            Integer ansChId
+            Integer ansChId,
+            Boolean isCompleted
     ) {
         QuizQuestionResponse dto = new QuizQuestionResponse();
-        dto.setId(id);
-        dto.setAnsWord(ansWord);
-        dto.setAnsImageUrl(ansImageUrl);
-        dto.setCh1Word(ch1Word);
-        dto.setCh2Word(ch2Word);
-        dto.setCh3Word(ch3Word);
-        dto.setCh4Word(ch4Word);
-        dto.setAnsChId(ansChId);
+        dto.quizId = quizId;
+        dto.ansWord = ansWord;
+        dto.ansImageUrl = ansImageUrl;
+        dto.ch1Word = ch1Word;
+        dto.ch2Word = ch2Word;
+        dto.ch3Word = ch3Word;
+        dto.ch4Word = ch4Word;
+        dto.ansChId = ansChId;
+        dto.isCompleted = isCompleted;
         return dto;
     }
-}
 
+    // 퀴즈 저장
+    public void submitAnswer(Integer selectedChId) {
+        if (this.ansChId.equals(selectedChId)) {
+            this.isCompleted = true;
+        }
+    }
+}

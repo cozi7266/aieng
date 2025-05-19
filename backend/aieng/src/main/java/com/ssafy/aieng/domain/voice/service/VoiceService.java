@@ -1,8 +1,9 @@
 package com.ssafy.aieng.domain.voice.service;
 
+import com.ssafy.aieng.domain.child.entity.Child;
+import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceCreateRequest;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
-import com.ssafy.aieng.domain.voice.dto.VoiceResponseDto;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,43 +23,99 @@ import java.util.stream.Collectors;
 public class VoiceService {
 
     private final VoiceRepository voiceRepository;
+    private final ChildRepository childRepository;
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("mp3", "wav");
     private static final long MIN_FILE_LENGTH_SECONDS = 30; // 30초
     private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
-//    @Transactional
-//    public VoiceResponse createVoice(VoiceCreateRequest request) {
-//        MultipartFile audioFile = request.getAudioFile();
-//        validateAudioFile(audioFile);
-//
-//        // 파일 업로드 및 URL 생성
-//        String audioUrl = uploadAudioFile(audioFile);
-//
-//        Voice voice = Voice.builder()
-//                .childId(request.getChildId())
-//                .name(request.getName())
-//                .description(request.getDescription())
-//                .audioUrl(audioUrl)
-//                .build();
-//
-//        Voice savedVoice = voiceRepository.save(voice);
-//        return VoiceResponse.from(savedVoice);
-//    }
+    // 목소리 파일 S3에 저장
+    @Transactional
+    public VoiceResponse createVoice(Integer userId, Integer childId, VoiceCreateRequest request) {
+        // 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
 
-    @Transactional(readOnly = true)
-    public VoiceResponse getVoice(Integer voiceId) {
-        Voice voice = voiceRepository.findById(voiceId)
-                .orElseThrow(() -> new CustomException(ErrorCode.VOICE_FILE_NOT_FOUND));
-        return VoiceResponse.from(voice);
+        MultipartFile audioFile = request.getAudioFile();
+        validateAudioFile(audioFile);
+
+        String audioUrl = uploadAudioFile(audioFile);
+
+        Voice voice = Voice.builder()
+                .child(child)
+                .name(request.getName())
+                .description(request.getDescription())
+                .audioUrl(audioUrl)
+                .build();
+
+        Voice savedVoice = voiceRepository.save(voice);
+        return VoiceResponse.from(savedVoice);
     }
 
+    // 목소리 목록 조회(디폴트 + 사용자 목소리)
     @Transactional(readOnly = true)
-    public List<VoiceResponse> getVoicesByChildId(Integer childId) {
+    public List<VoiceResponse> getVoicesWithDefault(Integer userId, Integer childId) {
+        // 자녀 소유자 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 자녀가 올린 목소리
+        List<Voice> childVoices = voiceRepository.findAllByChildIdOrderByCreatedAtDesc(childId);
+
+        // 시스템 기본 목소리 (childId가 null인 항목)
+        List<Voice> defaultVoices = voiceRepository.findAllByChildIdIsNullOrderByCreatedAtDesc();
+
+        // 병합
+        List<Voice> allVoices = new ArrayList<>();
+        allVoices.addAll(childVoices);
+        allVoices.addAll(defaultVoices);
+
+        return allVoices.stream()
+                .map(VoiceResponse::from)
+                .toList();
+    }
+
+    // 특정 아이가 업로드한 목소리 목록 조회
+    @Transactional(readOnly = true)
+    public List<VoiceResponse> getVoicesByChildId(Integer userId, Integer childId) {
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
         List<Voice> voices = voiceRepository.findAllByChildIdOrderByCreatedAtDesc(childId);
         return voices.stream()
                 .map(VoiceResponse::from)
                 .toList();
     }
+
+    // 목소리 상세 조회
+    @Transactional(readOnly = true)
+    public VoiceResponse getVoiceDetail(Integer userId, Integer childId, Integer voiceId) {
+        Voice voice = voiceRepository.findById(voiceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VOICE_FILE_NOT_FOUND));
+
+        // 자녀가 등록한 목소리인 경우에만 소유자 검증
+        if (voice.getChild() != null) {
+            if (!voice.getChild().getId().equals(childId)) {
+                throw new CustomException(ErrorCode.INVALID_CHILD_ACCESS);
+            }
+
+            if (!voice.getChild().getUser().getId().equals(userId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+            }
+        }
+        return VoiceResponse.from(voice);
+    }
+
+
 
     private void validateAudioFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -93,11 +151,5 @@ public class VoiceService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public List<VoiceResponseDto> getDefaultVoices() {
-        return voiceRepository.findAllByChildIdIsNullOrderByCreatedAtDesc()
-                .stream()
-                .map(VoiceResponseDto::from)
-                .collect(Collectors.toList());
-    }
+
 } 

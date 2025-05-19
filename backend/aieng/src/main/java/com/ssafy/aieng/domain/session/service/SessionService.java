@@ -138,14 +138,13 @@ public class SessionService {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // 2. 기존 Learning soft delete + Redis 삭제
+        // 2. 기존 Learning 하드 delete + Redis 삭제
         List<Learning> oldLearnings = learningRepository.findAllBySessionIdAndDeletedFalse(sessionId);
         for (Learning learning : oldLearnings) {
-            learning.softDelete();
             String infoKey = RedisKeyUtil.getGeneratedContentKey(userId, sessionId, learning.getWord().getWordEn());
             stringRedisTemplate.delete(infoKey);
         }
-        learningRepository.saveAll(oldLearnings);
+        learningRepository.deleteAll(oldLearnings); // ← 실제 삭제
 
         // 3. 새 단어 6개 선택
         List<Word> wordList = wordRepository.findAllByThemeId(themeId);
@@ -196,6 +195,7 @@ public class SessionService {
                 wordResponses
         );
     }
+
 
 
     // 자녀의 세션 목록 조회 (정렬 필드도 유연하게 처리 가능)

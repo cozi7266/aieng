@@ -8,8 +8,6 @@ import java.util.List;
 
 @Repository
 public interface SongRepository extends JpaRepository<Song, Integer> {
-    List<Song> findByStorybookId(Integer storybookId);
-    List<Song> findByVoiceId(Integer voiceId);
-    List<Song> findByMoodId(Integer moodId);
-    List<Song> findAllByDeletedFalse();
-} 
+
+    List<Song> findAllByStorybookChildIdOrderByCreatedAtDesc(Integer childId);
+}

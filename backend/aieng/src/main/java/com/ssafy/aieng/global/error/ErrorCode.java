@@ -34,7 +34,8 @@ public enum  ErrorCode {
     CHILD_NOT_FOUND(404, "U004", "아이를 찾을 수 없습니다."),
 
     // Child
-    FORBIDDEN_CHILD_ACCESS(403, "U005", "해당 자녀 정보에 접근할 수 없습니다."),
+    FORBIDDEN_CHILD_ACCESS(403, " C001", "해당 자녀 정보에 접근할 수 없습니다."),
+    INVALID_CHILD_ACCESS(403, "C001", "유효하지 않은 아이입니다."),
 
     // Session
     SESSION_NOT_FOUND(404, "S001", "학습 세션을 찾을 수 없습니다."),
@@ -50,6 +51,7 @@ public enum  ErrorCode {
     QUIZ_ALREADY_EXISTS(409, "Q001", "퀴즈가 이미 존재합니다."),
     QUIZ_NOT_FOUND(404, "Q002", "퀴즈가 존재하지 않습니다."),
     QUIZ_CREATION_FAILED(400, "Q003", "퀴즈 생성 조건을 만족하지 않습니다."),
+    QUESTION_ALREADY_COMPLETED(400, "Q004", "이미 완료된 문제입니다."),
 
     // Theme
     THEME_NOT_FOUND(404, "T001", "테마를 찾을 수 없습니다."),
