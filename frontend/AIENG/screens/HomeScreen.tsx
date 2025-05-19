@@ -108,7 +108,7 @@ const HomeScreenContent: React.FC<HomeScreenContentProps> = ({
   };
 
   // 화면 크기에 따른 로고 크기 계산
-  const logoHeight = dimensions.height * 0.08;
+  const logoHeight = dimensions.height * 0.11;
   const logoWidth = logoHeight * 4;
 
   return (
