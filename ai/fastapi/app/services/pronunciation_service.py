@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def clean_text(text: str) -> str:
     return re.sub(r'[^\w\s]', '', text.lower())
 
-async def evaluate_pronunciation(audio_file: UploadFile, expected_text: Optional[str] = None) -> Dict:
+async def evaluate_pronunciation(audio_file: UploadFile, ans_text: Optional[str] = None) -> Dict:
     """
     Google Cloud Speech-to-Text API를 사용하여 발음을 평가합니다.
     
