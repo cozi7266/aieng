@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Builder
 public class SongGenerateResponseDto {
     private Integer songId;
-    private Integer voiceId;
     private Integer moodId;
     private String songUrl;
     private String title;
@@ -25,7 +24,6 @@ public class SongGenerateResponseDto {
     public static SongGenerateResponseDto of(Song song) {
         return SongGenerateResponseDto.builder()
                 .songId(song.getId())
-                .voiceId(song.getVoice().getId())
                 .moodId(song.getMood().getId())
                 .songUrl(song.getSongUrl())
                 .title(song.getTitle())
