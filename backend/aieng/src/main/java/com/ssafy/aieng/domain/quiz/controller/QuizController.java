@@ -14,6 +14,9 @@ import com.ssafy.aieng.domain.quiz.service.QuizService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/quiz")
 @RequiredArgsConstructor
@@ -56,17 +59,22 @@ public class QuizController {
 
     // 퀴즈 학습 완료
     @PostMapping("/submit")
-    public ResponseEntity<ApiResponse<Void>> submitAnswer(
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> submitAnswer(
             @RequestBody SubmitAnswerRequest request,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId
     ) {
-        quizService.submitAnswer(
+        boolean isCorrect = quizService.submitAnswer(
                 user.getId(),
                 childId,
                 request.getQuizQuestionId(),
                 request.getSelectedChoiceId()
         );
-        return ApiResponse.success(HttpStatus.OK);
+
+        Map<String, Boolean> result = new HashMap<>();
+        result.put("isCorrect", isCorrect);
+
+        return ApiResponse.success(result);
     }
+
 }
