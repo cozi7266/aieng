@@ -176,9 +176,7 @@ const SongScreen: React.FC = () => {
   };
 
   const handleNavigateToStory = (song: Song) => {
-    // StoryScreen이 준비되면 주석 해제
-    // navigation.navigate("StoryScreen", { song });
-    console.log("동화 페이지로 이동:", song.title);
+    navigation.navigate("FairytaleScreen", { songId: song.id });
   };
 
   const handlePlayPause = () => {
