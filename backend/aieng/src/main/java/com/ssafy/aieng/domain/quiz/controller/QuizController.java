@@ -1,8 +1,10 @@
 package com.ssafy.aieng.domain.quiz.controller;
 
+import com.ssafy.aieng.domain.quiz.dto.request.SubmitAnswerRequest;
 import com.ssafy.aieng.global.common.response.ApiResponse;
 import com.ssafy.aieng.global.common.util.AuthenticationUtil;
 import com.ssafy.aieng.global.security.UserPrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -53,14 +55,17 @@ public class QuizController {
     }
 
     // 퀴즈 학습 완료
-    @PostMapping("/questions/{quizQuestionId}/submit")
+    @PostMapping("/submit")
     public ResponseEntity<ApiResponse<Void>> submitAnswer(
-            @PathVariable Integer quizQuestionId,
-            @RequestParam("choice") Integer selectedChId,
-            @RequestHeader("X-Child-Id") Integer childId,
+            @RequestBody SubmitAnswerRequest request,
             @AuthenticationPrincipal UserPrincipal user
     ) {
-        quizService.submitAnswer(user.getId(), childId, quizQuestionId, selectedChId);
-        return ApiResponse.success(null);
+        quizService.submitAnswer(
+                user.getId(),
+                request.getChildId(),
+                request.getQuizQuestionId(),
+                request.getSelectedChoiceId()
+        );
+        return ApiResponse.success(HttpStatus.OK);
     }
 }
