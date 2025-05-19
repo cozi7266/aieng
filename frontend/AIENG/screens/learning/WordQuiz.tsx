@@ -30,26 +30,28 @@ import QuizOptionButton from "../../components/common/learning/QuizOptionButton"
 import QuizFeedback from "../../components/common/learning/QuizFeedback";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NavigationAlert from "../../components/navigation/NavigationAlert";
 
-// API 응답 타입 정의
+// 새로운 API 응답 타입 정의
 interface QuizQuestionResponse {
-  id: number;
-  ans_word: string;
-  ans_image_url: string;
-  ch1_word: string;
-  ch2_word: string;
-  ch3_word: string;
-  ch4_word: string;
-  ans_ch_id: number;
+  quizQuestionId: number;
+  ansWord: string;
+  ansImageUrl: string;
+  ch1Word: string;
+  ch2Word: string;
+  ch3Word: string;
+  ch4Word: string;
+  ansChId: number;
+  isCompleted: boolean;
 }
 
 interface QuizResponse {
   success: boolean;
   data: {
-    id: number;
-    session_id: number;
-    created_at: string;
+    quizId: number | null;
+    createdAt: string;
     questions: QuizQuestionResponse[];
+    isCompleted: boolean;
   } | null;
   error: {
     code: string;
@@ -57,89 +59,57 @@ interface QuizResponse {
   } | null;
 }
 
-// 라우트 파라미터 타입 정의
-type WordQuizParams = {
-  wordId: string;
-  themeId: string;
-  theme: string;
-  sessionId: string;
-};
-
-type WordQuizScreenRouteProp = RouteProp<
-  { WordQuiz: WordQuizParams },
-  "WordQuiz"
->;
-
 // 퀴즈 데이터 타입 정의
 interface QuizQuestion {
-  questionId: string;
+  questionId: number;
   imageUrl: any;
   correctAnswer: string;
   options: string[];
+  correctAnswerIndex: number; // 정답 선택지 인덱스 (1-4)
   correctAnswerKorean: string;
 }
 
 const WordQuizScreen: React.FC = () => {
+  // 상태 변수들
   const navigation = useNavigation();
-  const route = useRoute<WordQuizScreenRouteProp>();
-  const { wordId, themeId, theme: themeName } = route.params;
+  const route = useRoute<
+    RouteProp<
+      {
+        WordQuiz: {
+          wordId: string;
+          themeId: string;
+          theme: string;
+          sessionId: string;
+        };
+      },
+      "WordQuiz"
+    >
+  >();
+  const { wordId, themeId, theme: themeName, sessionId } = route.params;
   const { stopBgm } = useAudio();
 
-  // 상태 변수
-  const [currentQuestion, setCurrentQuestion] = useState<QuizQuestion | null>(
-    null
-  );
+  const [allQuestions, setAllQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [isAnswered, setIsAnswered] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionResponse[]>(
-    []
-  );
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
-  // 진행 단계 (3/3 표시)
-  const currentStep = 3;
-  const totalSteps = 3;
+  // 퀴즈 단계 계산 (1/4, 2/4, 3/4, 4/4)
+  const totalSteps = 4;
+  const currentStep = currentQuestionIndex + 1;
+  const isLastQuestion = currentStep === totalSteps;
 
   // 애니메이션 값
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const nextButtonAnim = useRef(new Animated.Value(1)).current;
-  const fillHeightAnim = useRef(new Animated.Value(0)).current;
   const optionScaleAnims = useRef([
     new Animated.Value(1),
     new Animated.Value(1),
     new Animated.Value(1),
     new Animated.Value(1),
   ]).current;
-
-  // 이미지 펄스 애니메이션
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.03,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  // 배경 음악 중지
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
-      stopBgm();
-    });
-    return unsubscribe;
-  }, [navigation, stopBgm]);
 
   // 퀴즈 데이터 가져오기
   useEffect(() => {
@@ -151,28 +121,13 @@ const WordQuizScreen: React.FC = () => {
         const token = await AsyncStorage.getItem("accessToken");
         const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-        console.log("[퀴즈 API 요청 정보]");
-        console.log(
-          "URL:",
-          `https://www.aieng.co.kr/api/quiz/create/${route.params.sessionId}`
-        );
-        console.log("Headers:", {
-          Authorization: `Bearer ${token}`,
-          "X-Child-Id": selectedChildId,
-          "Content-Type": "application/json",
-        });
-
-        if (!token) {
-          throw new Error("인증 토큰이 없습니다.");
+        if (!token || !selectedChildId) {
+          throw new Error("인증 정보가 없습니다.");
         }
 
-        if (!selectedChildId) {
-          throw new Error("선택된 자녀 ID가 없습니다.");
-        }
-
-        const response = await axios.post<QuizResponse>(
-          `https://www.aieng.co.kr/api/quiz/create/${route.params.sessionId}`,
-          {},
+        // 새로운 API 엔드포인트로 모든 퀴즈 문제 가져오기
+        const response = await axios.get<QuizResponse>(
+          `https://www.aieng.co.kr/api/quiz/${sessionId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -187,32 +142,53 @@ const WordQuizScreen: React.FC = () => {
         console.log("Data:", JSON.stringify(response.data, null, 2));
 
         if (response.data.success && response.data.data) {
-          setQuizQuestions(response.data.data.questions);
-          const firstQuestion = response.data.data.questions[0];
-          console.log("[첫 번째 퀴즈 문제 정보]");
-          console.log("문제 ID:", firstQuestion.id);
-          console.log("정답 단어:", firstQuestion.ans_word);
-          console.log("이미지 URL:", firstQuestion.ans_image_url);
-          console.log("선택지:", {
-            ch1: firstQuestion.ch1_word,
-            ch2: firstQuestion.ch2_word,
-            ch3: firstQuestion.ch3_word,
-            ch4: firstQuestion.ch4_word,
-          });
-          console.log("정답 선택지 번호:", firstQuestion.ans_ch_id);
+          const quizData = response.data.data;
+          console.log("\n[퀴즈 완료 상태]");
+          console.log("전체 퀴즈 완료 여부:", quizData.isCompleted);
 
-          setCurrentQuestion({
-            questionId: firstQuestion.id.toString(),
-            imageUrl: { uri: firstQuestion.ans_image_url },
-            correctAnswer: firstQuestion.ans_word,
-            options: [
-              firstQuestion.ch1_word,
-              firstQuestion.ch2_word,
-              firstQuestion.ch3_word,
-              firstQuestion.ch4_word,
-            ],
-            correctAnswerKorean: "", // API에서 한글 단어 정보가 없으므로 빈 문자열로 설정
+          // 퀴즈가 이미 완료된 경우
+          if (quizData.isCompleted) {
+            NavigationAlert.show({
+              title: "퀴즈 완료",
+              message: "이미 퀴즈를 완료했습니다. 학습 화면으로 돌아갑니다.",
+              confirmText: "확인",
+              onConfirm: () => {
+                navigation.dispatch(
+                  CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: "LearningScreen" }],
+                  })
+                );
+              },
+            });
+            return;
+          }
+
+          const quizQuestions = quizData.questions.map((q) => ({
+            questionId: q.quizQuestionId,
+            imageUrl: { uri: q.ansImageUrl },
+            correctAnswer: q.ansWord,
+            options: [q.ch1Word, q.ch2Word, q.ch3Word, q.ch4Word],
+            correctAnswerIndex: q.ansChId,
+            correctAnswerKorean: "",
+          }));
+
+          console.log("\n[변환된 퀴즈 문제 정보]");
+          console.log("총 문제 수:", quizQuestions.length);
+          quizQuestions.forEach((q, index) => {
+            console.log(`\n[${index + 1}번째 문제]`);
+            console.log("문제 ID:", q.questionId);
+            console.log("정답 단어:", q.correctAnswer);
+            console.log("이미지 URL:", q.imageUrl.uri);
+            console.log("선택지:", q.options);
+            console.log("정답 선택지 번호:", q.correctAnswerIndex);
+            console.log(
+              "문제 완료 여부:",
+              quizData.questions[index].isCompleted
+            );
           });
+
+          setAllQuestions(quizQuestions);
         } else {
           throw new Error(
             response.data.error?.message ||
@@ -220,146 +196,85 @@ const WordQuizScreen: React.FC = () => {
           );
         }
       } catch (error: any) {
-        console.error("[퀴즈 API 에러 정보]");
-        console.error("Message:", error.message);
-        if (error.response) {
-          console.error("Status:", error.response.status);
-          console.error("Data:", JSON.stringify(error.response.data, null, 2));
-          setError(
-            `서버 오류: ${error.response.status} - ${
-              error.response.data.error?.message || "알 수 없는 오류"
-            }`
-          );
-        } else if (error.request) {
-          console.error("Request:", error.request);
-          setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
-        } else {
-          console.error("Config:", error.config);
-          setError(error.message || "요청 처리 중 오류가 발생했습니다.");
-        }
+        console.error("[퀴즈 API 에러]", error);
+        setError(
+          error.response?.data?.error?.message ||
+            error.message ||
+            "퀴즈를 불러오는 중 오류가 발생했습니다."
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchQuizData();
-  }, [route.params.sessionId]);
+  }, [sessionId]);
 
-  // 다음 버튼 애니메이션
-  useEffect(() => {
-    if (isAnswered) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(nextButtonAnim, {
-            toValue: 1.05,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.timing(nextButtonAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+  // 정답 제출 함수
+  const submitAnswer = async (questionId: number) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-      Animated.timing(fillHeightAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: false,
-      }).start();
-    } else {
-      fillHeightAnim.setValue(0);
-    }
-  }, [isAnswered]);
-
-  // 가로 모드 고정
-  useEffect(() => {
-    const lockOrientation = async () => {
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE
-      );
-    };
-    lockOrientation();
-  }, []);
-
-  // 네비게이션 이벤트 처리
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-      // 다음 학습 단계로 이동 시에는 경고 표시 안 함
-      if (
-        e.data.action.type === "NAVIGATE" &&
-        (e.data.action.payload?.name === "WordComplete" ||
-          e.data.action.payload?.name === "Home")
-      ) {
-        return;
+      if (!token || !selectedChildId) {
+        console.error("토큰 또는 자녀 ID가 없습니다.");
+        return false;
       }
 
-      // 기본 내비게이션 방지
-      e.preventDefault();
+      // 현재 문제의 정답 인덱스 가져오기
+      const currentQuestion = allQuestions[currentQuestionIndex];
 
-      // 경고 표시
-      NavigationWarningAlert.show({
-        onConfirm: () => {
-          navigation.dispatch(e.data.action);
+      // 정답 인덱스를 사용하여 항상 정답으로 제출
+      await axios.post(
+        "https://www.aieng.co.kr/api/quiz/submit",
+        {
+          quizQuestionId: questionId,
+          selectedChoiceId: currentQuestion.correctAnswerIndex,
         },
-      });
-    });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    return unsubscribe;
-  }, [navigation]);
+      return true;
+    } catch (error) {
+      console.error("정답 제출 중 오류 발생:", error);
+      return false;
+    }
+  };
 
-  // 다음 문제로 이동
-  const handleContinue = () => {
+  // 다음 문제로 이동 또는 노래 화면으로 이동
+  const handleContinue = async () => {
     if (!isAnswered) return;
 
-    const nextIndex = currentQuestionIndex + 1;
-    if (nextIndex < quizQuestions.length) {
-      setCurrentQuestionIndex(nextIndex);
-      const nextQuestion = quizQuestions[nextIndex];
-      console.log(`[${nextIndex + 1}번째 퀴즈 문제 정보]`);
-      console.log("문제 ID:", nextQuestion.id);
-      console.log("정답 단어:", nextQuestion.ans_word);
-      console.log("이미지 URL:", nextQuestion.ans_image_url);
-      console.log("선택지:", {
-        ch1: nextQuestion.ch1_word,
-        ch2: nextQuestion.ch2_word,
-        ch3: nextQuestion.ch3_word,
-        ch4: nextQuestion.ch4_word,
-      });
-      console.log("정답 선택지 번호:", nextQuestion.ans_ch_id);
+    const currentQuestion = allQuestions[currentQuestionIndex];
 
-      setCurrentQuestion({
-        questionId: nextQuestion.id.toString(),
-        imageUrl: { uri: nextQuestion.ans_image_url },
-        correctAnswer: nextQuestion.ans_word,
-        options: [
-          nextQuestion.ch1_word,
-          nextQuestion.ch2_word,
-          nextQuestion.ch3_word,
-          nextQuestion.ch4_word,
-        ],
-        correctAnswerKorean: "", // API에서 한글 단어 정보가 없으므로 빈 문자열로 설정
-      });
+    // 문제 정답 제출
+    await submitAnswer(currentQuestion.questionId);
+
+    // 마지막 문제가 아니면 다음 문제로 이동
+    if (!isLastQuestion) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedOption(null);
       setIsCorrect(null);
       setIsAnswered(false);
-    } else {
-      console.log("[퀴즈 완료]");
-      console.log("총 문제 수:", quizQuestions.length);
-      console.log(
-        "마지막 문제 ID:",
-        quizQuestions[quizQuestions.length - 1].id
-      );
+    }
+  };
 
-      // 모든 문제를 풀었을 때
+  // 노래 화면으로 이동
+  const handleSongPress = async () => {
+    // 마지막 문제의 경우 정답 제출 후 노래 화면으로 이동
+    if (isLastQuestion && isAnswered) {
+      const currentQuestion = allQuestions[currentQuestionIndex];
+      await submitAnswer(currentQuestion.questionId);
+
       navigation.dispatch(
         CommonActions.navigate({
-          name: "WordComplete",
-          params: {
-            themeId: themeId,
-            theme: themeName,
-          },
+          name: "SongSettingScreen",
         })
       );
     }
@@ -369,15 +284,9 @@ const WordQuizScreen: React.FC = () => {
   const handleOptionSelect = (option: string, index: number) => {
     if (isAnswered) return; // 이미 답변했으면 선택 방지
 
-    console.log("[사용자 답변 정보]");
-    console.log("선택한 답:", option);
-    console.log("선택지 번호:", index + 1);
-    console.log("정답:", currentQuestion?.correctAnswer);
-    console.log("정답 여부:", option === currentQuestion?.correctAnswer);
-
+    const currentQuestion = allQuestions[currentQuestionIndex];
     setSelectedOption(option);
-    const correct = option === currentQuestion?.correctAnswer;
-    setIsCorrect(correct);
+    setIsCorrect(option === currentQuestion.correctAnswer);
     setIsAnswered(true);
 
     // 선택한 옵션 애니메이션
@@ -395,19 +304,12 @@ const WordQuizScreen: React.FC = () => {
     ]).start();
   };
 
-  // 노래 화면으로 이동하는 함수 - React Navigation 6에 맞게 수정
-  const handleSongPress = () => {
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: "SongSettingScreen",
-      })
-    );
-  };
-
   // 로딩 화면
-  if (isLoading || !currentQuestion) {
+  if (isLoading || allQuestions.length === 0) {
     return <LoadingScreen message="퀴즈를 준비하고 있어요..." />;
   }
+
+  const currentQuestion = allQuestions[currentQuestionIndex];
 
   return (
     <View style={styles.container}>
@@ -452,31 +354,18 @@ const WordQuizScreen: React.FC = () => {
         />
       </View>
 
-      {/* 피드백 오버레이 - z축으로 상단에 표시 */}
+      {/* 피드백 오버레이 */}
       {isAnswered && (
         <View style={styles.feedbackOverlayContainer}>
           <QuizFeedback
-            isCorrect={isCorrect}
+            isCorrect={isCorrect ?? false}
             correctAnswer={currentQuestion.correctAnswer}
             correctAnswerKorean={currentQuestion.correctAnswerKorean}
-            onSongPress={handleSongPress}
+            onSongPress={isLastQuestion ? handleSongPress : handleContinue}
+            buttonText={isLastQuestion ? "동요 만들기" : "다음 문제"}
+            isLastQuestion={isLastQuestion}
           />
         </View>
-      )}
-
-      {/* 배경 애니메이션 레이어 */}
-      {isAnswered && (
-        <Animated.View
-          style={[
-            styles.fillBackground,
-            {
-              height: fillHeightAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["0%", "100%"],
-              }),
-            },
-          ]}
-        />
       )}
 
       {/* 메인 콘텐츠 */}
@@ -527,31 +416,6 @@ const WordQuizScreen: React.FC = () => {
             </View>
           ))}
         </View>
-
-        {/* 컨트롤 버튼 */}
-        <View style={styles.controlsContainer}>
-          <Animated.View
-            style={{
-              transform: [{ scale: isAnswered ? nextButtonAnim : 1 }],
-            }}
-          >
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                isAnswered ? styles.continueButton : styles.disabledButton,
-              ]}
-              onPress={handleContinue}
-              disabled={!isAnswered}
-            >
-              <FontAwesome5
-                name="arrow-right"
-                size={20}
-                color={theme.colors.buttonText}
-              />
-              <Text style={styles.buttonText}>계속하기</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
       </View>
 
       {/* 도움말 모달 */}
@@ -600,7 +464,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  // 헤더 스타일
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -639,7 +502,6 @@ const styles = StyleSheet.create({
   headerButton: {
     marginLeft: theme.spacing.m,
   },
-  // 진행 바
   duoProgressContainer: {
     height: 12,
     backgroundColor: "#E5E5E5",
@@ -650,7 +512,6 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: theme.colors.primary,
   },
-  // 피드백 오버레이 컨테이너
   feedbackOverlayContainer: {
     position: "absolute",
     top: 70,
@@ -660,7 +521,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // 메인 콘텐츠
   mainContainer: {
     flex: 1,
     justifyContent: "center",
@@ -699,36 +559,6 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: theme.spacing.l,
   },
-  controlsContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: theme.spacing.m,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.pill,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    minWidth: 220,
-    ...theme.shadows.default,
-  },
-  buttonText: {
-    color: theme.colors.buttonText,
-    fontSize: 22,
-    fontWeight: "bold",
-    marginLeft: 12,
-  },
-  continueButton: {
-    backgroundColor: theme.colors.secondary,
-  },
-  disabledButton: {
-    backgroundColor: "#CCCCCC",
-    opacity: 0.7,
-  },
-  // 모달 스타일
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -775,14 +605,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: theme.colors.text,
     lineHeight: 26,
-  },
-  fillBackground: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(81, 75, 242, 0.15)",
-    zIndex: 0,
   },
 });
 

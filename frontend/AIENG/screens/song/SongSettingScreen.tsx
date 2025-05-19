@@ -21,6 +21,7 @@ import MoodItem from "../../components/songs/MoodItem";
 import VoiceItem from "../../components/songs/VoiceItem";
 import { theme } from "../../Theme";
 import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
+import { CommonActions } from "@react-navigation/native";
 
 type SongSettingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -153,8 +154,13 @@ const SongSettingScreen: React.FC = () => {
     console.log("Selected mood:", selectedMood);
     console.log("Selected voice:", selectedVoice);
 
-    // 다음 화면으로 이동 또는 처리
-    // navigation.navigate("NextScreen");
+    // Home 화면으로 이동
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      })
+    );
   };
 
   return (
