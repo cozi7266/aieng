@@ -15,16 +15,14 @@ import java.util.List;
 @Getter
 @Setter
 public class QuizResponse {
-    private Integer id;
-    private Integer sessionId;
+
+    private Integer quizId;
     private LocalDateTime createdAt;
     private List<QuizQuestionResponse> questions;
     private Boolean isCompleted;
 
     public static QuizResponse of(Quiz quiz, WordRepository wordRepository) {
         QuizResponse response = new QuizResponse();
-        response.setId(quiz.getId());
-        response.setSessionId(quiz.getSession().getId());
         response.setCreatedAt(quiz.getCreatedAt());
         response.setIsCompleted(quiz.isCompleted());
 
@@ -37,7 +35,7 @@ public class QuizResponse {
             Word ch4 = wordRepository.findById(q.getCh4Id()).orElse(null);
 
             QuizQuestionResponse dto = QuizQuestionResponse.of(
-                    quiz.getId(),
+                    q.getId(),
                     ans != null ? ans.getWordEn() : null,
                     q.getAnsImageUrl(),
                     ch1 != null ? ch1.getWordEn() : null,

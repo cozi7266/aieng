@@ -144,8 +144,7 @@ public class QuizService {
         QuizQuestion question = quizQuestionRepository.findById(quizQuestionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.QUIZ_NOT_FOUND));
 
-        Quiz quiz = question.getQuiz();
-        Session session = quiz.getSession();
+        Session session = question.getQuiz().getSession();
         Child child = session.getChild();
 
         // 자녀 소유 검증
@@ -153,16 +152,14 @@ public class QuizService {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 이미 정답 맞춘 경우 예외
+        // 중복 제출 방지
         if (question.isCompleted()) {
             throw new CustomException(ErrorCode.QUESTION_ALREADY_COMPLETED);
         }
 
-        // 정답 제출
+        // 답안 처리 및 전체 퀴즈 완료 체크
         question.submitAnswer(selectedChId);
-
-        // 퀴즈 전체 완료 여부 체크
-        quiz.checkAndMarkQuizComplete();
+        question.getQuiz().checkAndMarkQuizComplete();
     }
 
 
