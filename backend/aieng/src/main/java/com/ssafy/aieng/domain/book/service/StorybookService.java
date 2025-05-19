@@ -35,6 +35,7 @@ public class StorybookService {
             "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Sample_User_Icon.png/480px-Sample_User_Icon.png";
 
 
+    // 그림책 생성
     @Transactional
     public StorybookResponse createStorybook(Integer userId, Integer childId, Integer sessionId) {
 
@@ -87,7 +88,10 @@ public class StorybookService {
             storybook.addLearningStorybook(ls);
         }
 
-        // 7. 저장 및 응답 반환
+        // 7. 세션 상태 업데이트
+        session.markStoryDone();
+
+        // 8. 저장 및 응답 반환
         storybookRepository.save(storybook);
         return StorybookResponse.from(storybook);
     }
@@ -121,5 +125,7 @@ public class StorybookService {
         storybook.softDelete();
         storybookRepository.save(storybook);
     }
+
+
 
 }
