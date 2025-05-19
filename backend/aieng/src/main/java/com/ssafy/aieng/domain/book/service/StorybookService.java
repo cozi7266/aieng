@@ -47,13 +47,9 @@ public class StorybookService {
 
 
         // 같은 세션으로 그림책 중복 생성 막기
-        boolean exists = storybookRepository.existsBySessionId(sessionId);
+        boolean exists = storybookRepository.existsStorybookBySessionId(sessionId);
         if (exists) {
             throw new CustomException(ErrorCode.DUPLICATE_STORYBOOK);
-        }
-
-        if (!session.getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
         // 3. 학습 완료 여부 확인
