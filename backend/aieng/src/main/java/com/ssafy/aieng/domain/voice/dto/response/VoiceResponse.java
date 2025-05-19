@@ -8,6 +8,7 @@ import lombok.Getter;
 @Builder
 public class VoiceResponse {
     private Integer voiceId;
+    private Integer childId;
     private String name;
     private String description;
     private String audioUrl;
@@ -15,6 +16,7 @@ public class VoiceResponse {
     public static VoiceResponse from(Voice voice) {
         return VoiceResponse.builder()
                 .voiceId(voice.getId())
+                .childId(voice.getChild().getId())
                 .name(voice.getName())
                 .description(voice.getDescription())
                 .audioUrl(voice.getAudioUrl())

@@ -9,7 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface VoiceRepository extends JpaRepository<Voice, Integer> {
+
     List<Voice> findAllByChildIdOrderByCreatedAtDesc(Integer childId);
+
     List<Voice> findAllByChildIdIsNullOrderByCreatedAtDesc();
 
     Optional<Voice> findByName(String voiceName);
