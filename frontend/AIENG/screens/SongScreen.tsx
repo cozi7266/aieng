@@ -677,7 +677,13 @@ const SongScreen: React.FC = () => {
                             styles.spinningIcon,
                         ]}
                       />
-                      <Text style={styles.createSongButtonText}>
+                      <Text
+                        style={[
+                          styles.createSongButtonText,
+                          currentSongStatus?.songStatus === "GENERATING" &&
+                            styles.disabledButtonText,
+                        ]}
+                      >
                         {currentSongStatus?.songStatus === "GENERATING"
                           ? "생성 중..."
                           : "동요 생성하기"}
@@ -839,6 +845,9 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: theme.colors.subText,
+    opacity: 0.7,
+  },
+  disabledButtonText: {
     opacity: 0.7,
   },
   buttonIcon: {
