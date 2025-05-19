@@ -244,8 +244,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       <View style={styles.timeContainer}>
         <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
         <Slider
-          style={styles.progressBar}
-          containerStyle={{ width: "70%", paddingHorizontal: 10 }}
+          containerStyle={{ width: "85%", paddingHorizontal: 10 }}
           value={sliderValue}
           onValueChange={handleSliderValueChange}
           minimumValue={0}

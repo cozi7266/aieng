@@ -6,6 +6,7 @@ import {
   Text,
   useWindowDimensions,
   SafeAreaView,
+  TouchableOpacity,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +17,13 @@ import { theme } from "../../Theme";
 import { useAudio } from "../../contexts/AudioContext";
 import MusicPlayer from "../../components/songs/MusicPlayer";
 import FairytaleCarousel from "../../components/songs/FairytaleCarousel";
+import { Audio } from "expo-av";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { FontAwesome5 } from "@expo/vector-icons";
+
+// API 기본 URL
+const API_BASE_URL = "https://www.aieng.co.kr";
 
 type FairytaleScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -28,16 +36,23 @@ type FairytaleScreenRouteProp = RouteProp<
 >;
 
 interface FairytalePage {
-  id: string;
-  imageUrl: any;
-  text: string;
+  wordId: number;
+  wordEn: string;
+  wordKo: string;
+  wordImgUrl: string;
+  sentence: string;
+  translation: string;
+  sentenceImgUrl: string;
+  sentenceTtsUrl: string;
+  pageOrder: number;
 }
 
 interface Fairytale {
-  id: string;
+  storybookId: number;
+  coverUrl: string;
   title: string;
+  description: string;
   pages: FairytalePage[];
-  songId: string;
 }
 
 interface Song {
@@ -59,6 +74,9 @@ const FairytaleScreen: React.FC = () => {
   const [song, setSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   // For responsive design
   const scaleFactor = Math.min(width / 2000, height / 1200);
@@ -66,40 +84,7 @@ const FairytaleScreen: React.FC = () => {
   // Audio context from the app
   const { stopBgm } = useAudio();
 
-  // Mock data for development
-  const mockFairytale: Fairytale = {
-    id: "1",
-    title: "Twinkle Twinkle Little Star Story",
-    songId: "1",
-    pages: [
-      {
-        id: "page1",
-        imageUrl: require("../../assets/icon.png"),
-        text: "In a far away sky, there was a little star.",
-      },
-      {
-        id: "page2",
-        imageUrl: require("../../assets/icon.png"),
-        text: "The little star was always twinkling brightly.",
-      },
-      {
-        id: "page3",
-        imageUrl: require("../../assets/icon.png"),
-        text: "One night, a child looked up and wondered what the star was.",
-      },
-      {
-        id: "page4",
-        imageUrl: require("../../assets/icon.png"),
-        text: "Up above the world so high, like a diamond in the sky.",
-      },
-      {
-        id: "page5",
-        imageUrl: require("../../assets/icon.png"),
-        text: "The star twinkled back at the child, sharing its light across the universe.",
-      },
-    ],
-  };
-
+  // Mock song data for development
   const mockSong: Song = {
     id: "1",
     title: "Twinkle Twinkle Little Star",
@@ -110,7 +95,127 @@ const FairytaleScreen: React.FC = () => {
     favorite: false,
   };
 
+  const playTts = async (ttsUrl: string) => {
+    try {
+      console.log("TTS 재생 시작:", ttsUrl);
+      if (sound) {
+        console.log("이전 음성 정지");
+        await sound.unloadAsync();
+      }
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: ttsUrl },
+        { shouldPlay: true }
+      );
+      console.log("새로운 음성 로드 완료");
+      setSound(newSound);
+    } catch (error) {
+      console.error("TTS 재생 중 오류 발생:", error);
+    }
+  };
+
   useEffect(() => {
+    const fetchFairytale = async () => {
+      try {
+        setIsLoading(true);
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
+
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
+
+        const url = `${API_BASE_URL}/api/books/${route.params.songId}`;
+        console.log("[API 요청] URL:", url);
+        console.log("[API 요청] Headers:", {
+          Authorization: `Bearer ${token}`,
+          "X-Child-Id": selectedChildId,
+        });
+
+        const response = await axios.get(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        });
+
+        console.log("[API 응답] 전체 데이터:", response.data);
+
+        if (response.data.success) {
+          const storybookData = response.data.data;
+          console.log("[API 응답] 동화책 데이터:", storybookData);
+
+          // 데이터 구조 확인
+          if (
+            !storybookData ||
+            !storybookData.pages ||
+            !Array.isArray(storybookData.pages)
+          ) {
+            console.error(
+              "[데이터 구조 오류] pages 배열이 없거나 잘못된 형식입니다:",
+              storybookData
+            );
+            throw new Error("동화책 데이터 형식이 올바르지 않습니다.");
+          }
+
+          // 데이터 변환
+          const transformedData: Fairytale = {
+            storybookId: storybookData.storybookId,
+            coverUrl: storybookData.coverUrl,
+            title: storybookData.title,
+            description: storybookData.description,
+            pages: storybookData.pages.map((page: any) => ({
+              wordId: page.wordId,
+              wordEn: page.wordEn,
+              wordKo: page.wordKo,
+              wordImgUrl: page.wordImgUrl,
+              sentence: page.sentence,
+              translation: page.translation,
+              sentenceImgUrl: page.sentenceImgUrl,
+              sentenceTtsUrl: page.sentenceTtsUrl,
+              pageOrder: page.pageOrder,
+            })),
+          };
+
+          console.log("[변환된 데이터]", transformedData);
+          setFairytale(transformedData);
+          setSong(mockSong); // Mock song data 설정
+        } else {
+          console.error("[API 응답 실패]", response.data);
+          setError(
+            response.data.error?.message || "동화책을 불러오는데 실패했습니다."
+          );
+        }
+      } catch (err: any) {
+        console.error("[API 에러]", err);
+        if (err.response) {
+          console.log("[서버 응답]", {
+            status: err.response.status,
+            data: err.response.data,
+          });
+          setError(
+            `서버 오류: ${err.response.status} - ${
+              err.response.data.error?.message || "알 수 없는 오류"
+            }`
+          );
+        } else if (err.request) {
+          console.log("[네트워크 에러]", err.request);
+          setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+        } else {
+          console.log("[기타 에러]", err);
+          setError(err.message || "요청 처리 중 오류가 발생했습니다.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     // Lock screen orientation to landscape for tablet
     const lockOrientation = async () => {
       await ScreenOrientation.lockAsync(
@@ -119,26 +224,28 @@ const FairytaleScreen: React.FC = () => {
     };
 
     lockOrientation();
-
-    // Load fairytale and song data
-    setFairytale(mockFairytale);
-    setSong(mockSong);
+    fetchFairytale();
 
     return () => {
       // Cleanup
       ScreenOrientation.unlockAsync();
       stopBgm();
+      if (sound) {
+        sound.unloadAsync();
+      }
     };
-  }, []);
+  }, [route.params.songId]);
 
   const handlePreviousPage = () => {
     if (fairytale && currentPageIndex > 0) {
+      console.log("이전 페이지로 이동:", currentPageIndex - 1);
       setCurrentPageIndex(currentPageIndex - 1);
     }
   };
 
   const handleNextPage = () => {
     if (fairytale && currentPageIndex < fairytale.pages.length - 1) {
+      console.log("다음 페이지로 이동:", currentPageIndex + 1);
       setCurrentPageIndex(currentPageIndex + 1);
     }
   };
@@ -182,7 +289,8 @@ const FairytaleScreen: React.FC = () => {
     },
   };
 
-  if (!fairytale || !song) {
+  if (isLoading) {
+    console.log("[상태] 로딩 중...");
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -191,6 +299,34 @@ const FairytaleScreen: React.FC = () => {
       </SafeAreaView>
     );
   }
+
+  if (error) {
+    console.log("[상태] 에러 발생:", error);
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!fairytale || !fairytale.pages || fairytale.pages.length === 0) {
+    console.log("[상태] 데이터 없음:", { fairytale });
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>동화책을 불러오고 있어요...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  console.log("[상태] 현재 페이지 데이터:", {
+    currentPageIndex,
+    currentPage: fairytale.pages[currentPageIndex],
+    totalPages: fairytale.pages.length,
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -207,7 +343,8 @@ const FairytaleScreen: React.FC = () => {
         </View>
         <View style={styles.pageIndicator}>
           <Text style={[styles.pageIndicatorText, dynamicStyles.pageIndicator]}>
-            {currentPageIndex + 1} / {fairytale.pages.length}
+            {fairytale.pages[currentPageIndex].pageOrder} /{" "}
+            {fairytale.pages.length}
           </Text>
         </View>
       </View>
@@ -226,18 +363,48 @@ const FairytaleScreen: React.FC = () => {
           }}
         >
           <FairytaleCarousel
-            pages={fairytale.pages}
+            pages={fairytale.pages.map((page) => ({
+              id: page.wordId.toString(),
+              imageUrl: { uri: page.wordImgUrl },
+              text: page.sentence,
+            }))}
             currentIndex={currentPageIndex}
             onPrevious={handlePreviousPage}
             onNext={handleNextPage}
             scaleFactor={scaleFactor}
           />
-          {/* 영화 자막처럼 이미지 위에 자막 띄우기 */}
-          <View style={styles.subtitleOverlay} pointerEvents="none">
-            <Text style={styles.subtitleText}>
-              {fairytale.pages[currentPageIndex].text}
-            </Text>
-          </View>
+          {/* 자막 클릭 시 TTS 재생 */}
+          <TouchableOpacity
+            style={styles.subtitleOverlay}
+            onPress={() => {
+              console.log(
+                "현재 페이지 데이터:",
+                fairytale.pages[currentPageIndex]
+              );
+              playTts(fairytale.pages[currentPageIndex].sentenceTtsUrl);
+            }}
+          >
+            <View style={styles.subtitleContainer}>
+              <View style={styles.subtitleRow}>
+                <TouchableOpacity
+                  style={styles.soundButton}
+                  onPress={() =>
+                    playTts(fairytale.pages[currentPageIndex].sentenceTtsUrl)
+                  }
+                >
+                  <FontAwesome5 name="volume-up" size={24} color="white" />
+                </TouchableOpacity>
+                <View>
+                  <Text style={styles.subtitleText}>
+                    {fairytale.pages[currentPageIndex].sentence}
+                  </Text>
+                  <Text style={styles.subtitleTextKo}>
+                    {fairytale.pages[currentPageIndex].translation}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
         </View>
         {/* Music Player */}
         <View style={styles.playerContainer}>
@@ -307,17 +474,33 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: "none",
+    padding: 16,
+  },
+  subtitleContainer: {
+    backgroundColor: "rgba(0,0,0,0.8)",
+    borderRadius: 16,
+    padding: 16,
+    maxWidth: "90%",
+  },
+  subtitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   subtitleText: {
-    backgroundColor: "rgba(0,0,0,0.5)",
     color: "white",
-    fontSize: theme.typography.body.fontSize * 0.9, // 기존 scaleFactor 유지, 필요시 더 줄일 수 있음
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
+    fontSize: theme.typography.body.fontSize * 1.1,
     textAlign: "center",
-    maxWidth: "90%",
+    marginBottom: 4,
+  },
+  subtitleTextKo: {
+    color: "white",
+    fontSize: theme.typography.body.fontSize * 0.95,
+    textAlign: "center",
+  },
+  soundButton: {
+    marginRight: 12,
+    padding: 8,
   },
   playerContainer: {
     paddingHorizontal: 0,
@@ -325,7 +508,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     backgroundColor: "transparent",
     borderTopWidth: 0,
-    width: "85%",
+    width: "75%",
     alignSelf: "center",
   },
   loadingContainer: {
@@ -336,6 +519,10 @@ const styles = StyleSheet.create({
   loadingText: {
     ...theme.typography.body,
     color: theme.colors.subText,
+  },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
   },
 });
 
