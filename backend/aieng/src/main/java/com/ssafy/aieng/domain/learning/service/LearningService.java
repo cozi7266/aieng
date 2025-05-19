@@ -157,8 +157,10 @@ public class LearningService {
 
         GeneratedContentResult result;
         try {
-            objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-            result = objectMapper.readValue(json, GeneratedContentResult.class);
+            // 전역 ObjectMapper 영향을 주지 않도록 copy() 사용
+            ObjectMapper snakeMapper = objectMapper.copy();
+            snakeMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+            result = snakeMapper.readValue(json, GeneratedContentResult.class);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -191,6 +193,7 @@ public class LearningService {
 
         return result;
     }
+
 
 
     // 생성한 문장 관련 정보 조회
