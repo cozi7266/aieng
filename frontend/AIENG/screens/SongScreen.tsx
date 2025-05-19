@@ -19,6 +19,21 @@ import { RootStackParamList } from "../App";
 import BackButton from "../components/navigation/BackButton";
 import { theme } from "../Theme";
 import { useAudio } from "../contexts/AudioContext";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// axios 기본 설정
+const api = axios.create({
+  baseURL: Platform.select({
+    ios: "http://localhost:8080",
+    android: "http://10.0.2.2:8080", // Android 에뮬레이터용
+  }),
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
 
 // 노래 관련 컴포넌트 임포트
 import SongCard from "../components/songs/SongCard";
@@ -42,6 +57,20 @@ interface Song {
   favorite: boolean;
 }
 
+interface Storybook {
+  storybookId: number;
+  title: string;
+  description: string;
+  coverUrl: string;
+  createdAt: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: Storybook[];
+  error: null | string;
+}
+
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
   const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
@@ -50,6 +79,7 @@ const SongScreen: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
+  const [storybooks, setStorybooks] = useState<Storybook[]>([]);
 
   // 반응형 레이아웃을 위한 계산
   const isLandscape = width > height;
@@ -156,8 +186,62 @@ const SongScreen: React.FC = () => {
       );
     };
 
+    const fetchStorybooks = async () => {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
+
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
+
+        console.log("API 요청 시작");
+        console.log("URL:", "https://www.aieng.co.kr/api/books");
+
+        const response = await axios.get<ApiResponse>(
+          "https://www.aieng.co.kr/api/books",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Child-Id": selectedChildId,
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          }
+        );
+
+        console.log("API 응답:", response);
+
+        if (response.data.success) {
+          console.log("동화책 데이터:", response.data.data);
+          setStorybooks(response.data.data);
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.error("API 에러 상세:", {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data,
+            config: {
+              url: error.config?.url,
+              method: error.config?.method,
+              headers: error.config?.headers,
+            },
+          });
+        } else {
+          console.error("알 수 없는 에러:", error);
+        }
+      }
+    };
+
     lockOrientation();
     setSongs(mockSongs);
+    fetchStorybooks();
 
     // 첫번째 노래를 기본 선택
     if (mockSongs.length > 0) {
@@ -324,17 +408,48 @@ const SongScreen: React.FC = () => {
         {/* 왼쪽 - 노래 그리드 */}
         <View style={[styles.leftContainer, dynamicStyles.contentPadding]}>
           <FlatList
-            data={filteredSongs}
-            keyExtractor={(item) => item.id}
+            data={storybooks}
+            keyExtractor={(item) => item.storybookId.toString()}
             numColumns={numColumns}
             columnWrapperStyle={{ justifyContent: "flex-start" }}
             renderItem={({ item }) => (
               <SongCard
-                song={item}
-                isActive={currentSong?.id === item.id}
-                isPlaying={false} // 재생 상태 표시 제거
-                onPress={() => handleSongPress(item)}
-                onStoryPress={() => handleNavigateToStory(item)}
+                song={{
+                  id: item.storybookId.toString(),
+                  title: item.title,
+                  artist: "동화",
+                  imageUrl: { uri: item.coverUrl },
+                  audioUrl: require("../assets/sounds/sample.mp3"),
+                  duration: 228,
+                  lyrics: item.description,
+                  favorite: false,
+                }}
+                isActive={currentSong?.id === item.storybookId.toString()}
+                isPlaying={false}
+                onPress={() =>
+                  handleSongPress({
+                    id: item.storybookId.toString(),
+                    title: item.title,
+                    artist: "동화",
+                    imageUrl: { uri: item.coverUrl },
+                    audioUrl: require("../assets/sounds/sample.mp3"),
+                    duration: 228,
+                    lyrics: item.description,
+                    favorite: false,
+                  })
+                }
+                onStoryPress={() =>
+                  handleNavigateToStory({
+                    id: item.storybookId.toString(),
+                    title: item.title,
+                    artist: "동화",
+                    imageUrl: { uri: item.coverUrl },
+                    audioUrl: require("../assets/sounds/sample.mp3"),
+                    duration: 228,
+                    lyrics: item.description,
+                    favorite: false,
+                  })
+                }
                 style={dynamicStyles.songCardSize}
                 scaleFactor={scaleFactor}
               />
@@ -343,11 +458,11 @@ const SongScreen: React.FC = () => {
           />
         </View>
 
-        {/* 오른쪽 - 현재 노래 및 플레이어 */}
+        {/* 오른쪽 - 현재 선택된 동요 정보 */}
         <View style={[styles.rightContainer, dynamicStyles.contentPadding]}>
           {currentSong ? (
             <>
-              {/* 현재 노래 정보 */}
+              {/* 현재 동요 정보 */}
               <View style={styles.currentSongContainer}>
                 <Image
                   source={currentSong.imageUrl}
