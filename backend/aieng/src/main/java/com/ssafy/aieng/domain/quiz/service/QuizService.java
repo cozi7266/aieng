@@ -138,29 +138,32 @@ public class QuizService {
         return QuizResponse.of(quiz, wordRepository);
     }
 
-    // 퀴즈 저장
+    // 퀴즈 풀기
     @Transactional
-    public void submitAnswer(Integer userId, Integer childId, Integer quizQuestionId, Integer selectedChId) {
+    public boolean submitAnswer(Integer userId, Integer childId, Integer quizQuestionId, Integer selectedChId) {
         QuizQuestion question = quizQuestionRepository.findById(quizQuestionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.QUIZ_NOT_FOUND));
 
         Session session = question.getQuiz().getSession();
         Child child = session.getChild();
 
-        // 자녀 소유 검증
         if (!child.getId().equals(childId) || !child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 중복 제출 방지
         if (question.isCompleted()) {
             throw new CustomException(ErrorCode.QUESTION_ALREADY_COMPLETED);
         }
 
-        // 답안 처리 및 전체 퀴즈 완료 체크
-        question.submitAnswer(selectedChId);
+        // 답안 처리
+        boolean isCorrect = question.getAnsChId().equals(selectedChId);
+        question.submitAnswer(selectedChId);  // 내부에서 정답이면 isCompleted=true로 처리됨
+
         question.getQuiz().checkAndMarkQuizComplete();
+
+        return isCorrect;
     }
+
 
 
 }
