@@ -69,6 +69,7 @@ public enum  ErrorCode {
     BOOK_CREATION_FAILED(500, "B002", "그림책 생성에 실패했습니다."),
     BOOK_NO_COMPLETED_LEARNING(400, "B003", "완료된 학습이 없어 그림책을 생성할 수 없습니다."),
     BOOK_INVALID_THEME(400, "B004", "유효하지 않은 테마입니다."),
+    DUPLICATE_STORYBOOK(400, "B005", "이미 해당 세션으로 생성된 그림책이 존재합니다."),
 
     // Dictionary
     DICTIONARY_WORD_NOT_FOUND(404, "DC001", "단어를 찾을 수 없습니다."),
