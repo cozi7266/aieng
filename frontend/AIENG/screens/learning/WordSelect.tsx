@@ -25,6 +25,7 @@ import WordCard from "../../components/common/learning/WordCard";
 import { useProfile } from "../../contexts/ProfileContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { NavigationAlert } from "../../components/navigation/NavigationAlert";
 
 // Define types
 type NavigationProp = NativeStackNavigationProp<any>;
@@ -73,6 +74,29 @@ interface ApiError {
 interface ApiResponse {
   success: boolean;
   data: SessionResponse | null;
+  error: ApiError | null;
+}
+
+// API 응답 타입 추가
+interface QuizResponse {
+  id: number;
+  session_id: number;
+  created_at: string;
+  questions: {
+    id: number;
+    ans_word: string;
+    ans_image_url: string;
+    ch1_word: string;
+    ch2_word: string;
+    ch3_word: string;
+    ch4_word: string;
+    ans_ch_id: number;
+  }[];
+}
+
+interface QuizApiResponse {
+  success: boolean;
+  data: QuizResponse | null;
   error: ApiError | null;
 }
 
@@ -445,6 +469,84 @@ const WordSelectScreen: React.FC = () => {
     } else if (completedCount === 0) {
       // 진행률이 0이고 선택된 카드가 없을 때만 새로운 단어 가져오기
       handleRefreshWords();
+    }
+  };
+
+  // words 배열이 변경될 때마다 completedCount 업데이트 및 퀴즈 생성 확인
+  useEffect(() => {
+    const learnedCount = words.filter((word) => word.isLearned).length;
+    setCompletedCount(learnedCount);
+
+    // 모든 단어를 학습했을 때 퀴즈 생성 확인
+    if (learnedCount === totalWords && totalWords > 0 && sessionId) {
+      NavigationAlert.show({
+        title: "퀴즈 생성",
+        message: "모든 단어를 학습했어요! 퀴즈를 만들어볼까요?",
+        confirmText: "퀴즈 만들기",
+        onConfirm: createQuiz,
+      });
+    }
+  }, [words, totalWords, sessionId]);
+
+  // 퀴즈 생성 API 호출 함수
+  const createQuiz = async () => {
+    if (!sessionId) {
+      NavigationAlert.show({
+        title: "오류",
+        message: "세션 정보가 없습니다. 다시 시도해주세요.",
+        confirmText: "확인",
+        onConfirm: () => navigation.navigate("LearningScreen"),
+      });
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      const response = await axios.post<QuizApiResponse>(
+        `https://www.aieng.co.kr/api/quiz/create/${sessionId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // 퀴즈 생성 성공 시 LearningScreen으로 이동
+        navigation.navigate("LearningScreen");
+      } else {
+        const errorMessage =
+          response.data.error?.message || "퀴즈 생성에 실패했습니다.";
+        NavigationAlert.show({
+          title: "퀴즈 생성 실패",
+          message: errorMessage,
+          confirmText: "확인",
+          onConfirm: () => navigation.navigate("LearningScreen"),
+        });
+      }
+    } catch (error: any) {
+      console.error("퀴즈 생성 실패:", error);
+      NavigationAlert.show({
+        title: "오류",
+        message: error.message || "퀴즈 생성 중 오류가 발생했습니다.",
+        confirmText: "확인",
+        onConfirm: () => navigation.navigate("LearningScreen"),
+      });
     }
   };
 

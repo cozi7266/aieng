@@ -172,7 +172,11 @@ const SongScreen: React.FC = () => {
 
   const handleSongPress = (song: Song) => {
     setCurrentSong(song);
-    setIsPlaying(true);
+    // setIsPlaying(true); // 자동 재생 제거
+  };
+
+  const handleNavigateToStory = (song: Song) => {
+    navigation.navigate("FairytaleScreen", { songId: song.id });
   };
 
   const handlePlayPause = () => {
@@ -323,13 +327,14 @@ const SongScreen: React.FC = () => {
             data={filteredSongs}
             keyExtractor={(item) => item.id}
             numColumns={numColumns}
-            columnWrapperStyle={{ justifyContent: "flex-start" }} // 왼쪽 정렬 추가
+            columnWrapperStyle={{ justifyContent: "flex-start" }}
             renderItem={({ item }) => (
               <SongCard
                 song={item}
                 isActive={currentSong?.id === item.id}
-                isPlaying={isPlaying && currentSong?.id === item.id}
+                isPlaying={false} // 재생 상태 표시 제거
                 onPress={() => handleSongPress(item)}
+                onStoryPress={() => handleNavigateToStory(item)}
                 style={dynamicStyles.songCardSize}
                 scaleFactor={scaleFactor}
               />

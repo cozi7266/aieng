@@ -32,6 +32,7 @@ import { AlertProvider as WarningAlertProvider } from "./components/navigation/N
 import { AlertProvider as NavigationAlertProvider } from "./components/navigation/NavigationAlert";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoadingScreen from "./components/common/LoadingScreen";
+import FairytaleScreen from "./screens/song/FairytaleScreen";
 
 // NativeEventEmitter 경고 무시
 LogBox.ignoreLogs([
@@ -65,7 +66,9 @@ export type RootStackParamList = {
     wordId: string;
     themeId: string;
     theme: string;
+    sessionId: string;
   };
+  FairytaleScreen: { songId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -210,6 +213,10 @@ export default function App() {
                       component={WordSentenceScreen}
                     />
                     <Stack.Screen name="WordQuiz" component={WordQuizScreen} />
+                    <Stack.Screen
+                      name="FairytaleScreen"
+                      component={FairytaleScreen}
+                    />
                   </>
                 )}
               </Stack.Navigator>

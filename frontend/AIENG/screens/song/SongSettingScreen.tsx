@@ -19,8 +19,9 @@ import BackButton from "../../components/navigation/BackButton";
 import Button from "../../components/common/Button";
 import MoodItem from "../../components/songs/MoodItem";
 import VoiceItem from "../../components/songs/VoiceItem";
-import MoodEmojiPicker from "../../components/songs/MoodEmojiPicker";
 import { theme } from "../../Theme";
+import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
+import { CommonActions } from "@react-navigation/native";
 
 type SongSettingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -40,7 +41,6 @@ interface Voice {
   id: string;
   name: string;
   gender: "male" | "female" | "custom";
-  imageUrl: any;
   selected: boolean;
 }
 
@@ -59,6 +59,8 @@ const SongSettingScreen: React.FC = () => {
     { id: "4", name: "화남", emoji: "😡", selected: false },
     { id: "5", name: "사랑", emoji: "❤️", selected: false },
     { id: "6", name: "놀람", emoji: "😲", selected: false },
+    { id: "7", name: "평온", emoji: "😌", selected: false },
+    { id: "8", name: "설렘", emoji: "🥰", selected: false },
   ]);
 
   const [voices, setVoices] = useState<Voice[]>([
@@ -66,19 +68,16 @@ const SongSettingScreen: React.FC = () => {
       id: "1",
       name: "남자 목소리",
       gender: "male",
-      imageUrl: require("../../assets/icon.png"),
       selected: false,
     },
     {
       id: "2",
       name: "여자 목소리",
       gender: "female",
-      imageUrl: require("../../assets/icon.png"),
       selected: false,
     },
   ]);
 
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
   // 화면 가로 모드 고정
@@ -116,7 +115,7 @@ const SongSettingScreen: React.FC = () => {
     );
   };
 
-  // 새 목소리 추가 처리
+  // 목소리 추가 처리
   const handleAddVoice = () => {
     setIsRecording(true);
 
@@ -129,7 +128,6 @@ const SongSettingScreen: React.FC = () => {
         id: `custom-${Date.now()}`,
         name: "내 목소리",
         gender: "custom",
-        imageUrl: require("../../assets/icon.png"),
         selected: false,
       };
 
@@ -137,21 +135,9 @@ const SongSettingScreen: React.FC = () => {
     }, 2000);
   };
 
-  // 새 분위기 추가를 위한 이모지 선택기 열기
-  const handleAddMood = () => {
-    setShowEmojiPicker(true);
-  };
-
-  // 이모지 선택 처리
-  const handleEmojiSelect = (emoji: string) => {
-    const newMood: Mood = {
-      id: `custom-${Date.now()}`,
-      name: "맞춤 분위기",
-      emoji: emoji,
-      selected: false,
-    };
-
-    setMoods((prev) => [...prev, newMood]);
+  // 목소리 삭제 처리
+  const handleDeleteVoice = (voiceId: string) => {
+    setVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
   };
 
   // 설정 저장 및 다음 단계로 진행
@@ -168,8 +154,13 @@ const SongSettingScreen: React.FC = () => {
     console.log("Selected mood:", selectedMood);
     console.log("Selected voice:", selectedVoice);
 
-    // 다음 화면으로 이동 또는 처리
-    // navigation.navigate("NextScreen");
+    // Home 화면으로 이동
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      })
+    );
   };
 
   return (
@@ -181,7 +172,9 @@ const SongSettingScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           />
-          <Text style={styles.headerTitle}>동요 생성 설정</Text>
+          <Text style={styles.headerTitle}>
+            동요 분위기 및 학습 목소리 설정
+          </Text>
         </View>
       </View>
 
@@ -189,7 +182,7 @@ const SongSettingScreen: React.FC = () => {
       <View style={styles.contentContainer}>
         {/* 좌측 - 분위기 설정 */}
         <View style={styles.leftContainer}>
-          <Text style={styles.sectionTitle}>분위기 설정</Text>
+          <Text style={styles.sectionTitle}>동요 분위기 설정</Text>
           <Text style={styles.sectionSubtitle}>
             생성될 동요의 분위기를 선택해주세요
           </Text>
@@ -207,26 +200,15 @@ const SongSettingScreen: React.FC = () => {
                 scaleFactor={scaleFactor}
               />
             ))}
-
-            {/* 분위기 추가 버튼 */}
-            <MoodItem
-              id="add-mood"
-              name="추가하기"
-              emoji=""
-              isSelected={false}
-              isAddButton={true}
-              onPress={handleAddMood}
-              style={styles.moodItem}
-              scaleFactor={scaleFactor}
-            />
           </View>
         </View>
 
         {/* 우측 - 목소리 설정 */}
         <View style={styles.rightContainer}>
-          <Text style={styles.sectionTitle}>목소리 설정</Text>
+          <Text style={styles.sectionTitle}>학습 목소리 설정</Text>
           <Text style={styles.sectionSubtitle}>
-            생성될 동요의 목소리를 선택해주세요
+            학습에서 텍스트를 읽어줄 목소리를 선택해주세요{"\n"}(1초 이상 눌러
+            내 목소리 변경)
           </Text>
 
           <ScrollView contentContainerStyle={styles.voiceGrid}>
@@ -235,9 +217,14 @@ const SongSettingScreen: React.FC = () => {
                 key={voice.id}
                 id={voice.id}
                 name={voice.name}
-                imageUrl={voice.imageUrl}
+                gender={voice.gender}
                 isSelected={voice.selected}
                 onPress={() => handleVoiceSelect(voice.id)}
+                onDelete={
+                  voice.gender === "custom"
+                    ? () => handleDeleteVoice(voice.id)
+                    : undefined
+                }
                 style={styles.voiceItem}
                 scaleFactor={scaleFactor}
               />
@@ -247,7 +234,7 @@ const SongSettingScreen: React.FC = () => {
             <VoiceItem
               id="add-voice"
               name={isRecording ? "녹음 중..." : "내 목소리 추가"}
-              imageUrl={null}
+              gender="custom"
               isSelected={false}
               isAddButton={true}
               onPress={handleAddVoice}
@@ -262,18 +249,11 @@ const SongSettingScreen: React.FC = () => {
       {/* 하단 버튼 */}
       <View style={styles.buttonContainer}>
         <Button
-          title="동요 생성하기"
+          title="저장하기"
           onPress={handleSaveSettings}
           variant="primary"
         />
       </View>
-
-      {/* 이모지 선택기 모달 */}
-      <MoodEmojiPicker
-        visible={showEmojiPicker}
-        onClose={() => setShowEmojiPicker(false)}
-        onEmojiSelected={handleEmojiSelect}
-      />
     </SafeAreaView>
   );
 };
@@ -332,12 +312,13 @@ const styles = StyleSheet.create({
   moodGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: theme.spacing.s,
   },
   moodItem: {
-    width: 120,
-    height: 120,
-    margin: theme.spacing.s,
+    width: "22%",
+    aspectRatio: 1,
+    marginBottom: theme.spacing.m,
   },
   voiceGrid: {
     flexDirection: "row",

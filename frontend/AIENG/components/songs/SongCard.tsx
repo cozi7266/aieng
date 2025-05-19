@@ -17,6 +17,7 @@ interface SongCardProps {
   isActive: boolean;
   isPlaying: boolean;
   onPress: () => void;
+  onStoryPress?: () => void;
   style?: any;
   scaleFactor: number;
 }
@@ -26,6 +27,7 @@ const SongCard: React.FC<SongCardProps> = ({
   isActive,
   isPlaying,
   onPress,
+  onStoryPress,
   style,
   scaleFactor = 1,
 }) => {
@@ -49,14 +51,10 @@ const SongCard: React.FC<SongCardProps> = ({
         />
         {isActive && (
           <View style={styles.overlay}>
-            <View style={styles.playIconContainer}>
-              <FontAwesome5
-                name={isPlaying ? "pause" : "play"}
-                size={36}
-                color="white"
-                style={isPlaying ? styles.playIcon : styles.pauseIcon}
-              />
-            </View>
+            <TouchableOpacity style={styles.storyButton} onPress={onStoryPress}>
+              <FontAwesome5 name="book" size={36} color="white" />
+              <Text style={styles.storyButtonText}>동화 보기</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -106,21 +104,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  playIconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    ...theme.shadows.default,
-  },
-  playIcon: {
-    marginLeft: 4,
-  },
-  pauseIcon: {
-    marginLeft: 0,
-  },
   textContainer: {
     padding: theme.spacing.s,
     justifyContent: "center",
@@ -133,6 +116,19 @@ const styles = StyleSheet.create({
   artist: {
     ...theme.typography.caption,
     color: theme.colors.subText,
+  },
+  storyButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.default,
+  },
+  storyButtonText: {
+    ...theme.typography.caption,
+    color: "white",
+    marginTop: theme.spacing.xs,
   },
 });
 

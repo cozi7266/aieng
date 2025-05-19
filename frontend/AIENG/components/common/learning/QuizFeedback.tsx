@@ -15,7 +15,9 @@ interface QuizFeedbackProps {
   isCorrect: boolean;
   correctAnswer: string;
   correctAnswerKorean: string;
-  onSongPress?: () => void; // 노래 화면으로 이동하기 위한 함수 추가
+  onSongPress: () => void; // 다음 문제 또는 노래 화면으로 이동하기 위한 함수
+  buttonText?: string; // 버튼 텍스트
+  isLastQuestion?: boolean; // 마지막 문제인지 여부
 }
 
 const QuizFeedback: React.FC<QuizFeedbackProps> = ({
@@ -23,6 +25,8 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
   correctAnswer,
   correctAnswerKorean,
   onSongPress,
+  buttonText = "동요 만들기",
+  isLastQuestion = false,
 }) => {
   // 애니메이션 값 설정
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
@@ -77,18 +81,24 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
         >
           {isCorrect
             ? "정답이에요! 👏"
-            : `아쉬워요. 정답은 "${correctAnswer}" (${correctAnswerKorean}) 입니다.`}
+            : `아쉬워요. 정답은 "${correctAnswer}" ${
+                correctAnswerKorean ? `(${correctAnswerKorean})` : ""
+              } 입니다.`}
         </Text>
       </View>
 
-      {/* 노래 화면으로 이동하는 버튼 추가 */}
+      {/* 버튼 - 다음 문제 또는 동요 만들기 */}
       <TouchableOpacity
         style={styles.songButton}
         onPress={onSongPress}
         activeOpacity={0.7}
       >
-        <FontAwesome5 name="music" size={20} color={theme.colors.buttonText} />
-        <Text style={styles.songButtonText}>동요 만들기</Text>
+        <FontAwesome5
+          name={isLastQuestion ? "music" : "arrow-right"}
+          size={20}
+          color={theme.colors.buttonText}
+        />
+        <Text style={styles.songButtonText}>{buttonText}</Text>
       </TouchableOpacity>
     </Animated.View>
   );
