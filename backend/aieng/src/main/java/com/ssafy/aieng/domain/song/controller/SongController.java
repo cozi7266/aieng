@@ -1,6 +1,5 @@
 package com.ssafy.aieng.domain.song.controller;
 
-import com.ssafy.aieng.domain.mood.dto.MoodResponseDto;
 import com.ssafy.aieng.domain.mood.service.MoodService;
 import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;

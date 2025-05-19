@@ -45,6 +45,13 @@ public class StorybookService {
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
+
+        // 같은 세션으로 그림책 중복 생성 막기
+        boolean exists = storybookRepository.existsBySessionId(sessionId);
+        if (exists) {
+            throw new CustomException(ErrorCode.DUPLICATE_STORYBOOK);
+        }
+
         if (!session.getChild().getId().equals(childId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }

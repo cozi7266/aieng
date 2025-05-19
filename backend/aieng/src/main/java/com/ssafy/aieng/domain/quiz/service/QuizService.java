@@ -155,8 +155,10 @@ public class QuizService {
             throw new CustomException(ErrorCode.QUESTION_ALREADY_COMPLETED);
         }
 
-        boolean isCorrect = question.getAnsChId().equals(selectedChId); // 정답 여부
+        // 답안 처리
+        boolean isCorrect = question.getAnsChId().equals(selectedChId);
         question.submitAnswer(selectedChId);
+
         question.getQuiz().checkAndMarkQuizComplete();
 
         return isCorrect;
