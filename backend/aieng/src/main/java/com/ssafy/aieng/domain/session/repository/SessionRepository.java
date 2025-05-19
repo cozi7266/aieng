@@ -22,12 +22,11 @@ public interface SessionRepository extends JpaRepository<Session, Integer> {
     Optional<Session> findTopByChildIdAndThemeIdAndDeletedFalseOrderByStartedAtDesc(Integer childId, Integer themeId);
 
 
+
     @Query("SELECT s FROM Session s " +
-            "WHERE s.child.id = :childId " +
-            "AND s.theme.id = :themeId " +
-            "AND s.deleted = false " +
+            "WHERE s.child.id = :childId AND s.theme.id = :themeId AND s.deleted = false " +
             "ORDER BY s.startedAt DESC")
-    Optional<Session> findLatestSessionByChildAndTheme(@Param("childId") Integer childId,
-                                                       @Param("themeId") Integer themeId);
+    List<Session> findSessionsByChildAndThemeOrdered(@Param("childId") Integer childId,
+                                                     @Param("themeId") Integer themeId);
 
 }
