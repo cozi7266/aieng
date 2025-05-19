@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 public class QuizController {
 
     private final QuizService quizService;
-    private final AuthenticationUtil authenticationUtil;
 
     // 퀴즈 활성화 상태 확인
     @GetMapping("/status/{sessionId}")
