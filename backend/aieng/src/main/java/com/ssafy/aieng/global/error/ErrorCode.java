@@ -87,6 +87,7 @@ public enum  ErrorCode {
     VOICE_NOT_FOUND(404, "V006", "Voice not found"),
     DEFAULT_VOICES_NOT_FOUND(404, "V007", "기본 목소리 목록을 찾을 수 없습니다."),
     DEFAULT_VOICES_LOAD_FAILED(500, "V008", "기본 목소리 목록을 불러오는데 실패했습니다."),
+    CANNOT_DELETE_DEFAULT_VOICE(400, "V009", "디폴트 목소리를 삭제할 수 없습니다."),
 
     // Mood 관련 에러
     MOOD_NOT_FOUND(404, "M001", "Mood not found"),

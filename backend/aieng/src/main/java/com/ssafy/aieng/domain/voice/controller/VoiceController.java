@@ -39,13 +39,13 @@ public class VoiceController {
     }
 
     // 목소리 목록 조회(디폴트 + 사용자 목소리)
-    @GetMapping
+    @GetMapping("/default")
     public ResponseEntity<ApiResponse<List<VoiceResponse>>> getVoices(
             @RequestHeader("X-Child-Id") Integer childId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-        List<VoiceResponse> responses = voiceService.getVoicesWithDefault(userId, childId);
+        List<VoiceResponse> responses = voiceService.getDefaultVoices();
         return ApiResponse.success(responses);
     }
 
@@ -71,5 +71,17 @@ public class VoiceController {
         VoiceResponse response = voiceService.getVoiceDetail(userId, childId, voiceId);
         return ApiResponse.success(response);
     }
+
+    // 목소리 삭제
+    @DeleteMapping("/{voiceId}")
+    public ResponseEntity<ApiResponse<Void>> deleteVoice(
+            @PathVariable Integer voiceId,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        voiceService.deleteVoice(user.getId(), childId, voiceId);
+        return ApiResponse.success(null);
+    }
+
 
 } 

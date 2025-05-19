@@ -54,28 +54,12 @@ public class VoiceService {
         return VoiceResponse.from(savedVoice);
     }
 
-    // 목소리 목록 조회(디폴트 + 사용자 목소리)
+    // 디폴트 목소리 목록 조회
     @Transactional(readOnly = true)
-    public List<VoiceResponse> getVoicesWithDefault(Integer userId, Integer childId) {
-        // 자녀 소유자 검증
-        Child child = childRepository.findById(childId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
-        if (!child.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
-        }
-
-        // 자녀가 올린 목소리
-        List<Voice> childVoices = voiceRepository.findAllByChildIdOrderByCreatedAtDesc(childId);
-
-        // 시스템 기본 목소리 (childId가 null인 항목)
+    public List<VoiceResponse> getDefaultVoices() {
         List<Voice> defaultVoices = voiceRepository.findAllByChildIdIsNullOrderByCreatedAtDesc();
 
-        // 병합
-        List<Voice> allVoices = new ArrayList<>();
-        allVoices.addAll(childVoices);
-        allVoices.addAll(defaultVoices);
-
-        return allVoices.stream()
+        return defaultVoices.stream()
                 .map(VoiceResponse::from)
                 .toList();
     }
@@ -114,6 +98,28 @@ public class VoiceService {
         }
         return VoiceResponse.from(voice);
     }
+
+    // 목소리 삭제
+    @Transactional
+    public void deleteVoice(Integer userId, Integer childId, Integer voiceId) {
+        Voice voice = voiceRepository.findById(voiceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VOICE_FILE_NOT_FOUND));
+
+        Child child = voice.getChild();
+
+        // 디폴트 목소리는 삭제 불가
+        if (child == null) {
+            throw new CustomException(ErrorCode.CANNOT_DELETE_DEFAULT_VOICE);
+        }
+
+        // 자녀 소유자 검증
+        if (!child.getId().equals(childId) || !child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        voiceRepository.delete(voice);
+    }
+
 
 
 
