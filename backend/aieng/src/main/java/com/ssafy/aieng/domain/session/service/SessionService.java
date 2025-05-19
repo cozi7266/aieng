@@ -1,10 +1,8 @@
 package com.ssafy.aieng.domain.session.service;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
-import com.ssafy.aieng.domain.child.service.ChildService;
 import com.ssafy.aieng.domain.learning.entity.Learning;
 import com.ssafy.aieng.domain.session.dto.response.ChildThemeProgressResponse;
 import com.ssafy.aieng.domain.session.dto.response.CreateSessionResponse;
@@ -13,11 +11,9 @@ import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.entity.Theme;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
-import com.ssafy.aieng.domain.user.repository.UserRepository;
 import com.ssafy.aieng.domain.word.dto.response.WordResponse;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
-import com.ssafy.aieng.global.common.redis.service.RedisService;
 import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
@@ -64,18 +60,18 @@ public class SessionService {
         Theme theme = themeRepository.findById(themeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
 
-        // 3. 기존 진행 중인 세션 조회
-        Optional<Session> existingSessionOpt = sessionRepository
-                .findByChildIdAndThemeIdAndFinishedAtIsNull(childId, themeId);
+        // 3. 기존 진행 중인 세션들 조회 (내림차순 정렬됨)
+        List<Session> sessions = sessionRepository.findSessionsByChildAndThemeOrdered(childId, themeId);
 
-        if (existingSessionOpt.isPresent()) {
-            Session existing = existingSessionOpt.get();
+        if (!sessions.isEmpty()) {
+            Session existing = sessions.get(0);
             List<WordResponse> words = learningRepository.findAllBySessionIdAndDeletedFalse(existing.getId()).stream()
                     .sorted(Comparator.comparing(Learning::getPageOrder))
                     .map(WordResponse::of)
                     .toList();
             return new CreateSessionResponse(existing.getId(), false, theme.getThemeEn(), theme.getThemeKo(), words);
         }
+
 
         // 4. 세션 생성
         Session session = Session.of(child, theme);
