@@ -71,10 +71,9 @@ public class QuizController {
                 request.getSelectedChoiceId()
         );
 
-        Map<String, Boolean> result = new HashMap<>();
-        result.put("isCorrect", isCorrect);
-
+        Map<String, Boolean> result = Map.of("isCorrect", isCorrect);
         return ApiResponse.success(result);
     }
+
 
 }
