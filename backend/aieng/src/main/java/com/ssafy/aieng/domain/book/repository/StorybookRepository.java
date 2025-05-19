@@ -14,5 +14,5 @@ public interface StorybookRepository extends JpaRepository<Storybook, Integer> {
 
     List<Storybook> findAllByChildIdAndDeletedFalseOrderByCreatedAtDesc(Integer childId);
 
-    boolean existsBySessionId(Integer sessionId);
+    boolean existsBySession_Id(Integer sessionId); // ✅ 정상 작동
 }
