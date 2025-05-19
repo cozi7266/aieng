@@ -65,8 +65,8 @@ public class SessionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
 
         // 3. 기존 진행 중인 세션 조회
-        Optional<Session> existingSessionOpt = sessionRepository
-                .findByChildIdAndThemeIdAndFinishedAtIsNull(childId, themeId);
+        Optional<Session> existingSessionOpt =
+                sessionRepository.findLatestSessionByChildAndTheme(childId, themeId);
 
         if (existingSessionOpt.isPresent()) {
             Session existing = existingSessionOpt.get();
