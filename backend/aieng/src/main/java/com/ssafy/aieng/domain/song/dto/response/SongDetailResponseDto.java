@@ -22,8 +22,6 @@ public class SongDetailResponseDto {
     private LocalDateTime createdAt;
     
     // 연결된 정보
-    private Integer voiceId;
-    private String voiceName;
     private Integer moodId;
     private String moodName;
     
@@ -42,8 +40,6 @@ public class SongDetailResponseDto {
                 .songUrl(song.getSongUrl())
                 .status(song.getStatus())
                 .createdAt(song.getCreatedAt())
-                .voiceId(song.getVoice().getId())
-                .voiceName(song.getVoice().getName())
                 .moodId(song.getMood().getId())
                 .moodName(song.getMood().getName())
                 .storybookId(storybook.getId())
