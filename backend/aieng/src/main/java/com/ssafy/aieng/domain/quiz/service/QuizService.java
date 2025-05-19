@@ -157,7 +157,7 @@ public class QuizService {
 
         // 답안 처리
         boolean isCorrect = question.getAnsChId().equals(selectedChId);
-        question.submitAnswer(selectedChId);  // 내부에서 정답이면 isCompleted=true로 처리됨
+        question.submitAnswer(selectedChId);
 
         question.getQuiz().checkAndMarkQuizComplete();
 

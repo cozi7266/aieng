@@ -12,12 +12,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class SongGenerateRequestDto {
 
-    @JsonProperty("voiceId")    // 요청에서 "voiceId"로 매핑
-    private Integer voice;
+    private String inputVoice;    // male vocal, female vocal
 
-    @JsonProperty("moodId")     // 요청에서 "moodId"로 매핑
-    private Integer mood;
+    private Integer moodId;
 
-    @JsonProperty("storybookId")  // 요청 및 응답에서 "storybookId"로 매핑
     private Integer storybookId;
 }

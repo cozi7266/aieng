@@ -24,19 +24,19 @@ public class StorybookController {
 
     private final StorybookService storybookService;
 
-    // 그림책 생성
-    @PostMapping("/sessions/{sessionId}/storybook")
-    public ResponseEntity<ApiResponse<StorybookResponse>> createStorybook(
-            @PathVariable Integer sessionId,
-            @RequestHeader("X-Child-Id") Integer childId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-
-        Integer userId = userPrincipal.getId();
-
-        StorybookResponse response = storybookService.createStorybook(userId, childId, sessionId);
-
-        return ApiResponse.success(response);
-    }
+//    // 그림책 생성
+//    @PostMapping("/sessions/{sessionId}/storybook")
+//    public ResponseEntity<ApiResponse<StorybookResponse>> createStorybook(
+//            @PathVariable Integer sessionId,
+//            @RequestHeader("X-Child-Id") Integer childId,
+//            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+//
+//        Integer userId = userPrincipal.getId();
+//
+//        StorybookResponse response = storybookService.createStorybook(userId, childId, sessionId);
+//
+//        return ApiResponse.success(response);
+//    }
 
     // 그림책 목록 조회
     @GetMapping

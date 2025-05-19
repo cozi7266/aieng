@@ -58,7 +58,7 @@ public class SongService {
     // 동요 생성
     @Transactional
     public void generateSong(Integer userId, Integer childId, Integer sessionId, SongGenerateRequestDto requestDto) {
-        // 1. 유저와 자녀 검증
+        // 1. 자녀 소유 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
@@ -72,23 +72,22 @@ public class SongService {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // 3. Voice, Mood 조회
-        Voice voice = voiceRepository.findById(requestDto.getVoice())
-                .orElseThrow(() -> new CustomException(ErrorCode.VOICE_NOT_FOUND));
-        Mood mood = moodRepository.findById(requestDto.getMood())
+        // 3. Mood 조회
+        Mood mood = moodRepository.findById(requestDto.getMoodId())
                 .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
-        if (voice.getName().isBlank() || mood.getName().isBlank()) {
-            log.error("❌ Voice 또는 Mood 이름이 비어 있음 - voiceName={}, moodName={}", voice.getName(), mood.getName());
+        // 4. 입력값 검증
+        String voiceName = requestDto.getInputVoice();
+        if (voiceName == null || voiceName.isBlank()) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        // 4. FastAPI 요청 구성 및 전송 (결과는 Redis에 저장됨)
+        // 5. FastAPI 요청 데이터 구성
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
                 "sessionId", sessionId,
                 "moodName", mood.getName(),
-                "voiceName", voice.getName()
+                "voiceName", voiceName
         );
 
         try {
@@ -101,28 +100,17 @@ public class SongService {
             HttpEntity<String> entity = new HttpEntity<>(jsonPayload, headers);
 
             ResponseEntity<String> fastApiResponse = new RestTemplate().postForEntity(
-                    FASTAPI_URL,
-                    entity,
-                    String.class
+                    FASTAPI_URL, entity, String.class
             );
 
-            log.info("✅ FastAPI 응답 코드: {}", fastApiResponse.getStatusCodeValue());
-
             if (fastApiResponse.getStatusCode().isError()) {
-                // FastAPI 서버 오류가 발생한 경우
-                String errorMessage = "FastAPI 응답 오류: " + fastApiResponse.getStatusCode().toString();
-                log.error("❌ FastAPI 동요 생성 요청 실패: {}", errorMessage);
+                log.error("❌ FastAPI 응답 실패: status={}, body={}",
+                        fastApiResponse.getStatusCodeValue(), fastApiResponse.getBody());
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            log.info("🎵 동요 생성 요청 완료 (FastAPI가 Redis에 저장 예정)");
+            log.info("🎵 동요 생성 요청 성공");
 
-        } catch (JsonProcessingException e) {
-            log.error("❌ FastAPI 요청 데이터 변환 실패", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
-        } catch (HttpServerErrorException e) {
-            log.error("❌ FastAPI 서버 오류", e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             log.error("❌ 동요 생성 중 오류 발생", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
