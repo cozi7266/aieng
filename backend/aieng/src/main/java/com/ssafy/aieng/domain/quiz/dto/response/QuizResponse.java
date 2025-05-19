@@ -19,12 +19,14 @@ public class QuizResponse {
     private Integer sessionId;
     private LocalDateTime createdAt;
     private List<QuizQuestionResponse> questions;
+    private Boolean isCompleted;
 
     public static QuizResponse of(Quiz quiz, WordRepository wordRepository) {
         QuizResponse response = new QuizResponse();
         response.setId(quiz.getId());
         response.setSessionId(quiz.getSession().getId());
         response.setCreatedAt(quiz.getCreatedAt());
+        response.setIsCompleted(quiz.isCompleted());
 
         List<QuizQuestionResponse> questionResponses = new ArrayList<>();
         for (QuizQuestion q : quiz.getQuestions()) {
@@ -34,15 +36,17 @@ public class QuizResponse {
             Word ch3 = wordRepository.findById(q.getCh3Id()).orElse(null);
             Word ch4 = wordRepository.findById(q.getCh4Id()).orElse(null);
 
-            QuizQuestionResponse dto = new QuizQuestionResponse();
-            dto.setId(q.getId());
-            dto.setAnsImageUrl(q.getAnsImageUrl());
-            dto.setAnsChId(q.getAnsChId());
-            dto.setAnsWord(ans != null ? ans.getWordEn() : null);
-            dto.setCh1Word(ch1 != null ? ch1.getWordEn() : null);
-            dto.setCh2Word(ch2 != null ? ch2.getWordEn() : null);
-            dto.setCh3Word(ch3 != null ? ch3.getWordEn() : null);
-            dto.setCh4Word(ch4 != null ? ch4.getWordEn() : null);
+            QuizQuestionResponse dto = QuizQuestionResponse.of(
+                    quiz.getId(),
+                    ans != null ? ans.getWordEn() : null,
+                    q.getAnsImageUrl(),
+                    ch1 != null ? ch1.getWordEn() : null,
+                    ch2 != null ? ch2.getWordEn() : null,
+                    ch3 != null ? ch3.getWordEn() : null,
+                    ch4 != null ? ch4.getWordEn() : null,
+                    q.getAnsChId(),
+                    q.isCompleted()
+            );
 
             questionResponses.add(dto);
         }
@@ -50,4 +54,5 @@ public class QuizResponse {
         response.setQuestions(questionResponses);
         return response;
     }
+
 }
