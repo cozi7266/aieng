@@ -83,6 +83,11 @@ interface SongStatusResponse {
   } | null;
 }
 
+interface SongStatus {
+  storybookCreated: boolean;
+  songStatus: "CREATED" | "GENERATING" | "FAILED";
+}
+
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
   const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
@@ -92,6 +97,9 @@ const SongScreen: React.FC = () => {
   const [isRepeat, setIsRepeat] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
   const [storybooks, setStorybooks] = useState<Storybook[]>([]);
+  const [currentSongStatus, setCurrentSongStatus] = useState<SongStatus | null>(
+    null
+  );
 
   // 반응형 레이아웃을 위한 계산
   const isLandscape = width > height;
@@ -321,7 +329,6 @@ const SongScreen: React.FC = () => {
 
       if (!sessionId) {
         console.error("현재 세션 ID가 없습니다.");
-        // TODO: 세션 ID가 없는 경우의 처리 (예: 학습 화면으로 이동)
         return;
       }
 
@@ -337,16 +344,15 @@ const SongScreen: React.FC = () => {
       console.log("동화/동요 상태:", status);
 
       setCurrentSong(song);
+      setCurrentSongStatus(status);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMessage =
           error.response?.data?.error?.message || error.message;
         console.error("동요 상태 확인 실패:", errorMessage);
 
-        // 404 에러인 경우 (세션을 찾을 수 없는 경우)
         if (error.response?.status === 404) {
           console.log("학습 세션이 만료되었거나 존재하지 않습니다.");
-          // TODO: 적절한 에러 처리 (예: 학습 화면으로 이동)
         }
       } else {
         console.error("알 수 없는 에러:", error);
@@ -384,10 +390,34 @@ const SongScreen: React.FC = () => {
     setIsRepeat(!isRepeat);
   };
 
-  const handleCreateSong = () => {
-    // 동요 생성 화면으로 이동
-    console.log("Navigate to song creation");
-    navigation.navigate("SongSettingScreen");
+  const handleCreateSong = async () => {
+    if (!currentSong) return;
+
+    try {
+      const sessionId = await AsyncStorage.getItem("currentSessionId");
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!sessionId || !token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      console.log("[동요 생성 요청]", {
+        sessionId,
+        storybookId: currentSong.id,
+      });
+
+      // TODO: 동요 생성 API 호출
+      // const response = await axios.post(...);
+
+      // 임시로 상태만 업데이트
+      setCurrentSongStatus({
+        storybookCreated: true,
+        songStatus: "GENERATING",
+      });
+    } catch (error) {
+      console.error("동요 생성 실패:", error);
+    }
   };
 
   const handleToggleFavorite = () => {
@@ -601,18 +631,61 @@ const SongScreen: React.FC = () => {
                 scaleFactor={scaleFactor}
               />
 
-              {/* 뮤직 플레이어 */}
-              <MusicPlayer
-                song={currentSong}
-                isPlaying={isPlaying}
-                isRepeat={isRepeat}
-                onPlayPause={handlePlayPause}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-                onRepeat={handleRepeat}
-                onToggleFavorite={handleToggleFavorite}
-                scaleFactor={scaleFactor}
-              />
+              {/* 동요 상태에 따른 UI 표시 */}
+              {currentSongStatus?.songStatus === "CREATED" ? (
+                <MusicPlayer
+                  song={currentSong}
+                  isPlaying={isPlaying}
+                  isRepeat={isRepeat}
+                  onPlayPause={handlePlayPause}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onRepeat={handleRepeat}
+                  onToggleFavorite={handleToggleFavorite}
+                  scaleFactor={scaleFactor}
+                />
+              ) : (
+                <View style={styles.playerContainer}>
+                  <View style={styles.playerControls}>
+                    <View style={styles.statusContainer}>
+                      <Text style={styles.statusText}>
+                        {currentSongStatus?.songStatus === "GENERATING"
+                          ? "동요를 생성하고 있어요..."
+                          : "동요를 생성해주세요"}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.createSongButton,
+                        currentSongStatus?.songStatus === "GENERATING" &&
+                          styles.disabledButton,
+                      ]}
+                      onPress={handleCreateSong}
+                      disabled={currentSongStatus?.songStatus === "GENERATING"}
+                    >
+                      <FontAwesome5
+                        name={
+                          currentSongStatus?.songStatus === "GENERATING"
+                            ? "spinner"
+                            : "music"
+                        }
+                        size={40 * scaleFactor}
+                        color="white"
+                        style={[
+                          styles.buttonIcon,
+                          currentSongStatus?.songStatus === "GENERATING" &&
+                            styles.spinningIcon,
+                        ]}
+                      />
+                      <Text style={styles.createSongButtonText}>
+                        {currentSongStatus?.songStatus === "GENERATING"
+                          ? "생성 중..."
+                          : "동요 생성하기"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.noSongContainer}>
@@ -729,6 +802,55 @@ const styles = StyleSheet.create({
   noSongText: {
     ...theme.typography.subTitle,
     color: theme.colors.subText,
+  },
+  playerContainer: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.m,
+    marginBottom: theme.spacing.l,
+    ...theme.shadows.default,
+  },
+  playerControls: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+  },
+  statusContainer: {
+    alignItems: "center",
+    marginBottom: theme.spacing.xs,
+  },
+  statusText: {
+    ...theme.typography.body,
+    color: theme.colors.subText,
+    textAlign: "center",
+    fontSize: theme.typography.body.fontSize * 0.8,
+  },
+  createSongButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.m,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.medium,
+    minWidth: 200,
+    ...theme.shadows.default,
+  },
+  disabledButton: {
+    backgroundColor: theme.colors.subText,
+    opacity: 0.7,
+  },
+  buttonIcon: {
+    marginRight: theme.spacing.s + 3,
+  },
+  spinningIcon: {
+    transform: [{ rotate: "0deg" }],
+    animation: "spin 1s linear infinite",
+  },
+  createSongButtonText: {
+    ...theme.typography.button,
+    color: "white",
   },
 });
 
