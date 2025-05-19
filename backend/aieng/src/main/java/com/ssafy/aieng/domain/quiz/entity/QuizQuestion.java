@@ -48,6 +48,13 @@ public class QuizQuestion extends BaseEntity{
     @Column(name = "question_text")
     private String question;
 
+    @Column(name = "is_completed", nullable = false)
+    private boolean isCompleted = false;
+
+    public void markAsCompleted() {
+        this.isCompleted = true;
+    }
+
     public static QuizQuestion create(
             Quiz quiz,
             Integer ansWordId,
@@ -74,4 +81,10 @@ public class QuizQuestion extends BaseEntity{
         return q;
     }
 
+    // 퀴즈 저장
+    public void submitAnswer(Integer selectedChId) {
+        if (this.ansChId.equals(selectedChId)) {
+            this.isCompleted = true;
+        }
+    }
 } 

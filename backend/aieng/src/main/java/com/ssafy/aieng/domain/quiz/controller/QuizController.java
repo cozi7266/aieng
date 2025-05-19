@@ -52,4 +52,16 @@ public class QuizController {
         QuizResponse response = quizService.getQuizBySessionId(user.getId(), sessionId, childId);
         return ApiResponse.success(response);
     }
+
+    // 퀴즈 학습 완료
+    @PostMapping("/questions/{quizQuestionId}/submit")
+    public ResponseEntity<ApiResponse<Void>> submitAnswer(
+            @PathVariable Integer quizQuestionId,
+            @RequestParam("choice") Integer selectedChId,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        quizService.submitAnswer(user.getId(), childId, quizQuestionId, selectedChId);
+        return ApiResponse.success(null);
+    }
 }

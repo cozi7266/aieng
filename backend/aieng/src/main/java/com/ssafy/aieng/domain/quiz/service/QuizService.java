@@ -5,6 +5,7 @@ import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.quiz.dto.response.QuizResponse;
 import com.ssafy.aieng.domain.quiz.entity.Quiz;
 import com.ssafy.aieng.domain.quiz.entity.QuizQuestion;
+import com.ssafy.aieng.domain.quiz.repository.QuizQuestionRepository;
 import com.ssafy.aieng.domain.quiz.repository.QuizRepository;
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
@@ -30,6 +31,7 @@ public class QuizService {
     private final SessionRepository sessionRepository;
     private final LearningRepository learningRepository;
     private final QuizRepository quizRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
     private final WordRepository wordRepository;
     private final ChildRepository childRepository;
 
@@ -135,5 +137,33 @@ public class QuizService {
 
         return QuizResponse.of(quiz, wordRepository);
     }
+
+    // 퀴즈 저장
+    @Transactional
+    public void submitAnswer(Integer userId, Integer childId, Integer quizQuestionId, Integer selectedChId) {
+        QuizQuestion question = quizQuestionRepository.findById(quizQuestionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.QUIZ_NOT_FOUND));
+
+        Quiz quiz = question.getQuiz();
+        Session session = quiz.getSession();
+        Child child = session.getChild();
+
+        // 자녀 소유 검증
+        if (!child.getId().equals(childId) || !child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 이미 정답 맞춘 경우 예외
+        if (question.isCompleted()) {
+            throw new CustomException(ErrorCode.QUESTION_ALREADY_COMPLETED);
+        }
+
+        // 정답 제출
+        question.submitAnswer(selectedChId);
+
+        // 퀴즈 전체 완료 여부 체크
+        quiz.checkAndMarkQuizComplete();
+    }
+
 
 }

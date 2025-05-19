@@ -88,7 +88,6 @@ public class LearningService {
      * - Redis에 결과가 저장되기를 기다리지 않음
      * - 프론트에서 이후 polling으로 결과 조회
      */
-
     @Transactional(readOnly = true)
     public void sendFastApiRequest(Integer userId, Integer childId, Integer sessionId, String wordEn) {
         validateChildOwnership(userId, childId);
