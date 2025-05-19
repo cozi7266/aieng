@@ -6,12 +6,30 @@ from app.utils.logger import logger
 
 
 class GPTService:
-    def __init__(self, redis=None):
-        self.client = AsyncOpenAI(
-            api_key=settings.OPENAI_API_KEY,
-            base_url=settings.OPENAI_BASE_URL
-        )
-        self.redis = redis
+    def __init__(self, client: AsyncOpenAI = None, redis=None):
+        try:
+            if client:
+                self.client = client
+                logger.info("GPT 클라이언트 인스턴스 주입 완료")
+            else:
+                logger.info("GPT 클라이언트 초기화 중...")
+                self.client = AsyncOpenAI(
+                    api_key=settings.OPENAI_API_KEY,
+                    base_url=settings.OPENAI_BASE_URL
+                )
+                logger.info("GPT 클라이언트 초기화 완료")
+
+            self.redis = redis
+            logger.info("Redis 인스턴스 주입 완료 (GPTService)")
+
+            if not settings.OPENAI_API_KEY:
+                raise ValueError("OpenAI API 키가 설정되지 않았습니다.")
+
+            logger.info("GPTService 초기화 완료")
+
+        except Exception as e:
+            logger.error(f"GPTService 초기화 실패: {e}")
+            raise RuntimeError("GPTService 초기화 중 오류 발생") from e
 
     async def generate_sentence(
         self,
@@ -56,19 +74,20 @@ class GPTService:
                             "content": user_content
                         }
                     ],
-                    max_tokens=200,
+                    max_tokens=300,
                     stream=False
                 )
-                full_output = response.choices[0].message.content.strip()
-                lines = full_output.splitlines()
 
-                if len(lines) < 3:
-                    logger.warning(f"[GPTService] 응답 형식 오류 (줄 수 부족): {full_output}")
+                content = response.choices[0].message.content.strip()
+
+                try:
+                    data = json.loads(content)
+                    sentence_en = data["sentence_en"].strip()
+                    sentence_ko = data["sentence_ko"].strip()
+                    image_prompt = data["image_prompt"].strip()
+                except Exception as e:
+                    logger.error(f"[GPTService] JSON 파싱 실패: {e}\n응답 내용:\n{content}")
                     continue
-
-                sentence_en = lines[0].strip()
-                sentence_ko = lines[1].strip()
-                image_prompt = lines[2].strip()
 
                 if self.is_sentence_appropriate(sentence_en):
                     logger.info(f"[GPTService] 문장 생성 성공: '{sentence_en}'")
@@ -91,10 +110,12 @@ class GPTService:
             "- 단어가 다의어일 경우, 주어진 테마에 맞는 의미로 문장에 사용해주세요.\n"
             "- 문장 끝에는 반드시 문장 부호를 포함해주세요.\n"
             "- 문장이 부적절하거나 아동에게 맞지 않다면 '부적절한 문장입니다.' 라고 출력해주세요.\n"
-            "- 출력 형식은 아래와 같아야 합니다:\n"
-            "  영어 문장\n"
-            "  그 문장의 자연스러운 한국어 번역\n"
-            "  해당 문장을 시각적으로 묘사한 영어 이미지 프롬프트 (예: A child holding a red apple)\n"
+            "출력은 아래 JSON 형식만 출력하세요. 설명 없이 JSON만 반환하세요:\n\n"
+            "{\n"
+            "  \"sentence_en\": \"영어 문장\",\n"
+            "  \"sentence_ko\": \"자연스러운 한국어 번역\",\n"
+            "  \"image_prompt\": \"영어 문장을 시각적으로 묘사한 프롬프트\"\n"
+            "}\n"
         )
 
         if previous_sentences:
@@ -108,27 +129,16 @@ class GPTService:
                 "이전 문장에 사용된 단어를 그대로 반복하지 마세요. 단어의 품사나 역할이 비슷한게 좋습니다.\n"
                 "의미적으로도 이전 문장과 연결되도록 해주세요 (예: 모두 동물, 모두 색깔, 모두 움직임 등).\n"
             )
-
-        base_instruction += (
-            "\n예시:\n"
-            "I love apples.\n"
-            "나는 사과를 좋아해요.\n"
-            "A smiling child holding a red apple in a sunny park."
-        )
-
         return base_instruction
 
     def is_sentence_appropriate(self, sentence: str) -> bool:
         words = sentence.strip().split()
         if len(words) < 4 or len(words) > 7:
             return False
-
         if re.search(r"[@#$%^&*_=+~<>]", sentence):
             return False
-
         if "부적절한 문장입니다" in sentence:
             return False
-
         return True
 
     async def generate_lyrics(self, sentences: list[str]) -> tuple[str, str]:

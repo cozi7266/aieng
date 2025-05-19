@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  zonos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zonos_container
+    runtime: nvidia
+    ports:
+      - "8000:8000"              # ✅ 외부에서 FastAPI 접속 가능
+    stdin_open: true
+    tty: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0

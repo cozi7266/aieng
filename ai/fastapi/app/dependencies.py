@@ -1,8 +1,39 @@
+from pathlib import Path
+from google.oauth2 import service_account
+from google.cloud import texttospeech
+
 from app.db.session import SessionLocal
 from app.utils.redis import RedisClient
 from app.utils.s3 import S3Client
 
-# DB 세션
+from app.services.gpt_service import GPTService
+from app.services.tts_service_google import GoogleTTSService
+from app.services.tts_service_zonos import ZonosService
+from app.services.sonauto_service import SonautoService
+
+from Zonos.zonos.model import Zonos
+from app.config import settings
+
+# ---- 싱글 인스턴스 ----
+redis_client = RedisClient()
+s3_client = S3Client()
+
+# 🔐 Google TTS 인증 정보 명시적 주입
+google_tts_credentials = service_account.Credentials.from_service_account_file(
+    Path(settings.TTS_API_KEY).resolve()
+)
+google_tts_client = texttospeech.TextToSpeechClient(credentials=google_tts_credentials)
+google_tts_service = GoogleTTSService(client=google_tts_client)
+
+# Zonos 모델 로드
+zonos_model = Zonos.from_pretrained("Zyphra/Zonos-v0.1-transformer", device="cuda")
+zonos_service = ZonosService(model=zonos_model)
+
+# GPT + Sonauto
+gpt_service = GPTService(redis=redis_client.get_client())
+sonauto_service = SonautoService(redis=redis_client, s3=s3_client, gpt=gpt_service)
+
+# ---- FastAPI DI ----
 def get_db():
     db = SessionLocal()
     try:
@@ -10,12 +41,20 @@ def get_db():
     finally:
         db.close()
 
-# Redis 클라이언트
 def get_redis():
-    redis_client = RedisClient()
     return redis_client
 
-# S3 클라이언트
 def get_s3():
-    s3_client = S3Client()
     return s3_client
+
+def get_gpt():
+    return gpt_service
+
+def get_google_tts():
+    return google_tts_service
+
+def get_zonos_tts():
+    return zonos_service
+
+def get_sonauto():
+    return sonauto_service

@@ -2,20 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.models.song import SongRequest, SongResponse
 from app.services.sonauto_service import SonautoService
 from app.dependencies import get_s3, get_redis
+from app.dependencies import get_sonauto
 from app.utils.logger import logger
 
 router = APIRouter()
 
 @router.post("/", response_model=SongResponse)
-async def generate_custom_song(
+async def generate_song(
     request: SongRequest,
-    redis = Depends(get_redis),
-    s3 = Depends(get_s3)
+    sonauto: SonautoService = Depends(get_sonauto)
 ):
     logger.info(f"[노래 생성 요청] sessionId={request.sessionId}, mood={request.moodName}, voice={request.voiceName}")
-    
+
     try:
-        result = await SonautoService(redis, s3).generate_song(
+        result = await sonauto.generate_song(
             user_id=request.userId,
             session_id=request.sessionId,
             mood_name=request.moodName,
