@@ -23,10 +23,6 @@ public class Song extends BaseEntity {
     private Storybook storybook;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "voice_id", nullable = false)
-    private Voice voice;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mood_id", nullable = false)
     private Mood mood;
 
@@ -42,20 +38,19 @@ public class Song extends BaseEntity {
     @Column(name = "song_url", length = 255)
     private String songUrl;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private SongStatus status = SongStatus.CREATED;
+    @Enumerated(EnumType.STRING)
+    private SongStatus status;
 
     @Builder
     public Song(Storybook storybook, Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
         this.storybook = storybook;
-        this.voice = voice;
         this.mood = mood;
         this.title = title;
         this.lyric = lyric;
         this.description = description;
         this.songUrl = songUrl;
-        this.status = SongStatus.CREATED;
+        this.status = SongStatus.REQUESTED;
     }
 
 } 

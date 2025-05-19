@@ -14,24 +14,24 @@ import java.time.LocalDateTime;
 @Builder
 public class SongGenerateResponseDto {
     private Integer songId;
-    private Integer voiceId;
     private Integer moodId;
     private String songUrl;
     private String title;
     private String lyric;
     private String description;
     private LocalDateTime createdAt;
+    private Integer newSessionId;
 
-    public static SongGenerateResponseDto of(Song song) {
+    public static SongGenerateResponseDto of(Song song, Integer newSessionId) {
         return SongGenerateResponseDto.builder()
                 .songId(song.getId())
-                .voiceId(song.getVoice().getId())
                 .moodId(song.getMood().getId())
                 .songUrl(song.getSongUrl())
                 .title(song.getTitle())
                 .lyric(song.getLyric())
                 .description(song.getDescription())
                 .createdAt(song.getCreatedAt())
+                .newSessionId(newSessionId)
                 .build();
     }
 }

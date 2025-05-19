@@ -17,5 +17,10 @@ public class RedisKeyUtil {
         return String.format("Song:user:%d:session:%d", userId, sessionId);
     }
 
+    // 동요 상태 저장용 키
+    public static String getSongStatusKey(Integer sessionId) {
+        return String.format("SongStatus:session:%d", sessionId);
+    }
+
 
 }
