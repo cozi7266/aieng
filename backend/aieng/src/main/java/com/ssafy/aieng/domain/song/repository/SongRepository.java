@@ -10,4 +10,6 @@ import java.util.List;
 public interface SongRepository extends JpaRepository<Song, Integer> {
 
     List<Song> findAllByStorybookChildIdOrderByCreatedAtDesc(Integer childId);
+
+    boolean existsByStorybookId(Integer storybookId);
 }

@@ -117,7 +117,7 @@ public class Session extends BaseEntity {
     public void markSongDoneAndFinish() {
         if (this.status == SessionStatus.STORY_DONE) {
             this.status = SessionStatus.SONG_DONE;
-            this.finishedAt = LocalDateTime.now(); // ✅ 여기서만 세션 종료
+            this.finishedAt = LocalDateTime.now();
         }
     }
 }

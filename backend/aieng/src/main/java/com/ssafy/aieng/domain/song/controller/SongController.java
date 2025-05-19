@@ -5,6 +5,7 @@ import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;
 import com.ssafy.aieng.domain.song.dto.response.SongGenerateResponseDto;
 import com.ssafy.aieng.domain.song.dto.response.SongResponseList;
+import com.ssafy.aieng.domain.song.dto.response.SongStatusResponse;
 import com.ssafy.aieng.domain.song.service.SongService;
 import com.ssafy.aieng.domain.voice.service.VoiceService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
@@ -15,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/songs")
@@ -81,6 +81,18 @@ public class SongController {
     ) {
         songService.deleteSong(user.getId(), childId, songId);
         return ApiResponse.success(null);
+    }
+
+    // 동요 생성 상태
+    @GetMapping("/sessions/{sessionId}/storybook/{storybookId}/status")
+    public ResponseEntity<ApiResponse<SongStatusResponse>> getSongStatus(
+            @PathVariable Integer sessionId,
+            @PathVariable Integer storybookId,
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId
+    ) {
+        SongStatusResponse status = songService.getSongStatus(user.getId(), childId, sessionId, storybookId);
+        return ApiResponse.success(status);
     }
 
 

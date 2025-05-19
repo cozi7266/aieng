@@ -179,10 +179,7 @@ public class LearningService {
                 learningRepository.save(learning);
                 session.incrementLearnedCount();
 
-                if (session.getLearnedWordCount().equals(session.getTotalWordCount())) {
-                    session.finish();
-                    log.info("🎉 세션 종료 처리됨: sessionId={}, finishedAt={}", session.getId(), session.getFinishedAt());
-                }
+
             }
         } catch (ObjectOptimisticLockingFailureException e) {
             log.warn("🔄 중복 저장 방지: 이미 저장된 Learning 데이터 - sessionId={}, word={}", sessionId, wordEn);
