@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class QuizQuestionResponse {
-    private Integer quizId;
+    private Integer quizQuestionId;
     private String ansWord;
     private String ansImageUrl;
     private String ch1Word;
@@ -17,7 +17,7 @@ public class QuizQuestionResponse {
     private Boolean isCompleted; // 사용자가 이 문제를 푼 상태
 
     public static QuizQuestionResponse of(
-            Integer quizId,
+            Integer quizQuestionId,
             String ansWord,
             String ansImageUrl,
             String ch1Word,
@@ -28,7 +28,7 @@ public class QuizQuestionResponse {
             Boolean isCompleted
     ) {
         QuizQuestionResponse dto = new QuizQuestionResponse();
-        dto.quizId = quizId;
+        dto.quizQuestionId = quizQuestionId;
         dto.ansWord = ansWord;
         dto.ansImageUrl = ansImageUrl;
         dto.ch1Word = ch1Word;
@@ -40,10 +40,4 @@ public class QuizQuestionResponse {
         return dto;
     }
 
-    // 퀴즈 저장
-    public void submitAnswer(Integer selectedChId) {
-        if (this.ansChId.equals(selectedChId)) {
-            this.isCompleted = true;
-        }
-    }
 }
