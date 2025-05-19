@@ -512,7 +512,8 @@ const WordSelectScreen: React.FC = () => {
         throw new Error("선택된 자녀 ID가 없습니다.");
       }
 
-      const response = await axios.post<QuizApiResponse>(
+      // 퀴즈 생성 API 호출
+      const quizResponse = await axios.post<QuizApiResponse>(
         `https://www.aieng.co.kr/api/quiz/create/${sessionId}`,
         {},
         {
@@ -526,12 +527,30 @@ const WordSelectScreen: React.FC = () => {
         }
       );
 
-      if (response.data.success) {
+      // 그림책 생성 API 호출
+      const storybookResponse = await axios.post(
+        `https://www.aieng.co.kr/api/books/sessions/${sessionId}/storybook`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // 그림책 생성 응답 로깅
+      console.log("[그림책 생성 응답]", storybookResponse.data);
+
+      if (quizResponse.data.success) {
         // 퀴즈 생성 성공 시 LearningScreen으로 이동
         navigation.navigate("LearningScreen");
       } else {
         const errorMessage =
-          response.data.error?.message || "퀴즈 생성에 실패했습니다.";
+          quizResponse.data.error?.message || "퀴즈 생성에 실패했습니다.";
         NavigationAlert.show({
           title: "퀴즈 생성 실패",
           message: errorMessage,
@@ -540,7 +559,7 @@ const WordSelectScreen: React.FC = () => {
         });
       }
     } catch (error: any) {
-      console.error("퀴즈 생성 실패:", error);
+      console.error("퀴즈/그림책 생성 실패:", error);
       NavigationAlert.show({
         title: "오류",
         message: error.message || "퀴즈 생성 중 오류가 발생했습니다.",
