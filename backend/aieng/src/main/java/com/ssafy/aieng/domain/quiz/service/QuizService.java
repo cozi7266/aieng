@@ -161,6 +161,8 @@ public class QuizService {
 
         question.getQuiz().checkAndMarkQuizComplete();
 
+        session.markQuizDone();
+
         return isCorrect;
     }
 

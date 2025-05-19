@@ -8,9 +8,9 @@ import com.ssafy.aieng.domain.mood.repository.MoodRepository;
 import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.SongGenerateResponseDto;
 import com.ssafy.aieng.domain.song.dto.response.SongResponseList;
+import com.ssafy.aieng.domain.song.dto.response.SongStatusResponse;
 import com.ssafy.aieng.domain.song.entity.Song;
 import com.ssafy.aieng.domain.song.repository.SongRepository;
-import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.domain.book.entity.Storybook;
 import com.ssafy.aieng.domain.book.repository.StorybookRepository;
@@ -29,13 +29,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpHeaders;
+import com.ssafy.aieng.domain.song.dto.response.SongStatusResponse;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @Slf4j
@@ -111,11 +110,13 @@ public class SongService {
 
             log.info("🎵 동요 생성 요청 성공");
 
+
         } catch (Exception e) {
             log.error("❌ 동요 생성 중 오류 발생", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
     // 동요 저장(Redis -> RDB)
@@ -158,34 +159,27 @@ public class SongService {
             String moodName = json.path("mood").asText(null);
             String voiceName = json.path("voice").asText(null);
 
-            // 필수 값이 하나라도 없으면 예외 처리
             if (lyricsEn == null || lyricsKo == null || songUrl == null || moodName == null || voiceName == null) {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            // 6. Voice 객체 찾기
-            Voice voice = voiceRepository.findByName(voiceName)
-                    .orElseThrow(() -> new CustomException(ErrorCode.VOICE_NOT_FOUND));
-
-            // 7. Mood 객체 찾기
+            // 6. Mood 조회
             Mood mood = moodRepository.findByName(moodName)
                     .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
-            // 8. Song 저장
+            // 7. Song 저장
             Song song = Song.builder()
-                    .storybook(storybook) // Storybook 관련 정보 추가
-                    .voice(voice)  // Voice 객체 할당
-                    .mood(mood)  // Mood 객체 할당
+                    .storybook(storybook)
+                    .mood(mood)
                     .title("AI Generated Song")
                     .lyric(lyricsEn)
                     .description(lyricsKo)
                     .songUrl(songUrl)
                     .build();
 
-            // 9. Song DB에 저장
             songRepository.save(song);
-            // 세션 상태 업데이트
             session.markSongDoneAndFinish();
+            session.finish();
 
             return SongGenerateResponseDto.of(song);
 
@@ -197,6 +191,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
     // 동요 목록 조회
     @Transactional(readOnly = true)
@@ -259,6 +254,50 @@ public class SongService {
         // 소프트 딜리트 처리
         song.softDelete();
     }
+
+
+    // 동요 생성 상태
+    @Transactional(readOnly = true)
+    public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
+        // 1. 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 2. 세션 검증
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        if (!session.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
+        }
+
+        // 3. 그림책 검증
+        Storybook storybook = storybookRepository.findById(storybookId)
+                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
+        if (!storybook.getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
+        }
+
+        // 4. 상태 판별
+        boolean isCreated = songRepository.existsByStorybookId(storybookId);
+        String redisKey = String.format("Song:user:%d:session:%d", userId, sessionId);
+        boolean isGenerating = stringRedisTemplate.hasKey(redisKey);
+
+        String status;
+        if (isCreated) {
+            status = "CREATED";
+        } else if (isGenerating) {
+            status = "GENERATING";
+        } else {
+            status = "FAILED";
+        }
+
+        return new SongStatusResponse(true, status);
+    }
+
+
 
 
 

@@ -1,11 +1,9 @@
 package com.ssafy.aieng.domain.book.controller;
 
-import com.ssafy.aieng.domain.book.dto.request.StorybookCreateRequest;
 import com.ssafy.aieng.domain.book.dto.response.StorybookListResponse;
 import com.ssafy.aieng.domain.book.dto.response.StorybookResponse;
 import com.ssafy.aieng.domain.book.service.StorybookService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
-import com.ssafy.aieng.global.common.util.AuthenticationUtil;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +21,7 @@ import java.util.List;
 public class StorybookController {
 
     private final StorybookService storybookService;
+
 
     // 그림책 생성
     @PostMapping("/sessions/{sessionId}/storybook")
@@ -58,7 +57,7 @@ public class StorybookController {
         return ApiResponse.success(response);
     }
 
-    // 4. 그림책 삭제
+    // 그림책 삭제
     @DeleteMapping("/{storybookId}")
     public ResponseEntity<ApiResponse<Void>> deleteStorybook(
             @PathVariable Integer storybookId,
@@ -67,5 +66,6 @@ public class StorybookController {
         storybookService.deleteStorybook(userId, storybookId);
         return ApiResponse.success(HttpStatus.NO_CONTENT);
     }
+
 
 } 
