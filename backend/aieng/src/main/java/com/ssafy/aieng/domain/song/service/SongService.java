@@ -169,7 +169,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // ✅ 2-1. 이미 해당 세션으로 동요가 저장된 경우 중복 방지
+        // 2-1. 이미 해당 세션으로 동요가 저장된 경우 중복 방지
         if (songRepository.existsBySessionId(sessionId)) {
             throw new CustomException(ErrorCode.DUPLICATE_SONG);
         }
@@ -188,7 +188,7 @@ public class SongService {
             String songUrl = json.path("song_url").asText(null);
             String moodName = json.path("mood").asText(null);
             String voiceName = json.path("voice").asText(null);
-            String title = json.path("title").asText("AI Generated Song"); // ✅ 없으면 기본값
+            String title = json.path("title").asText("AI Generated Song");
 
             if (lyricsEn == null || lyricsKo == null || songUrl == null || moodName == null || voiceName == null) {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -198,7 +198,7 @@ public class SongService {
             Mood mood = moodRepository.findByName(moodName)
                     .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
-            // 5. Song 저장 (🎯 핵심: Session과 연결)
+            // 5. Song 저장
             Song song = Song.builder()
                     .mood(mood)
                     .title(title)
@@ -234,9 +234,6 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
-
-
-
 
     // 동요 목록 조회
     @Transactional(readOnly = true)
@@ -300,7 +297,7 @@ public class SongService {
 
     // 동요 생성 상태 조회
     @Transactional(readOnly = true)
-    public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
+    public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId) {
         // 1. 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -364,7 +361,6 @@ public class SongService {
         SongStatusDetail detail = new SongStatusDetail(
                 (song != null ? song.getId() : null),
                 sessionId,
-                storybookId,
                 redisKeyExists,
                 rdbSaved,
                 songUrl,

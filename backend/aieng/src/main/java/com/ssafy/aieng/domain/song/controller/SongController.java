@@ -22,8 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class SongController {
 
     private final SongService songService;
-    private final MoodService moodService;
-    private final VoiceService voiceService;
 
     // 동요 생성 요청(FastAPI로 요청만)
     @PostMapping("/sessions/{sessionId}/generate-song")
@@ -85,11 +83,10 @@ public class SongController {
     @GetMapping("/sessions/{sessionId}/status")
     public ResponseEntity<ApiResponse<SongStatusResponse>> getSongStatus(
             @PathVariable Integer sessionId,
-            @PathVariable Integer storybookId,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId
     ) {
-        SongStatusResponse status = songService.getSongStatus(user.getId(), childId, sessionId, storybookId);
+        SongStatusResponse status = songService.getSongStatus(user.getId(), childId, sessionId);
         return ApiResponse.success(status);
     }
 
