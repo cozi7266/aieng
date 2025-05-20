@@ -8,10 +8,11 @@ import com.ssafy.aieng.domain.mood.repository.MoodRepository;
 import com.ssafy.aieng.domain.session.dto.response.CreateSessionResponse;
 import com.ssafy.aieng.domain.session.service.SessionService;
 import com.ssafy.aieng.domain.song.dto.response.*;
+import com.ssafy.aieng.domain.song.entity.LikedSong;
 import com.ssafy.aieng.domain.song.entity.Song;
 import com.ssafy.aieng.domain.song.entity.SongStatus;
+import com.ssafy.aieng.domain.song.repository.LikedSongRepository;
 import com.ssafy.aieng.domain.song.repository.SongRepository;
-import com.ssafy.aieng.domain.book.repository.StorybookRepository;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.session.entity.Session;
@@ -34,6 +35,7 @@ import com.ssafy.aieng.domain.song.dto.response.SongStatusResponse;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 import org.springframework.web.client.RestTemplate;
@@ -50,7 +52,7 @@ public class SongService {
     private final ChildRepository childRepository;
     private final SessionRepository sessionRepository;
     private final VoiceRepository voiceRepository;
-    private final StorybookRepository storybookRepository;
+    private final LikedSongRepository likedSongRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final SessionService sessionService;
 
@@ -151,7 +153,6 @@ public class SongService {
     }
 
 
-
     // 동요 저장(Redis -> RDB)
     @Transactional
     public SongGenerateResponseDto getGeneratedSong(Integer userId, Integer childId, Integer sessionId) {
@@ -206,6 +207,7 @@ public class SongService {
                     .description(lyricsKo)
                     .songUrl(songUrl)
                     .session(session)
+                    .duration(95)
                     .build();
 
             songRepository.save(song);
@@ -312,19 +314,19 @@ public class SongService {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // ✅ 3. Redis 키: session 기준으로 조회
+        // 3. Redis 키: session 기준으로 조회
         String redisStatusKey = RedisKeyUtil.getSongStatusKey(sessionId);
         String redisGeneratedKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId);
 
         log.info("\uD83D\uDCCC Redis 상태 키: {}", redisStatusKey);
         log.info("\uD83D\uDCCC Redis 결과 키: {}", redisGeneratedKey);
 
-        // ✅ 4. 상태 조회
+        // 4. 상태 조회
         String statusStr = stringRedisTemplate.opsForValue().get(redisStatusKey);
         log.info("\uD83D\uDCE5 조회된 상태 문자열: {}", statusStr);
         SongStatus status = (statusStr != null) ? SongStatus.valueOf(statusStr) : SongStatus.NONE;
 
-        // ✅ 5. 보정
+        // 5. 보정
         boolean redisKeyExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisGeneratedKey));
         if (status == SongStatus.IN_PROGRESS && redisKeyExists) {
             status = SongStatus.READY;
@@ -332,12 +334,12 @@ public class SongService {
             log.info("\u2705 상태 보정: IN_PROGRESS \u2192 READY (결과 키 존재)");
         }
 
-        // ✅ 6. RDB 조회 - session 기준
+        // 6. RDB 조회 - session 기준
         boolean rdbSaved = songRepository.existsBySessionId(sessionId);
         Song song = songRepository.findBySessionId(sessionId).orElse(null);
         log.info("\uD83D\uDDC3️ RDB 저장 여부: {}, songId: {}", rdbSaved, (song != null ? song.getId() : null));
 
-        // ✅ 7. Redis 결과
+        // 7. Redis 결과
         String songUrl = null;
         String lyricsKo = null;
         String lyricsEn = null;
@@ -357,7 +359,7 @@ public class SongService {
             }
         }
 
-        // ✅ 8. DTO 반환 (storybookId는 단순 전달용)
+        // 8. DTO 반환 (storybookId는 단순 전달용)
         SongStatusDetail detail = new SongStatusDetail(
                 (song != null ? song.getId() : null),
                 sessionId,
@@ -371,5 +373,81 @@ public class SongService {
         return SongStatusResponse.of(status.name(), detail);
     }
 
+    // 좋아요, 취소
+    @Transactional
+    public boolean toggleLikeSong(Integer userId, Integer childId, Integer songId) {
+        // 1. 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 2. 동요 검증
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
+
+        // 3. 찜 여부 확인
+        Optional<LikedSong> likedOpt = likedSongRepository.findByChildAndSong(child, song);
+
+        if (likedOpt.isPresent()) {
+            // 찜 취소
+            likedSongRepository.delete(likedOpt.get());
+            return false;
+        } else {
+            // 찜 등록
+            LikedSong liked = LikedSong.builder()
+                    .child(child)
+                    .song(song)
+                    .build();
+            likedSongRepository.save(liked);
+            return true;
+        }
+    }
+
+
+    // 찜 여부 확인
+    @Transactional(readOnly = true)
+    public boolean isSongLiked(Integer userId, Integer childId, Integer songId) {
+        // 1. 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 2. 동요 존재 여부 확인
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
+
+        // 3. 찜 여부 확인
+        return likedSongRepository.existsByChildAndSong(child, song);
+    }
+
+
+    // 찜한 동요 목록 조회
+    @Transactional(readOnly = true)
+    public SongResponseList getLikedSongs(Integer userId, Integer childId) {
+        // 1. 자녀 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 2. 찜한 동요 목록 조회
+        List<LikedSong> likedSongs = likedSongRepository.findAllByChild(child);
+
+        // 3. 동요 리스트 변환 (soft delete 제외)
+        List<Song> songs = likedSongs.stream()
+                .map(LikedSong::getSong)
+                .filter(song -> !song.getDeleted()) // soft-delete 고려
+                .toList();
+
+        // 4. 응답 DTO 반환 (childId 포함)
+        return SongResponseList.of(child.getId(), songs);
+    }
 
 }

@@ -12,8 +12,6 @@ import java.util.List;
 @Repository
 public interface StorybookRepository extends JpaRepository<Storybook, Integer> {
 
-    List<Storybook> findAllByChildIdOrderByCreatedAtDesc(Integer childId);
-
     List<Storybook> findAllByChildIdAndDeletedFalseOrderByCreatedAtDesc(Integer childId);
 
     @Query("SELECT CASE WHEN COUNT(ls) > 0 THEN true ELSE false END " +
