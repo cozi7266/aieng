@@ -27,10 +27,10 @@ public class Song extends BaseEntity {
     @Column(name = "title", length = 50, nullable = false)
     private String title;
 
-    @Column(name = "lyric", columnDefinition = "TEXT", nullable = false)
+    @Column(name = "lyric", columnDefinition = "TEXT")
     private String lyric;
 
-    @Column(name = "description", length = 255)
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "song_url", length = 255)
@@ -54,6 +54,4 @@ public class Song extends BaseEntity {
         this.status = SongStatus.SAVED;
         this.duration = duration;
     }
-
-
 } 

@@ -12,17 +12,16 @@ import java.util.Optional;
 @Repository
 public interface SessionRepository extends JpaRepository<Session, Integer> {
 
-
+    // id로 삭제되지 않은 Session 조회
     Optional<Session> findByIdAndDeletedFalse(Integer id);
 
-    Optional<Session> findByChildIdAndThemeIdAndFinishedAtIsNull(Integer childId, Integer themeId);
-
+    // childId로 삭제되지 않은 모든 Session 조회
     List<Session> findAllByChildIdAndDeletedFalse(Integer childId);
 
+    // childId와 themeId로 가장 최근에 시작한 삭제되지 않은 Session 조회
     Optional<Session> findTopByChildIdAndThemeIdAndDeletedFalseOrderByStartedAtDesc(Integer childId, Integer themeId);
 
-
-
+    // childId와 themeId로 삭제되지 않은 Session을 시작 시간 기준 내림차순 조회
     @Query("SELECT s FROM Session s " +
             "WHERE s.child.id = :childId AND s.theme.id = :themeId AND s.deleted = false " +
             "ORDER BY s.startedAt DESC")

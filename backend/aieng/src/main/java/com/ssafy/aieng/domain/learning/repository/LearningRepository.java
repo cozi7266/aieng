@@ -19,13 +19,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface LearningRepository extends JpaRepository<Learning, Integer> {
 
-    List<Learning> findTop5ByWordThemeIdAndLearnedTrueOrderByLearnedAtDesc(Integer themeId);
-
-
-    @Query("SELECT l FROM Learning l JOIN l.session s WHERE s.child.id = :childId AND l.learned = true ORDER BY l.learnedAt DESC")
-    List<Learning> findAllByChildIdAndLearnedTrueOrderByLearnedAtDesc(@Param("childId") Integer childId);
-
-
+    // 세션 ID와 단어 ID로 Learning 엔티티 1개 조회
     @Query("""
         SELECT l FROM Learning l
         WHERE l.session.id = :sessionId AND l.word.id = :wordId
@@ -34,16 +28,19 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
                                                 @Param("wordId") Integer wordId);
 
 
-
-
+    // 세션 ID로 삭제되지 않은 Learning 목록 조회
     List<Learning> findAllBySessionIdAndDeletedFalse(Integer sessionId);
 
+    // 세션 ID로 학습 완료(learned)된 Learning 개수 반환
     long countBySessionIdAndLearned(Integer sessionId, boolean b);
 
+    // 세션 ID로 학습 완료된 Learning 목록 조회
     List<Learning> findAllBySessionIdAndLearnedTrue(Integer sessionId);
 
+    // 세션 ID로 학습 완료된 Learning을 pageOrder 순으로 조회
     List<Learning> findAllBySessionIdAndLearnedTrueOrderByPageOrder(Integer sessionId);
 
+    // 자녀 ID로 학습 완료된 Learning 전체 조회 (세션 구분 없음)
     List<Learning> findAllBySession_Child_IdAndLearnedTrue(Integer childId);
 
 }

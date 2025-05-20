@@ -143,8 +143,6 @@ public class LearningService {
     }
 
 
-
-
     /**
      * Redis에서 생성 결과를 조회하고, Learning 테이블에 저장
      * - 이미 저장된 경우 중복 저장 생략
@@ -207,8 +205,6 @@ public class LearningService {
         return result;
     }
 
-
-
     // 생성한 문장 관련 정보 조회
     @Transactional(readOnly = true)
     public SentenceResponse getSentenceResponse(Integer userId, Integer childId, Integer sessionId, String wordEn) {
@@ -231,6 +227,4 @@ public class LearningService {
         // 5️⃣ 응답 반환
         return SentenceResponse.of(learning);
     }
-
-
 }

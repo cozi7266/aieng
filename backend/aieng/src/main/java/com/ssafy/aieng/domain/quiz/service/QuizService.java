@@ -138,7 +138,7 @@ public class QuizService {
         return QuizResponse.of(quiz, wordRepository);
     }
 
-    // 퀴즈 풀기
+    // 퀴즈 정답 제출
     @Transactional
     public boolean submitAnswer(Integer userId, Integer childId, Integer quizQuestionId, Integer selectedChId) {
         QuizQuestion question = quizQuestionRepository.findById(quizQuestionId)
@@ -155,7 +155,6 @@ public class QuizService {
             throw new CustomException(ErrorCode.QUESTION_ALREADY_COMPLETED);
         }
 
-        // 답안 처리
         boolean isCorrect = question.getAnsChId().equals(selectedChId);
         question.submitAnswer(selectedChId);
 
@@ -165,7 +164,6 @@ public class QuizService {
 
         return isCorrect;
     }
-
 
 
 }
