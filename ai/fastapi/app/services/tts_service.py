@@ -11,7 +11,7 @@ class TTSService:
         self.output_dir = Path("tts_outputs")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    async def generate_audio(self, text: str, filename: str = "tts_result") -> bytes:
+    async def generate_audio(self, text: str, gender: str, filename: str = "tts_result") -> bytes:
         logger.info(f"[TTSService] TTS 생성 요청: '{text[:50]}'... (길이: {len(text)}자)")
 
         ssml_text = f'''
@@ -25,8 +25,8 @@ class TTSService:
 
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
-            name="en-US-Wavenet-F",
-            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+            name="en-US-Wavenet-D" if gender == "MALE" else "en-US-Wavenet-F",
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE if gender == "MALE" else texttospeech.SsmlVoiceGender.FEMALE
         )
 
         audio_config = texttospeech.AudioConfig(

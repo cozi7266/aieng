@@ -35,14 +35,14 @@ class SonautoService:
     async def generate_song(self, user_id: int, session_id: int, mood_name: str, voice_name: str) -> dict:
         # 1. Redis에서 문장 조회
         sentences = self.get_sentences_from_redis(user_id, session_id)
-        if len(sentences) != 5:
+        if len(sentences) < 5:
             raise ValueError("학습 문장은 정확히 5개여야 합니다.")
 
         logger.info(f"[Sonauto] 세션 {session_id}에서 문장 5개 조회 완료")
 
         # 2. GPT로 가사 및 번역 생성
         gpt_service = GPTService()
-        lyrics_en, lyrics_ko = await gpt_service.generate_lyrics(sentences)
+        title, lyrics_en, lyrics_ko = await gpt_service.generate_lyrics(sentences)
 
         logger.info("[Sonauto] GPT 가사 생성 완료")
 
@@ -116,6 +116,7 @@ class SonautoService:
         redis_key = f"Song:user:{user_id}:session:{session_id}"
         redis_value = {
             "song_url": s3_url,
+            "title": title,
             "lyrics_en": lyrics_en,
             "lyrics_ko": lyrics_ko,
             "mood": mood_name,
@@ -129,6 +130,7 @@ class SonautoService:
 
         return SongResponse(
             songUrl=s3_url,
+            title=title,
             lyricsEn=lyrics_en,
             lyricsKo=lyrics_ko
         )

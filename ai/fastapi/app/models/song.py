@@ -8,5 +8,6 @@ class SongRequest(BaseModel):
 
 class SongResponse(BaseModel):
     songUrl: str
+    title: str
     lyricsEn: str
     lyricsKo: str
