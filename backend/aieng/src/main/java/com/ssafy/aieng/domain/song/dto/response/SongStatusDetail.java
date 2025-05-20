@@ -8,7 +8,6 @@ import lombok.Getter;
 public class SongStatusDetail {
     private Integer songId;
     private Integer sessionId;
-    private Integer storybookId;
     private boolean redisKeyExists;
     private boolean rdbSaved;
     private String songUrl;
