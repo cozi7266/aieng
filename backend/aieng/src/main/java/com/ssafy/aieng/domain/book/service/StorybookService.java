@@ -128,7 +128,7 @@ public class StorybookService {
 
     // 그림책 상세 조회
     @Transactional(readOnly = true)
-    public StorybookResponse getStorybookDetail(Integer userId, Integer storybookId) {
+    public StorybookResponse getStorybookDetail(Integer userId, Integer childId, Integer storybookId) {
         Storybook storybook = storybookRepository.findById(storybookId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
         customAuthentication.validateChildOwnership(userId, storybook.getChild().getId());

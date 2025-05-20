@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface StorybookRepository extends JpaRepository<Storybook, Integer> {
@@ -19,4 +20,5 @@ public interface StorybookRepository extends JpaRepository<Storybook, Integer> {
             "WHERE ls.learning.session.id = :sessionId")
     boolean existsStorybookBySessionId(@Param("sessionId") Integer sessionId);
 
+    Optional<Storybook> findBySessionId(Integer id);
 }

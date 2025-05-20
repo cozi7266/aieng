@@ -50,10 +50,11 @@ public class StorybookController {
     // 그림책 상세 조회
     @GetMapping("/{storybookId}")
     public ResponseEntity<ApiResponse<StorybookResponse>> getStorybookDetail(
+            @RequestHeader("X-Child-Id") Integer childId,
             @PathVariable Integer storybookId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         Integer userId = userPrincipal.getId();
-        StorybookResponse response = storybookService.getStorybookDetail(userId, storybookId);
+        StorybookResponse response = storybookService.getStorybookDetail(userId, childId, storybookId);
         return ApiResponse.success(response);
     }
 
