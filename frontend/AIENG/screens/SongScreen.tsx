@@ -617,7 +617,7 @@ const SongScreen: React.FC = () => {
             scaleFactor={scaleFactor}
           />
           {/* 테스트용 상태 변경 버튼들 */}
-          <View style={styles.testButtonsContainer}>
+          {/* <View style={styles.testButtonsContainer}>
             <TouchableOpacity
               style={styles.testButton}
               onPress={() => {
@@ -738,7 +738,7 @@ const SongScreen: React.FC = () => {
             >
               <Text style={styles.testButtonText}>FAILED</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </View>
       </View>
 
