@@ -1,10 +1,12 @@
 from pathlib import Path
 from google.oauth2 import service_account
 from google.cloud import texttospeech
+import logging
 
 from app.db.session import SessionLocal
 from app.utils.redis import RedisClient
 from app.utils.s3 import S3Client
+from app.utils.logger import logger
 
 from app.services.gpt_service import GPTService
 from app.services.tts_service_google import GoogleTTSService
@@ -26,7 +28,11 @@ google_tts_client = texttospeech.TextToSpeechClient(credentials=google_tts_crede
 google_tts_service = GoogleTTSService(client=google_tts_client)
 
 # Zonos 모델 로드
+logger.info("Zonos 모델 로드 시작...")
 zonos_model = Zonos.from_pretrained("Zyphra/Zonos-v0.1-transformer", device="cuda")
+logger.info(f"모델 초기 로드 후 디바이스: {next(zonos_model.parameters()).device}")
+zonos_model = zonos_model.to("cuda")
+logger.info(f"모델 GPU 이동 후 디바이스: {next(zonos_model.parameters()).device}")
 zonos_service = ZonosService(model=zonos_model)
 
 # GPT + Sonauto
