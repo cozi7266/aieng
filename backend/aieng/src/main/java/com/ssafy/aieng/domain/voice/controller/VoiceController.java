@@ -87,7 +87,7 @@ public class VoiceController {
             @AuthenticationPrincipal UserPrincipal user
     ) {
         voiceService.deleteVoice(user.getId(), childId, voiceId);
-        return ApiResponse.success(null);
+        return ApiResponse.success(HttpStatus.OK);
     }
 
     // 아이의 목소리 및 분위기 설정 (TTS, 동요, Mood)
@@ -95,11 +95,10 @@ public class VoiceController {
     public ResponseEntity<ApiResponse<Void>> updateVoiceSettings(
             @RequestHeader("X-Child-Id") Integer childId,
             @RequestBody VoiceSettingRequest request,
-            @AuthenticationPrincipal UserPrincipal userPrincipal
+            @AuthenticationPrincipal UserPrincipal user
     ) {
-        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-        voiceService.updateVoiceSettings(userId, childId, request);
-        return ApiResponse.success(null);
+        voiceService.updateVoiceSettings(user.getId(), childId, request);
+        return ApiResponse.success(HttpStatus.OK);
     }
 
 
