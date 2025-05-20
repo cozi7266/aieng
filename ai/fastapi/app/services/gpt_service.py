@@ -141,13 +141,24 @@ class GPTService:
             return False
         return True
 
-    async def generate_lyrics(self, sentences: list[str]) -> tuple[str, str]:
+    async def generate_lyrics(self, sentences: list[str]) -> tuple[str, str, str]:
         prompt = (
-            "당신은 7~8세 어린이를 위한 영어 동요 작사가이자 번역가입니다.\n"
-            "아래에 제시된 5개의 영어 문장을 바탕으로 반복적이고 따라 부르기 쉬운 영어 가사를 만들어주세요.\n"
-            "그 후, 해당 가사의 자연스럽고 구어체적인 한국어 번역을 함께 제공해주세요.\n\n"
-            "출력은 반드시 아래 JSON 형식으로 해주세요. 설명 없이 JSON만 출력해야 합니다:\n\n"
+            "당신은 7~8세 어린이를 위한 영어 동요 작사가이자 번역가입니다. \n"
+            "다음 조건을 반드시 지켜서 동요 가사를 만들어주세요: \n"
+
+            "1. 주어진 sentence 목록의 내용을 바탕으로 문장 순서에 따라 이야기가 자연스럽게 전개되도록 가사를 구성할 것. \n"
+            "2. 학습한 핵심 단어(명사, 동사 등)가 반복되도록 하여 아이들의 단어 학습 효과를 높일 것. \n"
+            "3. 짧고 단순한 문장 구조를 사용할 것. 문장은 현재형 위주로 작성하고 문법적으로 명확하게. \n"
+            "4. 전체 가사는 밝고 경쾌한 분위기로, 아이들이 따라 부르기 쉽도록 운율과 리듬을 고려할 것. \n"
+            "5. 반복되는 코러스(후렴)를 포함시키되, 주된 단어를 강조하는 방식으로 작성할 것. \n"
+            "6. 이모지나 특수기호는 절대 포함하지 말 것. \n"
+            "7. 아이들의 발음 연습을 위해 간단하고 다양한 동작 요소를 가사에 자연스럽게 넣으면 좋음.\n"
+            "8. 전체 가사의 구조는 [Chorus] + [Post-Chorus] + [Verse 2] + [Pre-Chorus] + [Chorus] + [Post-Chorus] 구조 정도로 제한할 것 (1분 30초의 노래 길이에 맞도록 너무 길지 않게).\n\n"
+            "그 후, 해당 영어 가사에 대하여 문맥이 자연스럽고 구어체적인 한국어 번역을 함께 제공해주세요.\n\n"
+            "노래의 제목은 주어진 sentence와 가사를 요약할 수 있는 짧고 함축적인 제목이 좋습니다.\n\n"
+            "출력은 반드시 아래 JSON 형식으로 해주세요. 설명 없이 JSON만 출력해야 합니다:\n"
             "{\n"
+            "  \"title\": \"노래 제목\",\n"
             "  \"english_lyrics\": \"영어 가사 내용\",\n"
             "  \"korean_translation\": \"한국어 번역 내용\"\n"
             "}\n\n"
@@ -168,9 +179,10 @@ class GPTService:
 
         try:
             data = json.loads(content)
+            title = data["title"].strip()
             lyrics_en = data["english_lyrics"].strip()
             lyrics_ko = data["korean_translation"].strip()
-            return lyrics_en, lyrics_ko
+            return title, lyrics_en, lyrics_ko
         except Exception as e:
             logger.error(f"[GPTService] JSON 파싱 실패: {e}\n응답 내용:\n{content}")
             raise ValueError("가사 응답이 JSON 형식을 따르지 않았습니다.")
