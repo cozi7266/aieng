@@ -20,8 +20,9 @@ public class SongGenerateResponseDto {
     private String lyric;
     private String description;
     private LocalDateTime createdAt;
+    private Integer newSessionId;
 
-    public static SongGenerateResponseDto of(Song song) {
+    public static SongGenerateResponseDto of(Song song, Integer newSessionId) {
         return SongGenerateResponseDto.builder()
                 .songId(song.getId())
                 .moodId(song.getMood().getId())
@@ -30,6 +31,7 @@ public class SongGenerateResponseDto {
                 .lyric(song.getLyric())
                 .description(song.getDescription())
                 .createdAt(song.getCreatedAt())
+                .newSessionId(newSessionId)
                 .build();
     }
 }

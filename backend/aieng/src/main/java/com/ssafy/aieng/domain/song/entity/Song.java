@@ -38,9 +38,9 @@ public class Song extends BaseEntity {
     @Column(name = "song_url", length = 255)
     private String songUrl;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private SongStatus status = SongStatus.CREATED;
+    @Enumerated(EnumType.STRING)
+    private SongStatus status;
 
     @Builder
     public Song(Storybook storybook, Voice voice, Mood mood, String title, String lyric, String description, String songUrl) {
@@ -50,7 +50,7 @@ public class Song extends BaseEntity {
         this.lyric = lyric;
         this.description = description;
         this.songUrl = songUrl;
-        this.status = SongStatus.CREATED;
+        this.status = SongStatus.REQUESTED;
     }
 
 } 

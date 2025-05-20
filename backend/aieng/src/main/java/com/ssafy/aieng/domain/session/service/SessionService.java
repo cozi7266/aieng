@@ -50,7 +50,7 @@ public class SessionService {
     }
 
 
-    // 학습 세션 생성
+    // 학습 세션 생성 (맨 처음)
     @Transactional
     public CreateSessionResponse createLearningSession(Integer userId, Integer childId, Integer themeId) {
         // 1. 아이 소유자 검증
@@ -71,7 +71,6 @@ public class SessionService {
                     .toList();
             return new CreateSessionResponse(existing.getId(), false, theme.getThemeEn(), theme.getThemeKo(), words);
         }
-
 
         // 4. 세션 생성
         Session session = Session.of(child, theme);
@@ -256,6 +255,64 @@ public class SessionService {
                 .map(ChildThemeProgressResponse::fromSession)
                 .orElseGet(() -> ChildThemeProgressResponse.fromThemeOnly(theme));
     }
+
+
+    // 세션 생성 (동요 저장 완료 후)
+    @Transactional
+    public CreateSessionResponse forceCreateNewSession(Integer userId, Integer childId, Integer themeId) {
+        // 아이 소유자 검증
+        Child child = getVerifiedChild(userId, childId);
+
+        // 테마 확인
+        Theme theme = themeRepository.findById(themeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.THEME_NOT_FOUND));
+
+        // 랜덤 단어 6개 선택
+        List<Word> wordList = wordRepository.findAllByThemeId(themeId);
+        if (wordList.size() < 6) throw new CustomException(ErrorCode.NOT_ENOUGH_WORDS);
+
+        Collections.shuffle(wordList);
+        List<Word> selectedWords = wordList.stream().limit(6).toList();
+
+        // 세션 생성
+        Session session = Session.of(child, theme);
+        sessionRepository.save(session);
+
+        // Learning 저장
+        List<Learning> learnings = new ArrayList<>();
+        for (int i = 0; i < selectedWords.size(); i++) {
+            learnings.add(Learning.builder()
+                    .session(session)
+                    .word(selectedWords.get(i))
+                    .pageOrder(i + 1)
+                    .learned(false)
+                    .build());
+        }
+        learningRepository.saveAll(learnings);
+        session.setTotalWordCount(learnings.size());
+
+        // Redis 저장
+        for (Learning learning : learnings) {
+            String key = RedisKeyUtil.getGeneratedContentKey(userId, session.getId(), learning.getWord().getWordEn());
+            Map<String, String> info = Map.of(
+                    "wordEn", learning.getWord().getWordEn(),
+                    "wordKo", learning.getWord().getWordKo(),
+                    "imgUrl", learning.getWord().getImgUrl()
+            );
+            stringRedisTemplate.opsForHash().putAll(key, info);
+            stringRedisTemplate.expire(key, Duration.ofDays(1));
+        }
+
+        // 응답 생성
+        List<WordResponse> responses = learnings.stream()
+                .map(l -> WordResponse.of(l.getWord(), l))
+                .toList();
+
+        return new CreateSessionResponse(session.getId(), true, theme.getThemeEn(), theme.getThemeKo(), responses);
+    }
+
+
+
 
 
 }

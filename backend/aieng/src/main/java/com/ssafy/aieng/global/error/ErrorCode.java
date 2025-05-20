@@ -100,7 +100,8 @@ public enum  ErrorCode {
 
     // Song 관련 에러
     SONG_NOT_FOUND(404, "SG001", "동요를 찾을 수 없습니다."),
-    SONG_ALREADY_DELETED(400, "SG002", "이미 삭제된 동요입니다."),;
+    SONG_ALREADY_DELETED(400, "SG002", "이미 삭제된 동요입니다."),
+    DUPLICATE_SONG(409, "SG003", "이미 저장된 동요입니다.");
 
 
     private final int status;
