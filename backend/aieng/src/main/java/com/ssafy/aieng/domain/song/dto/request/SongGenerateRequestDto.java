@@ -12,9 +12,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class SongGenerateRequestDto {
 
-    private String inputVoice;    // male vocal, female vocal
+    private Integer voiceId;
 
     private Integer moodId;
 
-    private Integer storybookId;
 }
