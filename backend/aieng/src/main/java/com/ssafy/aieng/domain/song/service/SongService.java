@@ -7,17 +7,16 @@ import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.mood.repository.MoodRepository;
 import com.ssafy.aieng.domain.session.dto.response.CreateSessionResponse;
 import com.ssafy.aieng.domain.session.service.SessionService;
-import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.*;
 import com.ssafy.aieng.domain.song.entity.Song;
 import com.ssafy.aieng.domain.song.entity.SongStatus;
 import com.ssafy.aieng.domain.song.repository.SongRepository;
-import com.ssafy.aieng.domain.book.entity.Storybook;
 import com.ssafy.aieng.domain.book.repository.StorybookRepository;
 import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
+import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
@@ -44,7 +43,6 @@ public class SongService {
 
     private static final String FASTAPI_URL = "https://www.aieng.co.kr/fastapi/songs/";
 
-
     private final SongRepository songRepository;
     private final MoodRepository moodRepository;
     private final ChildRepository childRepository;
@@ -56,7 +54,7 @@ public class SongService {
 
     // 동요 생성
     @Transactional
-    public void generateSong(Integer userId, Integer childId, Integer sessionId, SongGenerateRequestDto requestDto) {
+    public void generateSong(Integer userId, Integer childId, Integer sessionId) {
         // 1. 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -71,37 +69,31 @@ public class SongService {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // ✅ 2-1. 이미 해당 세션으로 동요가 생성된 경우 중복 방지
+        // 2-1. 중복 방지
         if (songRepository.existsBySessionId(sessionId)) {
             throw new CustomException(ErrorCode.DUPLICATE_SONG);
         }
 
-        // 3. Mood 조회
-        Mood mood = moodRepository.findById(requestDto.getMoodId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
-
-        // 4. Voice 유효성 체크
-        String voiceName = requestDto.getInputVoice();
-        if (voiceName == null || voiceName.isBlank()) {
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        // 3. 아이에 설정된 분위기 가져오기
+        Mood mood = child.getMood();
+        if (mood == null) {
+            throw new CustomException(ErrorCode.MOOD_NOT_FOUND); // 또는 기본값 설정
         }
 
-        // ✅ 5. 그림책 자동 생성 (DB에는 저장하지만 Redis 키에는 사용하지 않음)
-        Storybook storybook = Storybook.builder()
-                .child(child)
-                .coverUrl("https://aieng.s3.ap-northeast-2.amazonaws.com/default_cover.png")
-                .title("AI Generated Storybook")
-                .description("동요 생성을 위한 자동 생성 그림책입니다.")
-                .build();
-        storybookRepository.save(storybook);
+        // 4. 아이에 설정된 목소리 가져오기
+        Voice songVoice = child.getSongVoice();
+        if (songVoice == null || songVoice.getName() == null || songVoice.getName().isBlank()) {
+            throw new CustomException(ErrorCode.VOICE_NOT_FOUND);
+        }
+        String voiceName = songVoice.getName();
 
-        // ✅ 6. 상태: REQUESTED
+        // 5. Redis 상태 저장: REQUESTED
         stringRedisTemplate.opsForValue().set(
                 RedisKeyUtil.getSongStatusKey(sessionId),
                 SongStatus.REQUESTED.name()
         );
 
-        // 7. FastAPI 요청 전송
+        // 6. FastAPI 요청
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
                 "sessionId", sessionId,
@@ -133,9 +125,7 @@ public class SongService {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
-            log.info("🎵 동요 생성 요청 성공");
-
-            // ✅ 상태: IN_PROGRESS
+            // 7. 상태: IN_PROGRESS
             stringRedisTemplate.opsForValue().set(
                     RedisKeyUtil.getSongStatusKey(sessionId),
                     SongStatus.IN_PROGRESS.name()
@@ -151,6 +141,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
     // 동요 저장(Redis -> RDB)
     @Transactional
