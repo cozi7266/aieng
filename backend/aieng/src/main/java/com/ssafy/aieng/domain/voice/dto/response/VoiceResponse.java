@@ -14,12 +14,14 @@ public class VoiceResponse {
     private String audioUrl;
 
     public static VoiceResponse from(Voice voice) {
-        return VoiceResponse.builder()
-                .voiceId(voice.getId())
-                .childId(voice.getChild().getId())
-                .name(voice.getName())
-                .description(voice.getDescription())
-                .audioUrl(voice.getAudioUrl())
-                .build();
+        Integer childId = (voice.getChild() != null) ? voice.getChild().getId() : null;
+
+        return new VoiceResponse(
+                voice.getId(),
+                childId,
+                voice.getName(),
+                voice.getDescription(),
+                voice.getAudioUrl()
+        );
     }
 } 

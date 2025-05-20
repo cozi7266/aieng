@@ -1,6 +1,12 @@
 package com.ssafy.aieng.domain.voice.controller;
 
+import com.ssafy.aieng.domain.mood.dto.MoodResponseDto;
+import com.ssafy.aieng.domain.mood.entity.Mood;
+import com.ssafy.aieng.domain.mood.service.MoodService;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceCreateRequest;
+import com.ssafy.aieng.domain.voice.dto.request.VoiceSettingRequest;
+import com.ssafy.aieng.domain.voice.dto.response.SongVoiceSettingResponse;
+import com.ssafy.aieng.domain.voice.dto.response.TtsVoiceSettingResponse;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
 import com.ssafy.aieng.domain.voice.service.VoiceService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
@@ -24,6 +30,7 @@ import java.util.List;
 public class VoiceController {
 
     private final VoiceService voiceService;
+    private final MoodService moodService;
     private final AuthenticationUtil authenticationUtil;
 
     // 목소리 파일 S3에 저장
@@ -81,6 +88,55 @@ public class VoiceController {
     ) {
         voiceService.deleteVoice(user.getId(), childId, voiceId);
         return ApiResponse.success(null);
+    }
+
+    // 아이의 목소리 및 분위기 설정 (TTS, 동요, Mood)
+    @PatchMapping("/settings")
+    public ResponseEntity<ApiResponse<Void>> updateVoiceSettings(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @RequestBody VoiceSettingRequest request,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        voiceService.updateVoiceSettings(user.getId(), childId, request);
+        return ApiResponse.success(null);
+    }
+
+
+    // 동요 세팅 조회
+    @GetMapping("/song-settings")
+    public ResponseEntity<ApiResponse<SongVoiceSettingResponse>> getSongSettings(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        List<MoodResponseDto> moods = moodService.getAllMoods(user.getId(), childId);
+
+        // ID 1: 남성, ID 2: 여성 목소리라고 가정
+        VoiceResponse maleVoice = voiceService.getVoiceById(1);
+        VoiceResponse femaleVoice = voiceService.getVoiceById(2);
+
+        List<VoiceResponse> voices = List.of(maleVoice, femaleVoice);
+        SongVoiceSettingResponse response = new SongVoiceSettingResponse(moods, voices);
+        return ApiResponse.success(response);
+    }
+
+    // tts 세팅
+    @GetMapping("/tts-settings")
+    public ResponseEntity<ApiResponse<TtsVoiceSettingResponse>> getTtsSettings(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        Integer userId = authenticationUtil.getCurrentUserId(user);
+
+        // 기본 남/여 목소리 (ID 1, 2)
+        VoiceResponse maleVoice = voiceService.getVoiceById(1);
+        VoiceResponse femaleVoice = voiceService.getVoiceById(2);
+        List<VoiceResponse> defaultVoices = List.of(maleVoice, femaleVoice);
+
+        // 자녀가 업로드한 커스텀 목소리
+        List<VoiceResponse> customVoices = voiceService.getVoicesByChildId(userId, childId);
+
+        TtsVoiceSettingResponse response = new TtsVoiceSettingResponse(defaultVoices, customVoices);
+        return ApiResponse.success(response);
     }
 
 

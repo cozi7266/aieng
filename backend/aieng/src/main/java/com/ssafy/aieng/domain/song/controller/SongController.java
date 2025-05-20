@@ -1,7 +1,6 @@
 package com.ssafy.aieng.domain.song.controller;
 
 import com.ssafy.aieng.domain.mood.service.MoodService;
-import com.ssafy.aieng.domain.song.dto.request.SongGenerateRequestDto;
 import com.ssafy.aieng.domain.song.dto.response.SongDetailResponseDto;
 import com.ssafy.aieng.domain.song.dto.response.SongGenerateResponseDto;
 import com.ssafy.aieng.domain.song.dto.response.SongResponseList;
@@ -29,14 +28,14 @@ public class SongController {
     // 동요 생성 요청(FastAPI로 요청만)
     @PostMapping("/sessions/{sessionId}/generate-song")
     public ResponseEntity<ApiResponse<Void>> generateSongRequest(
-            @RequestBody SongGenerateRequestDto requestDto,
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
             @PathVariable Integer sessionId
     ) {
-        songService.generateSong(user.getId(), childId, sessionId, requestDto);
-        return ApiResponse.success(HttpStatus.OK);
+        songService.generateSong(user.getId(), childId, sessionId);
+        return ApiResponse.success(null);
     }
+
 
     // 동요 (Redis -> RDB 저장)
     @GetMapping("/sessions/{sessionId}/save-song")
