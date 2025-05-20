@@ -24,8 +24,6 @@ import { RootStackParamList } from "../../App";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
 import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
-import BGMToggleButton from "../../components/common/BGMToggleButton";
-import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
@@ -409,8 +407,6 @@ const WordListeningScreen: React.FC = () => {
             onPress={() => setHelpModalVisible(true)}
             style={styles.headerButton}
           />
-          <BGMToggleButton style={styles.headerButton} />
-          <ProfileButton style={styles.headerButton} />
         </View>
       </View>
 
@@ -567,8 +563,7 @@ const WordListeningScreen: React.FC = () => {
               <View style={styles.helpSection}>
                 <Text style={styles.helpSectionTitle}>학습 팁</Text>
                 <Text style={styles.helpText}>
-                  단어를 들으면 다음 단계로 넘어갈 수 있어요! 여러 번 들어보고
-                  발음을 따라해 보세요.
+                  단어를 눌러 여러 번 들어보고 발음을 따라해 보세요.
                 </Text>
               </View>
             </ScrollView>

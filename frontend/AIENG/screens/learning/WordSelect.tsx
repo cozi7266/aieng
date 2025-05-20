@@ -19,10 +19,8 @@ import * as ScreenOrientation from "expo-screen-orientation";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
 import BGMToggleButton from "../../components/common/BGMToggleButton";
-import ProfileButton from "../../components/common/ProfileButton";
 import Button from "../../components/common/Button";
 import WordCard from "../../components/common/learning/WordCard";
-import { useProfile } from "../../contexts/ProfileContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { NavigationAlert } from "../../components/navigation/NavigationAlert";
@@ -109,7 +107,6 @@ const WordSelectScreen: React.FC = () => {
   const themeId = route.params?.themeId || "1";
 
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
-  const { isProfileModalOpen } = useProfile();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
 
@@ -136,37 +133,6 @@ const WordSelectScreen: React.FC = () => {
 
   // 세션 ID를 저장할 상태 추가
   const [sessionId, setSessionId] = useState<number | null>(null);
-
-  // Profile modal animation
-  useEffect(() => {
-    if (isProfileModalOpen) {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(borderRadiusAnim, {
-          toValue: 20,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(borderRadiusAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    }
-  }, [isProfileModalOpen]);
 
   // Lock screen orientation to landscape
   useEffect(() => {
@@ -619,11 +585,12 @@ const WordSelectScreen: React.FC = () => {
             </View>
 
             <View style={styles.headerRight}>
-              <Text style={styles.progressText}>
-                {completedCount}/{totalWords}
-              </Text>
+              <View style={styles.progressIndicator}>
+                <Text style={styles.progressText}>
+                  {completedCount}/{totalWords}
+                </Text>
+              </View>
               <BGMToggleButton style={styles.headerButton} />
-              <ProfileButton style={styles.headerButton} />
             </View>
           </View>
 
@@ -715,10 +682,17 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     fontSize: 40,
   },
+  progressIndicator: {
+    backgroundColor: theme.colors.secondary,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.pill,
+    marginRight: theme.spacing.m,
+  },
   progressText: {
-    ...theme.typography.title,
-    color: theme.colors.primary,
-    marginRight: theme.spacing.l,
+    ...theme.typography.caption,
+    color: "white",
+    fontWeight: "bold",
   },
   headerButton: {
     marginLeft: theme.spacing.m,
