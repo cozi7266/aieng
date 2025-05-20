@@ -18,8 +18,6 @@ import { theme } from "../Theme";
 import BackButton from "../components/navigation/BackButton";
 import LearningThemeCard from "../components/common/learning/LearningThemeCard";
 import BGMToggleButton from "../components/common/BGMToggleButton";
-import ProfileButton from "../components/common/ProfileButton";
-import { useProfile } from "../contexts/ProfileContext";
 import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -47,7 +45,6 @@ type LearningScreenNavigationProp = NativeStackNavigationProp<
 const LearningScreen: React.FC = () => {
   const navigation = useNavigation<LearningScreenNavigationProp>();
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
-  const { isProfileModalOpen } = useProfile();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
   const [numColumns, setNumColumns] = useState(3);
@@ -138,35 +135,6 @@ const LearningScreen: React.FC = () => {
       fetchThemes();
     }, [])
   );
-
-  // 프로필 모달 상태에 따른 애니메이션
-  useEffect(() => {
-    if (isProfileModalOpen) {
-      Animated.timing(scaleAnim, {
-        toValue: 0.9,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      Animated.timing(borderRadiusAnim, {
-        toValue: 20,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    } else {
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      Animated.timing(borderRadiusAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [isProfileModalOpen]);
 
   // 가로 모드로 화면 고정 (태블릿용)
   useEffect(() => {
@@ -285,7 +253,6 @@ const LearningScreen: React.FC = () => {
 
             <View style={styles.headerButtons}>
               <BGMToggleButton style={styles.headerButton} />
-              <ProfileButton style={styles.headerButton} />
             </View>
           </View>
 

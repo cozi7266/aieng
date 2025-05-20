@@ -19,10 +19,8 @@ import * as ScreenOrientation from "expo-screen-orientation";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
 import BGMToggleButton from "../../components/common/BGMToggleButton";
-import ProfileButton from "../../components/common/ProfileButton";
 import Button from "../../components/common/Button";
 import WordCard from "../../components/common/learning/WordCard";
-import { useProfile } from "../../contexts/ProfileContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { NavigationAlert } from "../../components/navigation/NavigationAlert";
@@ -109,7 +107,6 @@ const WordSelectScreen: React.FC = () => {
   const themeId = route.params?.themeId || "1";
 
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
-  const { isProfileModalOpen } = useProfile();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
 
@@ -136,37 +133,6 @@ const WordSelectScreen: React.FC = () => {
 
   // 세션 ID를 저장할 상태 추가
   const [sessionId, setSessionId] = useState<number | null>(null);
-
-  // Profile modal animation
-  useEffect(() => {
-    if (isProfileModalOpen) {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(borderRadiusAnim, {
-          toValue: 20,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(borderRadiusAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
-        }),
-      ]).start();
-    }
-  }, [isProfileModalOpen]);
 
   // Lock screen orientation to landscape
   useEffect(() => {
@@ -512,7 +478,8 @@ const WordSelectScreen: React.FC = () => {
         throw new Error("선택된 자녀 ID가 없습니다.");
       }
 
-      const response = await axios.post<QuizApiResponse>(
+      // 퀴즈 생성 API 호출
+      const quizResponse = await axios.post<QuizApiResponse>(
         `https://www.aieng.co.kr/api/quiz/create/${sessionId}`,
         {},
         {
@@ -526,12 +493,30 @@ const WordSelectScreen: React.FC = () => {
         }
       );
 
-      if (response.data.success) {
+      // 그림책 생성 API 호출
+      const storybookResponse = await axios.post(
+        `https://www.aieng.co.kr/api/books/sessions/${sessionId}/storybook`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // 그림책 생성 응답 로깅
+      console.log("[그림책 생성 응답]", storybookResponse.data);
+
+      if (quizResponse.data.success) {
         // 퀴즈 생성 성공 시 LearningScreen으로 이동
         navigation.navigate("LearningScreen");
       } else {
         const errorMessage =
-          response.data.error?.message || "퀴즈 생성에 실패했습니다.";
+          quizResponse.data.error?.message || "퀴즈 생성에 실패했습니다.";
         NavigationAlert.show({
           title: "퀴즈 생성 실패",
           message: errorMessage,
@@ -540,7 +525,7 @@ const WordSelectScreen: React.FC = () => {
         });
       }
     } catch (error: any) {
-      console.error("퀴즈 생성 실패:", error);
+      console.error("퀴즈/그림책 생성 실패:", error);
       NavigationAlert.show({
         title: "오류",
         message: error.message || "퀴즈 생성 중 오류가 발생했습니다.",
@@ -600,11 +585,12 @@ const WordSelectScreen: React.FC = () => {
             </View>
 
             <View style={styles.headerRight}>
-              <Text style={styles.progressText}>
-                {completedCount}/{totalWords}
-              </Text>
+              <View style={styles.progressIndicator}>
+                <Text style={styles.progressText}>
+                  {completedCount}/{totalWords}
+                </Text>
+              </View>
               <BGMToggleButton style={styles.headerButton} />
-              <ProfileButton style={styles.headerButton} />
             </View>
           </View>
 
@@ -696,10 +682,17 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary,
     fontSize: 40,
   },
+  progressIndicator: {
+    backgroundColor: theme.colors.secondary,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.pill,
+    marginRight: theme.spacing.m,
+  },
   progressText: {
-    ...theme.typography.title,
-    color: theme.colors.primary,
-    marginRight: theme.spacing.l,
+    ...theme.typography.caption,
+    color: "white",
+    fontWeight: "bold",
   },
   headerButton: {
     marginLeft: theme.spacing.m,

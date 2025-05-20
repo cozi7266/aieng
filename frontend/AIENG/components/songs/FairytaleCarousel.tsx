@@ -39,12 +39,12 @@ const FairytaleCarousel: React.FC<FairytaleCarouselProps> = ({
   // Dynamic styles based on screen size
   const dynamicStyles = {
     navigationButton: {
-      width: 60 * scaleFactor,
-      height: 60 * scaleFactor,
-      borderRadius: 30 * scaleFactor,
+      width: 80 * scaleFactor,
+      height: 80 * scaleFactor,
+      borderRadius: 40 * scaleFactor,
     },
     navigationButtonIcon: {
-      fontSize: 24 * scaleFactor,
+      fontSize: 35 * scaleFactor,
     },
     imageContainer: {
       height: height * 0.55,
@@ -78,6 +78,7 @@ const FairytaleCarousel: React.FC<FairytaleCarouselProps> = ({
           styles.navButton,
           styles.prevButton,
           dynamicStyles.navigationButton,
+          currentIndex === 0 && styles.hiddenButton,
         ]}
         onPress={onPrevious}
         disabled={currentIndex === 0}
@@ -85,9 +86,7 @@ const FairytaleCarousel: React.FC<FairytaleCarouselProps> = ({
         <FontAwesome5
           name="chevron-left"
           size={dynamicStyles.navigationButtonIcon.fontSize}
-          color={
-            currentIndex === 0 ? theme.colors.accent : theme.colors.primary
-          }
+          color={theme.colors.background}
         />
       </TouchableOpacity>
 
@@ -121,6 +120,7 @@ const FairytaleCarousel: React.FC<FairytaleCarouselProps> = ({
           styles.navButton,
           styles.nextButton,
           dynamicStyles.navigationButton,
+          currentIndex === pages.length - 1 && styles.hiddenButton,
         ]}
         onPress={onNext}
         disabled={currentIndex === pages.length - 1}
@@ -128,11 +128,7 @@ const FairytaleCarousel: React.FC<FairytaleCarouselProps> = ({
         <FontAwesome5
           name="chevron-right"
           size={dynamicStyles.navigationButtonIcon.fontSize}
-          color={
-            currentIndex === pages.length - 1
-              ? theme.colors.accent
-              : theme.colors.primary
-          }
+          color={theme.colors.background}
         />
       </TouchableOpacity>
     </View>
@@ -158,7 +154,7 @@ const styles = StyleSheet.create({
   navButton: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: theme.colors.primary,
     ...theme.shadows.default,
   },
   prevButton: {
@@ -180,6 +176,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     borderRadius: theme.borderRadius.large,
+  },
+  hiddenButton: {
+    opacity: 0,
   },
 });
 

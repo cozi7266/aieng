@@ -1,5 +1,5 @@
 // screens/SongScreen.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   FlatList,
   Platform,
   SafeAreaView,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -19,6 +20,21 @@ import { RootStackParamList } from "../App";
 import BackButton from "../components/navigation/BackButton";
 import { theme } from "../Theme";
 import { useAudio } from "../contexts/AudioContext";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// axios 기본 설정
+const api = axios.create({
+  baseURL: Platform.select({
+    ios: "http://localhost:8080",
+    android: "http://10.0.2.2:8080", // Android 에뮬레이터용
+  }),
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
 
 // 노래 관련 컴포넌트 임포트
 import SongCard from "../components/songs/SongCard";
@@ -42,6 +58,55 @@ interface Song {
   favorite: boolean;
 }
 
+interface Storybook {
+  storybookId: number;
+  title: string;
+  description: string;
+  coverUrl: string;
+  createdAt: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: Storybook[];
+  error: null | string;
+}
+
+interface SongStatusResponse {
+  success: boolean;
+  data: {
+    status: "NONE" | "REQUESTED" | "IN_PROGRESS" | "READY" | "SAVED" | "FAILED";
+    details: {
+      songId: number | null;
+      sessionId: number;
+      storybookId: number;
+      redisKeyExists: boolean;
+      rdbSaved: boolean;
+      songUrl: string | null;
+      lyricsKo: string | null;
+      lyricsEn: string | null;
+    };
+  };
+  error: null | {
+    code: string;
+    message: string;
+  };
+}
+
+interface SongStatus {
+  status: "NONE" | "REQUESTED" | "IN_PROGRESS" | "READY" | "SAVED" | "FAILED";
+  details: {
+    songId: number | null;
+    sessionId: number;
+    storybookId: number;
+    redisKeyExists: boolean;
+    rdbSaved: boolean;
+    songUrl: string | null;
+    lyricsKo: string | null;
+    lyricsEn: string | null;
+  };
+}
+
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
   const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
@@ -50,6 +115,11 @@ const SongScreen: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
+  const [storybooks, setStorybooks] = useState<Storybook[]>([]);
+  const [currentSongStatus, setCurrentSongStatus] = useState<SongStatus | null>(
+    null
+  );
+  const spinValue = useRef(new Animated.Value(0)).current;
 
   // 반응형 레이아웃을 위한 계산
   const isLandscape = width > height;
@@ -156,8 +226,61 @@ const SongScreen: React.FC = () => {
       );
     };
 
+    const fetchStorybooks = async () => {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
+
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
+
+        console.log("[동화책 목록 요청]");
+
+        const response = await axios.get<ApiResponse>(
+          "https://www.aieng.co.kr/api/books",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Child-Id": selectedChildId,
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          const books = response.data.data;
+          console.log(
+            "[동화책 목록]",
+            books.map((book) => ({
+              id: book.storybookId,
+              title: book.title,
+              coverUrl: book.coverUrl,
+            }))
+          );
+          setStorybooks(books);
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.error("[동화책 목록 조회 실패]", {
+            message: error.response?.data?.error?.message || error.message,
+            status: error.response?.status,
+          });
+        } else {
+          console.error("알 수 없는 에러:", error);
+        }
+      }
+    };
+
     lockOrientation();
     setSongs(mockSongs);
+    fetchStorybooks();
 
     // 첫번째 노래를 기본 선택
     if (mockSongs.length > 0) {
@@ -170,9 +293,112 @@ const SongScreen: React.FC = () => {
     };
   }, []);
 
-  const handleSongPress = (song: Song) => {
-    setCurrentSong(song);
-    // setIsPlaying(true); // 자동 재생 제거
+  useEffect(() => {
+    if (
+      currentSongStatus?.status === "REQUESTED" ||
+      currentSongStatus?.status === "IN_PROGRESS"
+    ) {
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      spinValue.setValue(0);
+    }
+  }, [currentSongStatus?.status]);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  const checkSongStatus = async (sessionId: number, storybookId: number) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      console.log("[동요 상태 확인]", { sessionId, storybookId });
+
+      const response = await axios.get<SongStatusResponse>(
+        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/storybook/${storybookId}/status`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        console.log("[동요 상태]", response.data);
+        return response.data.data;
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 상태 확인에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 상태 확인 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      } else {
+        console.error("알 수 없는 에러:", error);
+      }
+      throw error;
+    }
+  };
+
+  const handleSongPress = async (song: Song) => {
+    try {
+      const sessionId = await AsyncStorage.getItem("currentSessionId");
+
+      if (!sessionId) {
+        console.error("현재 세션 ID가 없습니다.");
+        return;
+      }
+
+      const storybookId = parseInt(song.id);
+
+      console.log("[동요 상태 확인]", {
+        sessionId,
+        storybookId,
+        songId: song.id,
+      });
+
+      const status = await checkSongStatus(parseInt(sessionId), storybookId);
+      console.log("동화/동요 상태:", status);
+
+      setCurrentSong(song);
+      setCurrentSongStatus(status);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
+        console.error("동요 상태 확인 실패:", errorMessage);
+
+        if (error.response?.status === 404) {
+          console.log("학습 세션이 만료되었거나 존재하지 않습니다.");
+        }
+      } else {
+        console.error("알 수 없는 에러:", error);
+      }
+    }
   };
 
   const handleNavigateToStory = (song: Song) => {
@@ -205,9 +431,7 @@ const SongScreen: React.FC = () => {
     setIsRepeat(!isRepeat);
   };
 
-  const handleCreateSong = () => {
-    // 동요 생성 화면으로 이동
-    console.log("Navigate to song creation");
+  const handleNavigateToSettings = () => {
     navigation.navigate("SongSettingScreen");
   };
 
@@ -227,6 +451,82 @@ const SongScreen: React.FC = () => {
     setCurrentSong((prevSong) =>
       prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
     );
+  };
+
+  const handleCreateSong = async () => {
+    if (!currentSong) return;
+
+    try {
+      const sessionId = await AsyncStorage.getItem("currentSessionId");
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!sessionId || !token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      console.log("[동요 생성 요청]", {
+        sessionId,
+        storybookId: currentSong.id,
+      });
+
+      // TODO: 동요 생성 API 호출
+      // const response = await axios.post(...);
+
+      // 임시로 상태만 업데이트
+      setCurrentSongStatus({
+        status: "REQUESTED",
+        details: {
+          songId: null,
+          sessionId: parseInt(sessionId),
+          storybookId: parseInt(currentSong.id),
+          redisKeyExists: false,
+          rdbSaved: false,
+          songUrl: null,
+          lyricsKo: null,
+          lyricsEn: null,
+        },
+      });
+    } catch (error) {
+      console.error("동요 생성 실패:", error);
+    }
+  };
+
+  const handleSaveSong = async () => {
+    if (!currentSong) return;
+
+    try {
+      const sessionId = await AsyncStorage.getItem("currentSessionId");
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!sessionId || !token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      console.log("[동요 저장 요청]", {
+        sessionId,
+        storybookId: currentSong.id,
+      });
+
+      // TODO: 동요 저장 API 호출
+      // const response = await axios.post(...);
+
+      // 임시로 상태만 업데이트
+      setCurrentSongStatus((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: "SAVED",
+          details: {
+            ...prev.details,
+            rdbSaved: true,
+          },
+        };
+      });
+    } catch (error) {
+      console.error("동요 저장 실패:", error);
+    }
   };
 
   const filteredSongs =
@@ -313,9 +613,132 @@ const SongScreen: React.FC = () => {
 
         <View style={styles.headerRight}>
           <CreateSongButton
-            onPress={handleCreateSong}
+            onPress={handleNavigateToSettings}
             scaleFactor={scaleFactor}
           />
+          {/* 테스트용 상태 변경 버튼들 */}
+          <View style={styles.testButtonsContainer}>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "NONE",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>NONE</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "REQUESTED",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>REQUESTED</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "IN_PROGRESS",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>IN_PROGRESS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "READY",
+                  details: {
+                    songId: 1,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: true,
+                    rdbSaved: false,
+                    songUrl: "https://example.com/song.mp3",
+                    lyricsKo: "한글 가사",
+                    lyricsEn: "English lyrics",
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>READY</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "SAVED",
+                  details: {
+                    songId: 1,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: true,
+                    rdbSaved: true,
+                    songUrl: "https://example.com/song.mp3",
+                    lyricsKo: "한글 가사",
+                    lyricsEn: "English lyrics",
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>SAVED</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "FAILED",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>FAILED</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -324,30 +747,65 @@ const SongScreen: React.FC = () => {
         {/* 왼쪽 - 노래 그리드 */}
         <View style={[styles.leftContainer, dynamicStyles.contentPadding]}>
           <FlatList
-            data={filteredSongs}
-            keyExtractor={(item) => item.id}
+            data={storybooks}
+            keyExtractor={(item) => item.storybookId.toString()}
             numColumns={numColumns}
             columnWrapperStyle={{ justifyContent: "flex-start" }}
             renderItem={({ item }) => (
               <SongCard
-                song={item}
-                isActive={currentSong?.id === item.id}
-                isPlaying={false} // 재생 상태 표시 제거
-                onPress={() => handleSongPress(item)}
-                onStoryPress={() => handleNavigateToStory(item)}
+                song={{
+                  id: item.storybookId.toString(),
+                  title: item.title,
+                  artist: "동화",
+                  imageUrl: { uri: item.coverUrl },
+                  audioUrl: require("../assets/sounds/sample.mp3"),
+                  duration: 228,
+                  lyrics: item.description,
+                  favorite: false,
+                }}
+                isActive={currentSong?.id === item.storybookId.toString()}
+                isPlaying={false}
+                onPress={() =>
+                  handleSongPress({
+                    id: item.storybookId.toString(),
+                    title: item.title,
+                    artist: "동화",
+                    imageUrl: { uri: item.coverUrl },
+                    audioUrl: require("../assets/sounds/sample.mp3"),
+                    duration: 228,
+                    lyrics: item.description,
+                    favorite: false,
+                  })
+                }
+                onStoryPress={() =>
+                  handleNavigateToStory({
+                    id: item.storybookId.toString(),
+                    title: item.title,
+                    artist: "동화",
+                    imageUrl: { uri: item.coverUrl },
+                    audioUrl: require("../assets/sounds/sample.mp3"),
+                    duration: 228,
+                    lyrics: item.description,
+                    favorite: false,
+                  })
+                }
                 style={dynamicStyles.songCardSize}
                 scaleFactor={scaleFactor}
+                isStoryButtonEnabled={
+                  currentSongStatus?.status === "SAVED" &&
+                  currentSong?.id === item.storybookId.toString()
+                }
               />
             )}
             contentContainerStyle={styles.songGrid}
           />
         </View>
 
-        {/* 오른쪽 - 현재 노래 및 플레이어 */}
+        {/* 오른쪽 - 현재 선택된 동요 정보 */}
         <View style={[styles.rightContainer, dynamicStyles.contentPadding]}>
           {currentSong ? (
             <>
-              {/* 현재 노래 정보 */}
+              {/* 현재 동요 정보 */}
               <View style={styles.currentSongContainer}>
                 <Image
                   source={currentSong.imageUrl}
@@ -391,18 +849,98 @@ const SongScreen: React.FC = () => {
                 scaleFactor={scaleFactor}
               />
 
-              {/* 뮤직 플레이어 */}
-              <MusicPlayer
-                song={currentSong}
-                isPlaying={isPlaying}
-                isRepeat={isRepeat}
-                onPlayPause={handlePlayPause}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-                onRepeat={handleRepeat}
-                onToggleFavorite={handleToggleFavorite}
-                scaleFactor={scaleFactor}
-              />
+              {/* 동요 상태에 따른 UI 표시 */}
+              {currentSongStatus?.status === "SAVED" ? (
+                <MusicPlayer
+                  song={currentSong}
+                  isPlaying={isPlaying}
+                  isRepeat={isRepeat}
+                  onPlayPause={handlePlayPause}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onRepeat={handleRepeat}
+                  onToggleFavorite={handleToggleFavorite}
+                  scaleFactor={scaleFactor}
+                />
+              ) : (
+                <View style={styles.playerContainer}>
+                  <View style={styles.playerControls}>
+                    <View style={styles.statusContainer}>
+                      <Text style={styles.statusText}>
+                        {currentSongStatus?.status === "REQUESTED" ||
+                        currentSongStatus?.status === "IN_PROGRESS"
+                          ? "동요를 생성하고 있어요..."
+                          : currentSongStatus?.status === "READY"
+                          ? "동요가 생성되었어요!"
+                          : "동요를 생성해주세요"}
+                      </Text>
+                    </View>
+                    {currentSongStatus?.status === "NONE" ||
+                    !currentSongStatus ? (
+                      <TouchableOpacity
+                        style={styles.createSongButton}
+                        onPress={handleCreateSong}
+                      >
+                        <FontAwesome5
+                          name="music"
+                          size={40 * scaleFactor}
+                          color="white"
+                          style={styles.buttonIcon}
+                        />
+                        <Text style={styles.createSongButtonText}>
+                          동요 생성하기
+                        </Text>
+                      </TouchableOpacity>
+                    ) : currentSongStatus?.status === "READY" ? (
+                      <TouchableOpacity
+                        style={styles.createSongButton}
+                        onPress={handleSaveSong}
+                      >
+                        <FontAwesome5
+                          name="save"
+                          size={40 * scaleFactor}
+                          color="white"
+                          style={styles.buttonIcon}
+                        />
+                        <Text style={styles.createSongButtonText}>
+                          저장하기
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.createSongButton, styles.disabledButton]}
+                        disabled={true}
+                      >
+                        <View style={styles.spinnerContainer}>
+                          <Animated.View
+                            style={{
+                              transform: [{ rotate: spin }],
+                              width: 40 * scaleFactor,
+                              height: 40 * scaleFactor,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <FontAwesome5
+                              name="spinner"
+                              size={40 * scaleFactor}
+                              color="white"
+                            />
+                          </Animated.View>
+                        </View>
+                        <Text
+                          style={[
+                            styles.createSongButtonText,
+                            styles.disabledButtonText,
+                          ]}
+                        >
+                          생성 중...
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.noSongContainer}>
@@ -519,6 +1057,81 @@ const styles = StyleSheet.create({
   noSongText: {
     ...theme.typography.subTitle,
     color: theme.colors.subText,
+  },
+  playerContainer: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.m,
+    marginBottom: theme.spacing.l,
+    ...theme.shadows.default,
+  },
+  playerControls: {
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+  },
+  statusContainer: {
+    alignItems: "center",
+    marginBottom: theme.spacing.xs,
+  },
+  statusText: {
+    ...theme.typography.body,
+    color: theme.colors.subText,
+    textAlign: "center",
+    fontSize: theme.typography.body.fontSize * 0.8,
+  },
+  createSongButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.m,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.medium,
+    minWidth: 200,
+    ...theme.shadows.default,
+  },
+  disabledButton: {
+    backgroundColor: theme.colors.subText,
+    opacity: 0.7,
+  },
+  disabledButtonText: {
+    opacity: 0.7,
+  },
+  buttonIcon: {
+    marginRight: theme.spacing.s + 3,
+  },
+  spinningIcon: {
+    marginRight: theme.spacing.s + 3,
+  },
+  createSongButtonText: {
+    ...theme.typography.button,
+    color: "white",
+  },
+  spinnerContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: theme.spacing.s + 3,
+  },
+  testButtonsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+    marginLeft: theme.spacing.m,
+  },
+  testButton: {
+    backgroundColor: theme.colors.accent,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.s,
+    borderRadius: theme.borderRadius.small,
+  },
+  testButtonText: {
+    color: "white",
+    fontSize: 12,
   },
 });
 

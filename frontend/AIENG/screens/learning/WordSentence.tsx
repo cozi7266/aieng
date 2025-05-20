@@ -24,8 +24,6 @@ import { FontAwesome5 } from "@expo/vector-icons";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
 import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
-import BGMToggleButton from "../../components/common/BGMToggleButton";
-import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
@@ -450,17 +448,19 @@ const WordSentenceScreen: React.FC = () => {
     );
 
     return (
-      <Text style={styles.sentenceText}>
-        {parts.map((part, index) =>
-          part.toLowerCase() === sentence.word.toLowerCase() ? (
-            <Text key={index} style={styles.highlightedWord}>
-              {part}
-            </Text>
-          ) : (
-            <Text key={index}>{part}</Text>
-          )
-        )}
-      </Text>
+      <TouchableOpacity onPress={handleCardPlay}>
+        <Text style={styles.sentenceText}>
+          {parts.map((part, index) =>
+            part.toLowerCase() === sentence.word.toLowerCase() ? (
+              <Text key={index} style={styles.highlightedWord}>
+                {part}
+              </Text>
+            ) : (
+              <Text key={index}>{part}</Text>
+            )
+          )}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -503,8 +503,6 @@ const WordSentenceScreen: React.FC = () => {
             onPress={() => setHelpModalVisible(true)}
             style={styles.headerButton}
           />
-          <BGMToggleButton style={styles.headerButton} />
-          <ProfileButton style={styles.headerButton} />
         </View>
       </View>
 

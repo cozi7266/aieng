@@ -20,6 +20,7 @@ interface SongCardProps {
   onStoryPress?: () => void;
   style?: any;
   scaleFactor: number;
+  isStoryButtonEnabled?: boolean;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
@@ -30,6 +31,7 @@ const SongCard: React.FC<SongCardProps> = ({
   onStoryPress,
   style,
   scaleFactor = 1,
+  isStoryButtonEnabled = false,
 }) => {
   return (
     <TouchableOpacity
@@ -49,7 +51,7 @@ const SongCard: React.FC<SongCardProps> = ({
           style={styles.image}
           defaultSource={require("../../assets/icon.png")}
         />
-        {isActive && (
+        {isActive && isStoryButtonEnabled && (
           <View style={styles.overlay}>
             <TouchableOpacity style={styles.storyButton} onPress={onStoryPress}>
               <FontAwesome5 name="book" size={36} color="white" />
