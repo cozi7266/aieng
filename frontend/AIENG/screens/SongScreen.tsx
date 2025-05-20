@@ -331,7 +331,7 @@ const SongScreen: React.FC = () => {
       console.log("[동요 상태 확인]", { sessionId, storybookId });
 
       const response = await axios.get<SongStatusResponse>(
-        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/storybook/${storybookId}/status`,
+        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/status`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -470,25 +470,46 @@ const SongScreen: React.FC = () => {
         storybookId: currentSong.id,
       });
 
-      // TODO: 동요 생성 API 호출
-      // const response = await axios.post(...);
+      const response = await axios.post(
+        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/generate-song`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      // 임시로 상태만 업데이트
-      setCurrentSongStatus({
-        status: "REQUESTED",
-        details: {
-          songId: null,
-          sessionId: parseInt(sessionId),
-          storybookId: parseInt(currentSong.id),
-          redisKeyExists: false,
-          rdbSaved: false,
-          songUrl: null,
-          lyricsKo: null,
-          lyricsEn: null,
-        },
-      });
+      if (response.data.success) {
+        console.log("[동요 생성 요청 성공]");
+        setCurrentSongStatus({
+          status: "REQUESTED",
+          details: {
+            songId: null,
+            sessionId: parseInt(sessionId),
+            storybookId: parseInt(currentSong.id),
+            redisKeyExists: false,
+            rdbSaved: false,
+            songUrl: null,
+            lyricsKo: null,
+            lyricsEn: null,
+          },
+        });
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 생성에 실패했습니다."
+        );
+      }
     } catch (error) {
       console.error("동요 생성 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 생성 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
     }
   };
 
@@ -509,23 +530,47 @@ const SongScreen: React.FC = () => {
         storybookId: currentSong.id,
       });
 
-      // TODO: 동요 저장 API 호출
-      // const response = await axios.post(...);
-
-      // 임시로 상태만 업데이트
-      setCurrentSongStatus((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          status: "SAVED",
-          details: {
-            ...prev.details,
-            rdbSaved: true,
+      const response = await axios.get(
+        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/save-song`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
           },
-        };
-      });
+        }
+      );
+
+      if (response.data.success) {
+        console.log("[동요 저장 성공]", response.data.data);
+        setCurrentSongStatus((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: "SAVED",
+            details: {
+              ...prev.details,
+              songId: response.data.data.song_id,
+              songUrl: response.data.data.song_url,
+              lyricsKo: response.data.data.description,
+              lyricsEn: response.data.data.lyric,
+              rdbSaved: true,
+            },
+          };
+        });
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 저장에 실패했습니다."
+        );
+      }
     } catch (error) {
       console.error("동요 저장 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 저장 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
     }
   };
 
