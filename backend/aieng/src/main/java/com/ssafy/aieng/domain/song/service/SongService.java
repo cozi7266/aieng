@@ -17,6 +17,7 @@ import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.voice.entity.Voice;
+import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
@@ -33,6 +34,7 @@ import com.ssafy.aieng.domain.song.dto.response.SongStatusResponse;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.springframework.web.client.RestTemplate;
 
@@ -47,6 +49,7 @@ public class SongService {
     private final MoodRepository moodRepository;
     private final ChildRepository childRepository;
     private final SessionRepository sessionRepository;
+    private final VoiceRepository voiceRepository;
     private final StorybookRepository storybookRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final SessionService sessionService;
@@ -69,25 +72,32 @@ public class SongService {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // 2-1. 중복 방지
+        // 2-1. 이미 해당 세션으로 동요가 생성된 경우 중복 방지
         if (songRepository.existsBySessionId(sessionId)) {
             throw new CustomException(ErrorCode.DUPLICATE_SONG);
         }
 
-        // 3. 아이에 설정된 분위기 가져오기
+        // 3. 분위기 설정 (없으면 랜덤)
         Mood mood = child.getMood();
         if (mood == null) {
-            throw new CustomException(ErrorCode.MOOD_NOT_FOUND); // 또는 기본값 설정
+            List<Mood> moodList = moodRepository.findAll();
+            if (moodList.isEmpty()) {
+                throw new CustomException(ErrorCode.MOOD_NOT_FOUND);
+            }
+            mood = moodList.get(new Random().nextInt(moodList.size()));
+
         }
 
-        // 4. 아이에 설정된 목소리 가져오기
+        // 4. 목소리 설정 (없으면 기본값 랜덤 선택: ID 1 or 2)
         Voice songVoice = child.getSongVoice();
         if (songVoice == null || songVoice.getName() == null || songVoice.getName().isBlank()) {
-            throw new CustomException(ErrorCode.VOICE_NOT_FOUND);
+            int randomVoiceId = new Random().nextBoolean() ? 1 : 2;
+            songVoice = voiceRepository.findById(randomVoiceId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.VOICE_NOT_FOUND));
         }
-        String voiceName = songVoice.getName();
 
-        // 5. Redis 상태 저장: REQUESTED
+
+        // 5. 상태: REQUESTED
         stringRedisTemplate.opsForValue().set(
                 RedisKeyUtil.getSongStatusKey(sessionId),
                 SongStatus.REQUESTED.name()
@@ -98,7 +108,7 @@ public class SongService {
                 "userId", userId,
                 "sessionId", sessionId,
                 "moodName", mood.getName(),
-                "voiceName", voiceName
+                "voiceName", songVoice.getName()
         );
 
         try {
@@ -110,14 +120,13 @@ public class SongService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<String> entity = new HttpEntity<>(jsonPayload, headers);
 
-            ResponseEntity<String> fastApiResponse = new RestTemplate().postForEntity(
+            ResponseEntity<String> response = new RestTemplate().postForEntity(
                     FASTAPI_URL, entity, String.class
             );
 
-            if (fastApiResponse.getStatusCode().isError()) {
+            if (response.getStatusCode().isError()) {
                 log.error("❌ FastAPI 응답 실패: status={}, body={}",
-                        fastApiResponse.getStatusCodeValue(), fastApiResponse.getBody());
-
+                        response.getStatusCodeValue(), response.getBody());
                 stringRedisTemplate.opsForValue().set(
                         RedisKeyUtil.getSongStatusKey(sessionId),
                         SongStatus.FAILED.name()
@@ -132,8 +141,7 @@ public class SongService {
             );
 
         } catch (Exception e) {
-            log.error("❌ 동요 생성 중 오류 발생", e);
-
+            log.error("❌ FastAPI 호출 중 예외 발생", e);
             stringRedisTemplate.opsForValue().set(
                     RedisKeyUtil.getSongStatusKey(sessionId),
                     SongStatus.FAILED.name()
@@ -141,6 +149,7 @@ public class SongService {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
     // 동요 저장(Redis -> RDB)
