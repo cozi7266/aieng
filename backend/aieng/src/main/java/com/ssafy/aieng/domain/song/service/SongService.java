@@ -280,58 +280,74 @@ public class SongService {
     }
 
     // 동요 생성 상태 조회
+    // 동요 생성 상태 조회
     @Transactional(readOnly = true)
     public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
-        // 1. 자녀 검증
+        // 1~3. 자녀, 세션, 그림책 검증 (생략하지 않고 실제 코드에는 있어야 함)
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 2. 세션 검증
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (!session.getChild().getId().equals(childId)) {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        // 3. 그림책 검증
         Storybook storybook = storybookRepository.findById(storybookId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
         if (!storybook.getChild().getId().equals(childId)) {
             throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
         }
 
-        // 4. Redis 키 (sessionId + storybookId 조합 사용)
+        // 4. Redis 키 설정
         String redisStatusKey = RedisKeyUtil.getSongStatusKey(sessionId, storybookId);
-        String redisGeneratedKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId, storybookId);
+        String redisGeneratedKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId); // FastAPI가 여전히 이 키 사용 중
+
+        log.info("📌 Redis 상태 키: {}", redisStatusKey);
+        log.info("📌 Redis 생성 결과 키: {}", redisGeneratedKey);
 
         // 5. 상태 조회
         String statusStr = stringRedisTemplate.opsForValue().get(redisStatusKey);
+        log.info("📥 조회된 상태 문자열: {}", statusStr);
         SongStatus status = (statusStr != null) ? SongStatus.valueOf(statusStr) : SongStatus.NONE;
 
-        // 6. DB 저장 여부 확인
+        // 6. 보정: 결과가 존재하는데 상태가 IN_PROGRESS이면 READY로 보정
+        boolean redisKeyExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisGeneratedKey));
+        if (status == SongStatus.IN_PROGRESS && redisKeyExists) {
+            status = SongStatus.READY;
+            stringRedisTemplate.opsForValue().set(redisStatusKey, SongStatus.READY.name());
+            log.info("✅ 상태 보정: IN_PROGRESS → READY (결과 키 존재)");
+        }
+
+        // 7. RDB 확인
         boolean rdbSaved = songRepository.existsByStorybookId(storybookId);
         Song song = songRepository.findByStorybookId(storybookId).orElse(null);
+        log.info("🗃️ RDB 저장 여부: {}, songId: {}", rdbSaved, (song != null ? song.getId() : null));
 
-        // 7. Redis 결과 조회 (READY 또는 SAVED 상태인 경우만)
-        boolean redisKeyExists = false;
+        // 8. Redis 결과 파싱 (READY 또는 SAVED인 경우)
         String songUrl = null;
         String lyricsKo = null;
         String lyricsEn = null;
 
-        if (status == SongStatus.READY || status == SongStatus.SAVED) {
-            redisKeyExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisGeneratedKey));
-            if (redisKeyExists) {
-                Map<Object, Object> redisData = stringRedisTemplate.opsForHash().entries(redisGeneratedKey);
-                songUrl = (String) redisData.getOrDefault("song_url", null);
-                lyricsKo = (String) redisData.getOrDefault("lyrics_ko", null);
-                lyricsEn = (String) redisData.getOrDefault("lyrics_en", null);
+        if ((status == SongStatus.READY || status == SongStatus.SAVED) && redisKeyExists) {
+            try {
+                String resultJson = stringRedisTemplate.opsForValue().get(redisGeneratedKey);
+                log.info("🎶 Redis 결과 JSON: {}", resultJson);
+
+                JsonNode jsonNode = new ObjectMapper().readTree(resultJson);
+                songUrl = jsonNode.path("song_url").asText(null);
+                lyricsKo = jsonNode.path("lyrics_ko").asText(null);
+                lyricsEn = jsonNode.path("lyrics_en").asText(null);
+
+            } catch (Exception e) {
+                log.error("❌ Redis 동요 결과 파싱 실패", e);
             }
         }
 
-        // 8. 상태 DTO 구성 후 반환
+        // 9. 응답 DTO 구성
         SongStatusDetail detail = new SongStatusDetail(
                 (song != null ? song.getId() : null),
                 sessionId,
@@ -345,6 +361,7 @@ public class SongService {
 
         return SongStatusResponse.of(status.name(), detail);
     }
+
 
 
 
