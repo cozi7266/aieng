@@ -45,4 +45,8 @@ public class Storybook extends BaseEntity {
         this.learningStorybooks.add(learningStorybook);
         learningStorybook.setStorybook(this); // 양방향 유지
     }
+
+
+
+
 }
