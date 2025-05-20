@@ -431,6 +431,28 @@ const SongScreen: React.FC = () => {
     setIsRepeat(!isRepeat);
   };
 
+  const handleNavigateToSettings = () => {
+    navigation.navigate("SongSettingScreen");
+  };
+
+  const handleToggleFavorite = () => {
+    if (!currentSong) return;
+
+    // 즐겨찾기 상태 토글
+    setSongs((prevSongs) =>
+      prevSongs.map((song) =>
+        song.id === currentSong.id
+          ? { ...song, favorite: !song.favorite }
+          : song
+      )
+    );
+
+    // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
+    setCurrentSong((prevSong) =>
+      prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
+    );
+  };
+
   const handleCreateSong = async () => {
     if (!currentSong) return;
 
@@ -505,24 +527,6 @@ const SongScreen: React.FC = () => {
     } catch (error) {
       console.error("동요 저장 실패:", error);
     }
-  };
-
-  const handleToggleFavorite = () => {
-    if (!currentSong) return;
-
-    // 즐겨찾기 상태 토글
-    setSongs((prevSongs) =>
-      prevSongs.map((song) =>
-        song.id === currentSong.id
-          ? { ...song, favorite: !song.favorite }
-          : song
-      )
-    );
-
-    // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
-    setCurrentSong((prevSong) =>
-      prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
-    );
   };
 
   const filteredSongs =
@@ -609,9 +613,132 @@ const SongScreen: React.FC = () => {
 
         <View style={styles.headerRight}>
           <CreateSongButton
-            onPress={handleCreateSong}
+            onPress={handleNavigateToSettings}
             scaleFactor={scaleFactor}
           />
+          {/* 테스트용 상태 변경 버튼들 */}
+          <View style={styles.testButtonsContainer}>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "NONE",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>NONE</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "REQUESTED",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>REQUESTED</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "IN_PROGRESS",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>IN_PROGRESS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "READY",
+                  details: {
+                    songId: 1,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: true,
+                    rdbSaved: false,
+                    songUrl: "https://example.com/song.mp3",
+                    lyricsKo: "한글 가사",
+                    lyricsEn: "English lyrics",
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>READY</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "SAVED",
+                  details: {
+                    songId: 1,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: true,
+                    rdbSaved: true,
+                    songUrl: "https://example.com/song.mp3",
+                    lyricsKo: "한글 가사",
+                    lyricsEn: "English lyrics",
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>SAVED</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={() => {
+                setCurrentSongStatus({
+                  status: "FAILED",
+                  details: {
+                    songId: null,
+                    sessionId: 1,
+                    storybookId: parseInt(currentSong?.id || "0"),
+                    redisKeyExists: false,
+                    rdbSaved: false,
+                    songUrl: null,
+                    lyricsKo: null,
+                    lyricsEn: null,
+                  },
+                });
+              }}
+            >
+              <Text style={styles.testButtonText}>FAILED</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -664,6 +791,10 @@ const SongScreen: React.FC = () => {
                 }
                 style={dynamicStyles.songCardSize}
                 scaleFactor={scaleFactor}
+                isStoryButtonEnabled={
+                  currentSongStatus?.status === "SAVED" &&
+                  currentSong?.id === item.storybookId.toString()
+                }
               />
             )}
             contentContainerStyle={styles.songGrid}
@@ -984,6 +1115,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: theme.spacing.s + 3,
+  },
+  testButtonsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+    marginLeft: theme.spacing.m,
+  },
+  testButton: {
+    backgroundColor: theme.colors.accent,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.s,
+    borderRadius: theme.borderRadius.small,
+  },
+  testButtonText: {
+    color: "white",
+    fontSize: 12,
   },
 });
 
