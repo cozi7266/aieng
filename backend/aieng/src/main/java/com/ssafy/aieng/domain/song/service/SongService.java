@@ -54,7 +54,7 @@ public class SongService {
     private final ChildRepository childRepository;
     private final SessionRepository sessionRepository;
     private final VoiceRepository voiceRepository;
-    private StorybookRepository storybookRepository;
+    private final StorybookRepository storybookRepository;
     private final LikedSongRepository likedSongRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final SessionService sessionService;
@@ -257,6 +257,7 @@ public class SongService {
     }
 
     // 동요 상세
+    @Transactional(readOnly = true)
     public SongDetailResponseDto getSongDetail(Integer userId, Integer childId, Integer songId) {
         // Song 조회
         Song song = songRepository.findById(songId)
@@ -292,7 +293,6 @@ public class SongService {
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
 
-        // 🔥 더 이상 그림책과 연결되어 있지 않으므로 소유 검증 생략
 
         // 3. Soft Delete 처리
         song.softDelete();
