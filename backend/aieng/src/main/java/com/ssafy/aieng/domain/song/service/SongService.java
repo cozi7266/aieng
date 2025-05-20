@@ -12,7 +12,6 @@ import com.ssafy.aieng.domain.song.dto.response.*;
 import com.ssafy.aieng.domain.song.entity.Song;
 import com.ssafy.aieng.domain.song.entity.SongStatus;
 import com.ssafy.aieng.domain.song.repository.SongRepository;
-import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.domain.book.entity.Storybook;
 import com.ssafy.aieng.domain.book.repository.StorybookRepository;
 import com.ssafy.aieng.domain.child.entity.Child;
@@ -58,34 +57,51 @@ public class SongService {
     // 동요 생성
     @Transactional
     public void generateSong(Integer userId, Integer childId, Integer sessionId, SongGenerateRequestDto requestDto) {
+        // 1. 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
+        // 2. 세션 검증
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (!session.getChild().getId().equals(childId)) {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
+        // ✅ 2-1. 이미 해당 세션으로 동요가 생성된 경우 중복 방지
+        if (songRepository.existsBySessionId(sessionId)) {
+            throw new CustomException(ErrorCode.DUPLICATE_SONG);
+        }
+
+        // 3. Mood 조회
         Mood mood = moodRepository.findById(requestDto.getMoodId())
                 .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
+        // 4. Voice 유효성 체크
         String voiceName = requestDto.getInputVoice();
         if (voiceName == null || voiceName.isBlank()) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        Integer storybookId = requestDto.getStorybookId();
+        // ✅ 5. 그림책 자동 생성 (DB에는 저장하지만 Redis 키에는 사용하지 않음)
+        Storybook storybook = Storybook.builder()
+                .child(child)
+                .coverUrl("https://aieng.s3.ap-northeast-2.amazonaws.com/default_cover.png")
+                .title("AI Generated Storybook")
+                .description("동요 생성을 위한 자동 생성 그림책입니다.")
+                .build();
+        storybookRepository.save(storybook);
 
-        // 상태: REQUESTED
+        // ✅ 6. 상태: REQUESTED
         stringRedisTemplate.opsForValue().set(
-                RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
+                RedisKeyUtil.getSongStatusKey(sessionId),
                 SongStatus.REQUESTED.name()
         );
 
+        // 7. FastAPI 요청 전송
         Map<String, Object> fastApiRequest = Map.of(
                 "userId", userId,
                 "sessionId", sessionId,
@@ -111,7 +127,7 @@ public class SongService {
                         fastApiResponse.getStatusCodeValue(), fastApiResponse.getBody());
 
                 stringRedisTemplate.opsForValue().set(
-                        RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
+                        RedisKeyUtil.getSongStatusKey(sessionId),
                         SongStatus.FAILED.name()
                 );
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -119,9 +135,9 @@ public class SongService {
 
             log.info("🎵 동요 생성 요청 성공");
 
-            // 상태: IN_PROGRESS
+            // ✅ 상태: IN_PROGRESS
             stringRedisTemplate.opsForValue().set(
-                    RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
+                    RedisKeyUtil.getSongStatusKey(sessionId),
                     SongStatus.IN_PROGRESS.name()
             );
 
@@ -129,41 +145,37 @@ public class SongService {
             log.error("❌ 동요 생성 중 오류 발생", e);
 
             stringRedisTemplate.opsForValue().set(
-                    RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
+                    RedisKeyUtil.getSongStatusKey(sessionId),
                     SongStatus.FAILED.name()
             );
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 
-
-
     // 동요 저장(Redis -> RDB)
     @Transactional
-    public SongGenerateResponseDto getGeneratedSong(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
+    public SongGenerateResponseDto getGeneratedSong(Integer userId, Integer childId, Integer sessionId) {
+        // 1. 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
+        // 2. 세션 검증
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (!session.getChild().getId().equals(childId)) {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        Storybook storybook = storybookRepository.findById(storybookId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
-        if (!storybook.getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
-        }
-
-        if (songRepository.existsByStorybookId(storybookId)) {
+        // ✅ 2-1. 이미 해당 세션으로 동요가 저장된 경우 중복 방지
+        if (songRepository.existsBySessionId(sessionId)) {
             throw new CustomException(ErrorCode.DUPLICATE_SONG);
         }
 
-        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId, storybookId);
+        // 3. Redis 결과 조회
+        String redisKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId);
         String resultJson = stringRedisTemplate.opsForValue().get(redisKey);
         if (resultJson == null) {
             throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
@@ -176,34 +188,41 @@ public class SongService {
             String songUrl = json.path("song_url").asText(null);
             String moodName = json.path("mood").asText(null);
             String voiceName = json.path("voice").asText(null);
+            String title = json.path("title").asText("AI Generated Song"); // ✅ 없으면 기본값
 
             if (lyricsEn == null || lyricsKo == null || songUrl == null || moodName == null || voiceName == null) {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
 
+            // 4. Mood 엔티티 조회
             Mood mood = moodRepository.findByName(moodName)
                     .orElseThrow(() -> new CustomException(ErrorCode.MOOD_NOT_FOUND));
 
+            // 5. Song 저장 (🎯 핵심: Session과 연결)
             Song song = Song.builder()
-                    .storybook(storybook)
                     .mood(mood)
-                    .title("AI Generated Song")
+                    .title(title)
                     .lyric(lyricsEn)
                     .description(lyricsKo)
                     .songUrl(songUrl)
+                    .session(session)
                     .build();
 
             songRepository.save(song);
 
+            // 6. 상태 업데이트
             stringRedisTemplate.opsForValue().set(
-                    RedisKeyUtil.getSongStatusKey(sessionId, storybookId),
+                    RedisKeyUtil.getSongStatusKey(sessionId),
                     SongStatus.SAVED.name()
             );
 
+            // 7. 세션 종료 및 새로운 세션 생성
             session.markSongDoneAndFinish();
             session.finish();
 
-            CreateSessionResponse newSession = sessionService.forceCreateNewSession(userId, childId, session.getTheme().getId());
+            CreateSessionResponse newSession = sessionService.forceCreateNewSession(
+                    userId, childId, session.getTheme().getId()
+            );
 
             return SongGenerateResponseDto.of(song, newSession.getSessionId());
 
@@ -217,6 +236,8 @@ public class SongService {
     }
 
 
+
+
     // 동요 목록 조회
     @Transactional(readOnly = true)
     public SongResponseList getSongsByChild(Integer userId, Integer childId) {
@@ -227,16 +248,16 @@ public class SongService {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 동요 목록 조회
-        List<Song> songs = songRepository.findAllByStorybookChildIdOrderByCreatedAtDesc(childId);
+        // 자녀의 세션을 기준으로 동요 목록 조회
+        List<Song> songs = songRepository.findAllBySession_Child_IdOrderByCreatedAtDesc(childId);
 
         return SongResponseList.of(childId, songs);
     }
 
-    // 동요 상세 조회
+
     @Transactional(readOnly = true)
     public SongDetailResponseDto getSongDetail(Integer userId, Integer childId, Integer songId) {
-        // 자녀 검증
+        // 자녀 조회 + 소유자 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
@@ -246,88 +267,80 @@ public class SongService {
         // 동요 조회
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
-        if (!song.getStorybook().getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
+
+        // 소유권 검증: 동요의 세션을 통해 자녀 확인
+        if (!song.getSession().getChild().getId().equals(childId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 그림책 정보 가져오기
-        Storybook storybook = song.getStorybook();
-
-        return SongDetailResponseDto.from(song, storybook);
+        // 응답 구성
+        return SongDetailResponseDto.from(song);
     }
 
     // 동요 삭제(Soft Delete)
     @Transactional
     public void deleteSong(Integer userId, Integer childId, Integer songId) {
-        // 자녀 검증
+        // 1. 자녀 소유자 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        // 동요 조회
+        // 2. 동요 조회
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
 
-        // 자녀의 그림책 소유 여부 검증
-        if (!song.getStorybook().getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
-        }
+        // 🔥 더 이상 그림책과 연결되어 있지 않으므로 소유 검증 생략
 
-        // 소프트 딜리트 처리
+        // 3. Soft Delete 처리
         song.softDelete();
     }
 
-    // 동요 생성 상태 조회
+
     // 동요 생성 상태 조회
     @Transactional(readOnly = true)
     public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
-        // 1~3. 자녀, 세션, 그림책 검증 (생략하지 않고 실제 코드에는 있어야 함)
+        // 1. 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
+        // 2. 세션 검증
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
         if (!session.getChild().getId().equals(childId)) {
             throw new CustomException(ErrorCode.INVALID_SESSION_ACCESS);
         }
 
-        Storybook storybook = storybookRepository.findById(storybookId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORYBOOK_NOT_FOUND));
-        if (!storybook.getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
-        }
+        // ✅ 3. Redis 키: session 기준으로 조회
+        String redisStatusKey = RedisKeyUtil.getSongStatusKey(sessionId);
+        String redisGeneratedKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId);
 
-        // 4. Redis 키 설정
-        String redisStatusKey = RedisKeyUtil.getSongStatusKey(sessionId, storybookId);
-        String redisGeneratedKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId); // FastAPI가 여전히 이 키 사용 중
+        log.info("\uD83D\uDCCC Redis 상태 키: {}", redisStatusKey);
+        log.info("\uD83D\uDCCC Redis 결과 키: {}", redisGeneratedKey);
 
-        log.info("📌 Redis 상태 키: {}", redisStatusKey);
-        log.info("📌 Redis 생성 결과 키: {}", redisGeneratedKey);
-
-        // 5. 상태 조회
+        // ✅ 4. 상태 조회
         String statusStr = stringRedisTemplate.opsForValue().get(redisStatusKey);
-        log.info("📥 조회된 상태 문자열: {}", statusStr);
+        log.info("\uD83D\uDCE5 조회된 상태 문자열: {}", statusStr);
         SongStatus status = (statusStr != null) ? SongStatus.valueOf(statusStr) : SongStatus.NONE;
 
-        // 6. 보정: 결과가 존재하는데 상태가 IN_PROGRESS이면 READY로 보정
+        // ✅ 5. 보정
         boolean redisKeyExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisGeneratedKey));
         if (status == SongStatus.IN_PROGRESS && redisKeyExists) {
             status = SongStatus.READY;
             stringRedisTemplate.opsForValue().set(redisStatusKey, SongStatus.READY.name());
-            log.info("✅ 상태 보정: IN_PROGRESS → READY (결과 키 존재)");
+            log.info("\u2705 상태 보정: IN_PROGRESS \u2192 READY (결과 키 존재)");
         }
 
-        // 7. RDB 확인
-        boolean rdbSaved = songRepository.existsByStorybookId(storybookId);
-        Song song = songRepository.findByStorybookId(storybookId).orElse(null);
-        log.info("🗃️ RDB 저장 여부: {}, songId: {}", rdbSaved, (song != null ? song.getId() : null));
+        // ✅ 6. RDB 조회 - session 기준
+        boolean rdbSaved = songRepository.existsBySessionId(sessionId);
+        Song song = songRepository.findBySessionId(sessionId).orElse(null);
+        log.info("\uD83D\uDDC3️ RDB 저장 여부: {}, songId: {}", rdbSaved, (song != null ? song.getId() : null));
 
-        // 8. Redis 결과 파싱 (READY 또는 SAVED인 경우)
+        // ✅ 7. Redis 결과
         String songUrl = null;
         String lyricsKo = null;
         String lyricsEn = null;
@@ -335,7 +348,7 @@ public class SongService {
         if ((status == SongStatus.READY || status == SongStatus.SAVED) && redisKeyExists) {
             try {
                 String resultJson = stringRedisTemplate.opsForValue().get(redisGeneratedKey);
-                log.info("🎶 Redis 결과 JSON: {}", resultJson);
+                log.info("\uD83C\uDFB6 Redis 결과 JSON: {}", resultJson);
 
                 JsonNode jsonNode = new ObjectMapper().readTree(resultJson);
                 songUrl = jsonNode.path("song_url").asText(null);
@@ -343,11 +356,11 @@ public class SongService {
                 lyricsEn = jsonNode.path("lyrics_en").asText(null);
 
             } catch (Exception e) {
-                log.error("❌ Redis 동요 결과 파싱 실패", e);
+                log.error("\u274C Redis 동요 결과 파싱 실패", e);
             }
         }
 
-        // 9. 응답 DTO 구성
+        // ✅ 8. DTO 반환 (storybookId는 단순 전달용)
         SongStatusDetail detail = new SongStatusDetail(
                 (song != null ? song.getId() : null),
                 sessionId,
@@ -361,8 +374,6 @@ public class SongService {
 
         return SongStatusResponse.of(status.name(), detail);
     }
-
-
 
 
 }
