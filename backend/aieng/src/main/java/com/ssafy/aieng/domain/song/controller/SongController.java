@@ -90,5 +90,35 @@ public class SongController {
         return ApiResponse.success(status);
     }
 
+    // 좋아요 등록, 취소
+    @PostMapping("/{songId}/like-toggle")
+    public ResponseEntity<ApiResponse<Boolean>> toggleLikeSong(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer songId
+    ) {
+        boolean liked = songService.toggleLikeSong(user.getId(), childId, songId);
+        return ApiResponse.success(liked); // true: 찜됨, false: 찜 취소됨
+    }
 
+    // 해당 동요 찜여부 확인
+    @GetMapping("/{songId}/like")
+    public ResponseEntity<ApiResponse<Boolean>> isSongLiked(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer songId
+    ) {
+        boolean liked = songService.isSongLiked(user.getId(), childId, songId);
+        return ApiResponse.success(liked);
+    }
+
+    // 찜한 동요 목록 확인
+    @GetMapping("/likes")
+    public ResponseEntity<ApiResponse<SongResponseList>> getLikedSongs(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId
+    ) {
+        SongResponseList response = songService.getLikedSongs(user.getId(), childId);
+        return ApiResponse.success(response);
+    }
 }

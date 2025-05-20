@@ -40,8 +40,11 @@ public class Song extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private SongStatus status;
 
+    @Column(name = "duration")
+    private Integer duration;
+
     @Builder
-    public Song(Session session, Mood mood, String title, String lyric, String description, String songUrl) {
+    public Song(Session session, Mood mood, String title, String lyric, String description, String songUrl, Integer duration) {
         this.session = session;
         this.mood = mood;
         this.title = title;
@@ -49,6 +52,8 @@ public class Song extends BaseEntity {
         this.description = description;
         this.songUrl = songUrl;
         this.status = SongStatus.SAVED;
+        this.duration = duration;
     }
+
 
 } 
