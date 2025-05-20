@@ -16,6 +16,7 @@ public interface LikedSongRepository extends JpaRepository<LikedSong, Integer> {
 
     boolean existsByChildAndSong(Child child, Song song);
 
-
     List<LikedSong> findAllByChild(Child child);
+
+    boolean existsByChildIdAndSongId(Integer childId, Integer songId);
 }
