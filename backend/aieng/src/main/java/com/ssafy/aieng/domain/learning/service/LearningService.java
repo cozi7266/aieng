@@ -130,7 +130,7 @@ public class LearningService {
             HttpEntity<GenerateContentRequest> entity = new HttpEntity<>(request, headers);
 
             restTemplate.postForEntity(
-                    "https://www.aieng.co.kr/fastapi/words/",
+                    "http://175.121.93.70:51528/words/",
                     entity,
                     String.class
             );
