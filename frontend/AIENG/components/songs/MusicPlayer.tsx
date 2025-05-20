@@ -26,6 +26,7 @@ interface MusicPlayerProps {
   onRepeat: () => void;
   onToggleFavorite: () => void;
   scaleFactor: number;
+  variant?: "song" | "fairytale";
 }
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({
@@ -38,6 +39,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   onRepeat,
   onToggleFavorite,
   scaleFactor = 1,
+  variant = "song",
 }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [sliderValue, setSliderValue] = useState<number[]>([0]);
@@ -244,7 +246,10 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
       <View style={styles.timeContainer}>
         <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
         <Slider
-          containerStyle={{ width: "85%", paddingHorizontal: 10 }}
+          containerStyle={{
+            width: variant === "fairytale" ? "85%" : "70%",
+            paddingHorizontal: 10,
+          }}
           value={sliderValue}
           onValueChange={handleSliderValueChange}
           minimumValue={0}
