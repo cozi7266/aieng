@@ -55,7 +55,7 @@ class WordService:
             }
 
             self.redis.set(redis_key, json.dumps(redis_value))
-            self.redis.expire(redis_key, 3600)
+            self.redis.expire(redis_key, 86400)
             logger.info(f"[Redis 저장 완료] key={redis_key}")
 
             # 5. 응답 반환
