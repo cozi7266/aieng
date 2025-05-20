@@ -257,6 +257,7 @@ public class SongService {
     }
 
     // 동요 상세
+    @Transactional(readOnly = true)
     public SongDetailResponseDto getSongDetail(Integer userId, Integer childId, Integer songId) {
         // Song 조회
         Song song = songRepository.findById(songId)
