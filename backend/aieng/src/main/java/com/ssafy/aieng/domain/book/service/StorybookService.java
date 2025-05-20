@@ -31,6 +31,24 @@ public class StorybookService {
     private final SessionRepository sessionRepository;
     private final CustomAuthentication customAuthentication;
 
+
+    private static final List<String> TITLE_TEMPLATES = List.of(
+            "%s의 첫 그림책",
+            "%s의 특별한 동화",
+            "%s의 상상력이 담긴 이야기",
+            "%s와 함께 떠나는 모험",
+            "%s가 직접 만든 동화책"
+    );
+
+
+    private static final List<String> DESCRIPTION_TEMPLATES = List.of(
+            "%s의 학습 기록을 바탕으로 만들어진 이야기입니다.",
+            "오늘(%s)의 멋진 배움을 담았어요.",
+            "학습한 단어로 %s만의 이야기를 만들어 보았어요.",
+            "잊지 못할 %s의 하루를 담은 그림책입니다.",
+            "%s의 머릿속 상상을 펼쳐 보았어요!"
+    );
+
     private static final String DEFAULT_IMAGE_URL =
             "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Sample_User_Icon.png/480px-Sample_User_Icon.png";
 
@@ -70,6 +88,7 @@ public class StorybookService {
         // 5. Storybook 생성
         Storybook storybook = Storybook.builder()
                 .child(session.getChild())
+                .session(session)
                 .title(title)
                 .description(description)
                 .coverUrl(coverUrl)
@@ -125,7 +144,6 @@ public class StorybookService {
         storybook.softDelete();
         storybookRepository.save(storybook);
     }
-
 
 
 }
