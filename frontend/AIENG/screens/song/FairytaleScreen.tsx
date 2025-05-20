@@ -419,6 +419,7 @@ const FairytaleScreen: React.FC = () => {
               onRepeat={handleRepeat}
               onToggleFavorite={handleToggleFavorite}
               scaleFactor={scaleFactor}
+              variant="fairytale"
             />
           )}
         </View>

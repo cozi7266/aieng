@@ -1,5 +1,5 @@
 // screens/SongScreen.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   FlatList,
   Platform,
   SafeAreaView,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -74,18 +75,36 @@ interface ApiResponse {
 interface SongStatusResponse {
   success: boolean;
   data: {
-    storybookCreated: boolean;
-    songStatus: "CREATED" | "GENERATING" | "FAILED";
-  } | null;
-  error: {
+    status: "NONE" | "REQUESTED" | "IN_PROGRESS" | "READY" | "SAVED" | "FAILED";
+    details: {
+      songId: number | null;
+      sessionId: number;
+      storybookId: number;
+      redisKeyExists: boolean;
+      rdbSaved: boolean;
+      songUrl: string | null;
+      lyricsKo: string | null;
+      lyricsEn: string | null;
+    };
+  };
+  error: null | {
     code: string;
     message: string;
-  } | null;
+  };
 }
 
 interface SongStatus {
-  storybookCreated: boolean;
-  songStatus: "CREATED" | "GENERATING" | "FAILED";
+  status: "NONE" | "REQUESTED" | "IN_PROGRESS" | "READY" | "SAVED" | "FAILED";
+  details: {
+    songId: number | null;
+    sessionId: number;
+    storybookId: number;
+    redisKeyExists: boolean;
+    rdbSaved: boolean;
+    songUrl: string | null;
+    lyricsKo: string | null;
+    lyricsEn: string | null;
+  };
 }
 
 const SongScreen: React.FC = () => {
@@ -100,6 +119,7 @@ const SongScreen: React.FC = () => {
   const [currentSongStatus, setCurrentSongStatus] = useState<SongStatus | null>(
     null
   );
+  const spinValue = useRef(new Animated.Value(0)).current;
 
   // 반응형 레이아웃을 위한 계산
   const isLandscape = width > height;
@@ -273,6 +293,28 @@ const SongScreen: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (
+      currentSongStatus?.status === "REQUESTED" ||
+      currentSongStatus?.status === "IN_PROGRESS"
+    ) {
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      spinValue.setValue(0);
+    }
+  }, [currentSongStatus?.status]);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
   const checkSongStatus = async (sessionId: number, storybookId: number) => {
     try {
       const token = await AsyncStorage.getItem("accessToken");
@@ -302,8 +344,7 @@ const SongScreen: React.FC = () => {
       );
 
       if (response.data.success) {
-        const { storybookCreated, songStatus } = response.data.data!;
-        console.log("[동요 상태]", { storybookCreated, songStatus });
+        console.log("[동요 상태]", response.data);
         return response.data.data;
       } else {
         throw new Error(
@@ -412,11 +453,57 @@ const SongScreen: React.FC = () => {
 
       // 임시로 상태만 업데이트
       setCurrentSongStatus({
-        storybookCreated: true,
-        songStatus: "GENERATING",
+        status: "REQUESTED",
+        details: {
+          songId: null,
+          sessionId: parseInt(sessionId),
+          storybookId: parseInt(currentSong.id),
+          redisKeyExists: false,
+          rdbSaved: false,
+          songUrl: null,
+          lyricsKo: null,
+          lyricsEn: null,
+        },
       });
     } catch (error) {
       console.error("동요 생성 실패:", error);
+    }
+  };
+
+  const handleSaveSong = async () => {
+    if (!currentSong) return;
+
+    try {
+      const sessionId = await AsyncStorage.getItem("currentSessionId");
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!sessionId || !token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      console.log("[동요 저장 요청]", {
+        sessionId,
+        storybookId: currentSong.id,
+      });
+
+      // TODO: 동요 저장 API 호출
+      // const response = await axios.post(...);
+
+      // 임시로 상태만 업데이트
+      setCurrentSongStatus((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: "SAVED",
+          details: {
+            ...prev.details,
+            rdbSaved: true,
+          },
+        };
+      });
+    } catch (error) {
+      console.error("동요 저장 실패:", error);
     }
   };
 
@@ -632,7 +719,7 @@ const SongScreen: React.FC = () => {
               />
 
               {/* 동요 상태에 따른 UI 표시 */}
-              {currentSongStatus?.songStatus === "CREATED" ? (
+              {currentSongStatus?.status === "SAVED" ? (
                 <MusicPlayer
                   song={currentSong}
                   isPlaying={isPlaying}
@@ -649,46 +736,77 @@ const SongScreen: React.FC = () => {
                   <View style={styles.playerControls}>
                     <View style={styles.statusContainer}>
                       <Text style={styles.statusText}>
-                        {currentSongStatus?.songStatus === "GENERATING"
+                        {currentSongStatus?.status === "REQUESTED" ||
+                        currentSongStatus?.status === "IN_PROGRESS"
                           ? "동요를 생성하고 있어요..."
+                          : currentSongStatus?.status === "READY"
+                          ? "동요가 생성되었어요!"
                           : "동요를 생성해주세요"}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.createSongButton,
-                        currentSongStatus?.songStatus === "GENERATING" &&
-                          styles.disabledButton,
-                      ]}
-                      onPress={handleCreateSong}
-                      disabled={currentSongStatus?.songStatus === "GENERATING"}
-                    >
-                      <FontAwesome5
-                        name={
-                          currentSongStatus?.songStatus === "GENERATING"
-                            ? "spinner"
-                            : "music"
-                        }
-                        size={40 * scaleFactor}
-                        color="white"
-                        style={[
-                          styles.buttonIcon,
-                          currentSongStatus?.songStatus === "GENERATING" &&
-                            styles.spinningIcon,
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.createSongButtonText,
-                          currentSongStatus?.songStatus === "GENERATING" &&
-                            styles.disabledButtonText,
-                        ]}
+                    {currentSongStatus?.status === "NONE" ||
+                    !currentSongStatus ? (
+                      <TouchableOpacity
+                        style={styles.createSongButton}
+                        onPress={handleCreateSong}
                       >
-                        {currentSongStatus?.songStatus === "GENERATING"
-                          ? "생성 중..."
-                          : "동요 생성하기"}
-                      </Text>
-                    </TouchableOpacity>
+                        <FontAwesome5
+                          name="music"
+                          size={40 * scaleFactor}
+                          color="white"
+                          style={styles.buttonIcon}
+                        />
+                        <Text style={styles.createSongButtonText}>
+                          동요 생성하기
+                        </Text>
+                      </TouchableOpacity>
+                    ) : currentSongStatus?.status === "READY" ? (
+                      <TouchableOpacity
+                        style={styles.createSongButton}
+                        onPress={handleSaveSong}
+                      >
+                        <FontAwesome5
+                          name="save"
+                          size={40 * scaleFactor}
+                          color="white"
+                          style={styles.buttonIcon}
+                        />
+                        <Text style={styles.createSongButtonText}>
+                          저장하기
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.createSongButton, styles.disabledButton]}
+                        disabled={true}
+                      >
+                        <View style={styles.spinnerContainer}>
+                          <Animated.View
+                            style={{
+                              transform: [{ rotate: spin }],
+                              width: 40 * scaleFactor,
+                              height: 40 * scaleFactor,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <FontAwesome5
+                              name="spinner"
+                              size={40 * scaleFactor}
+                              color="white"
+                            />
+                          </Animated.View>
+                        </View>
+                        <Text
+                          style={[
+                            styles.createSongButtonText,
+                            styles.disabledButtonText,
+                          ]}
+                        >
+                          생성 중...
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               )}
@@ -854,12 +972,18 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.s + 3,
   },
   spinningIcon: {
-    transform: [{ rotate: "0deg" }],
-    animation: "spin 1s linear infinite",
+    marginRight: theme.spacing.s + 3,
   },
   createSongButtonText: {
     ...theme.typography.button,
     color: "white",
+  },
+  spinnerContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: theme.spacing.s + 3,
   },
 });
 
