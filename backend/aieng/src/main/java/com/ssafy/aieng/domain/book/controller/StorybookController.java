@@ -1,10 +1,9 @@
 package com.ssafy.aieng.domain.book.controller;
 
-import com.ssafy.aieng.domain.book.dto.request.StorybookCreateRequest;
+import com.ssafy.aieng.domain.book.dto.response.StorybookListResponse;
 import com.ssafy.aieng.domain.book.dto.response.StorybookResponse;
 import com.ssafy.aieng.domain.book.service.StorybookService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
-import com.ssafy.aieng.global.common.util.AuthenticationUtil;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/books")
@@ -20,25 +21,51 @@ import org.springframework.web.bind.annotation.*;
 public class StorybookController {
 
     private final StorybookService storybookService;
-    private final AuthenticationUtil authenticationUtil;
 
-    @PostMapping("/{theme_id}")
+
+    // 그림책 생성
+    @PostMapping("/sessions/{sessionId}/storybook")
     public ResponseEntity<ApiResponse<StorybookResponse>> createStorybook(
-            @PathVariable("theme_id") Integer themeId,
-            @RequestBody StorybookCreateRequest request,
+            @PathVariable Integer sessionId,
+            @RequestHeader("X-Child-Id") Integer childId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        try {
-            // 사용자 인증 확인
-            Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-            if (userId == null) {
-                return ApiResponse.fail("인증되지 않은 사용자입니다.", HttpStatus.UNAUTHORIZED);
-            }
 
-            StorybookResponse response = storybookService.createStorybook(themeId, request);
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            log.error("[Storybook Creation] 그림책 생성 실패: {}", e.getMessage(), e);
-            return ApiResponse.fail("그림책을 생성하는데 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        Integer userId = userPrincipal.getId();
+
+        StorybookResponse response = storybookService.createStorybook(userId, childId, sessionId);
+
+        return ApiResponse.success(response);
     }
+
+    // 그림책 목록 조회
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<StorybookListResponse>>> getStorybooksByChild(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+        List<StorybookListResponse> response = storybookService.getStorybooksByChild(userId, childId);
+        return ApiResponse.success(response);
+    }
+
+    // 그림책 상세 조회
+    @GetMapping("/{storybookId}")
+    public ResponseEntity<ApiResponse<StorybookResponse>> getStorybookDetail(
+            @PathVariable Integer storybookId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+        StorybookResponse response = storybookService.getStorybookDetail(userId, storybookId);
+        return ApiResponse.success(response);
+    }
+
+    // 그림책 삭제
+    @DeleteMapping("/{storybookId}")
+    public ResponseEntity<ApiResponse<Void>> deleteStorybook(
+            @PathVariable Integer storybookId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Integer userId = userPrincipal.getId();
+        storybookService.deleteStorybook(userId, storybookId);
+        return ApiResponse.success(HttpStatus.NO_CONTENT);
+    }
+
+
 } 

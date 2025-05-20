@@ -77,3 +77,4 @@ google-cloud-speech
 python-Levenshtein
 sounddevice
 scipy
+python-multipart

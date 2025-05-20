@@ -38,7 +38,7 @@ class SonautoService:
         if len(sentences) < 5:
             raise ValueError("학습 문장은 정확히 5개여야 합니다.")
 
-        logger.info(f"[Sonauto] 세션 {session_id}에서 문장 5개 조회 완료")
+        logger.info(f"[Sonauto] 세션 {session_id}에서 문장 6개 조회 완료")
 
         # 2. GPT로 가사 및 번역 생성
         gpt_service = GPTService()

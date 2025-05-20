@@ -2,6 +2,7 @@ package com.ssafy.aieng.global.common.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -29,6 +30,7 @@ public abstract class BaseEntity {
     @Column
     private LocalDateTime deletedAt;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean deleted = false;
 
@@ -64,6 +66,6 @@ public abstract class BaseEntity {
         }
         this.deleted = false;
         this.deletedAt = null;
+        this.createdAt = LocalDateTime.now();
     }
-
 }

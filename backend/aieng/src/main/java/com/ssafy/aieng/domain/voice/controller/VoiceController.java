@@ -1,6 +1,12 @@
 package com.ssafy.aieng.domain.voice.controller;
 
+import com.ssafy.aieng.domain.mood.dto.MoodResponseDto;
+import com.ssafy.aieng.domain.mood.entity.Mood;
+import com.ssafy.aieng.domain.mood.service.MoodService;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceCreateRequest;
+import com.ssafy.aieng.domain.voice.dto.request.VoiceSettingRequest;
+import com.ssafy.aieng.domain.voice.dto.response.SongVoiceSettingResponse;
+import com.ssafy.aieng.domain.voice.dto.response.TtsVoiceSettingResponse;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
 import com.ssafy.aieng.domain.voice.service.VoiceService;
 import com.ssafy.aieng.global.common.response.ApiResponse;
@@ -24,72 +30,114 @@ import java.util.List;
 public class VoiceController {
 
     private final VoiceService voiceService;
+    private final MoodService moodService;
     private final AuthenticationUtil authenticationUtil;
 
+    // 목소리 파일 S3에 저장
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<VoiceResponse>> createVoice(
-            @RequestParam("childId") Integer childId,
-            @RequestParam("name") String name,
-            @RequestParam(value = "description", required = false) String description,
-            @RequestParam("audioFile") MultipartFile audioFile,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        
-        try {
-            // 사용자 인증 확인
-            Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-            if (userId == null) {
-                return ApiResponse.fail("인증되지 않은 사용자입니다.", HttpStatus.UNAUTHORIZED);
-            }
-
-            VoiceCreateRequest request = new VoiceCreateRequest();
-            request.setChildId(childId);
-            request.setName(name);
-            request.setDescription(description);
-            request.setAudioFile(audioFile);
-
-            VoiceResponse response = voiceService.createVoice(request);
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            log.error("[Voice Creation] 음성 파일 업로드 실패: {}", e.getMessage(), e);
-            return ApiResponse.fail("음성 파일 업로드에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+            @RequestHeader("X-Child-Id") Integer childId,
+            @ModelAttribute VoiceCreateRequest request,  // Multipart 포함 DTO
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
+        VoiceResponse response = voiceService.createVoice(userId, childId, request);
+        return ApiResponse.success(response);
     }
 
-    @GetMapping("/{voiceId}")
-    public ResponseEntity<ApiResponse<VoiceResponse>> getVoice(
-            @PathVariable Integer voiceId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        try {
-            // 사용자 인증 확인
-            Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-            if (userId == null) {
-                return ApiResponse.fail("인증되지 않은 사용자입니다.", HttpStatus.UNAUTHORIZED);
-            }
-
-            VoiceResponse response = voiceService.getVoice(voiceId);
-            return ApiResponse.success(response);
-        } catch (Exception e) {
-            log.error("[Voice Retrieval] 음성 파일 조회 실패: {}", e.getMessage(), e);
-            return ApiResponse.fail("음성 파일을 조회하는데 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    // 목소리 목록 조회(디폴트 + 사용자 목소리)
+    @GetMapping("/default")
+    public ResponseEntity<ApiResponse<List<VoiceResponse>>> getVoices(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
+        List<VoiceResponse> responses = voiceService.getDefaultVoices();
+        return ApiResponse.success(responses);
     }
 
-    @GetMapping("/child/{childId}")
+    // 특정 아이가 업로드한 목소리 목록 조회
+    @GetMapping("/child")
     public ResponseEntity<ApiResponse<List<VoiceResponse>>> getVoicesByChild(
-            @PathVariable Integer childId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        try {
-            // 사용자 인증 확인
-            Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-            if (userId == null) {
-                return ApiResponse.fail("인증되지 않은 사용자입니다.", HttpStatus.UNAUTHORIZED);
-            }
-
-            List<VoiceResponse> responses = voiceService.getVoicesByChildId(childId);
-            return ApiResponse.success(responses);
-        } catch (Exception e) {
-            log.error("[Voice List Retrieval] 음성 파일 목록 조회 실패: {}", e.getMessage(), e);
-            return ApiResponse.fail("음성 파일 목록을 조회하는데 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
+        List<VoiceResponse> responses = voiceService.getVoicesByChildId(userId, childId);
+        return ApiResponse.success(responses);
     }
+
+    // 목소리 상세 조회
+    @GetMapping("/{voiceId}")
+    public ResponseEntity<ApiResponse<VoiceResponse>> getVoiceDetail(
+            @PathVariable Integer voiceId,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
+        VoiceResponse response = voiceService.getVoiceDetail(userId, childId, voiceId);
+        return ApiResponse.success(response);
+    }
+
+    // 목소리 삭제
+    @DeleteMapping("/{voiceId}")
+    public ResponseEntity<ApiResponse<Void>> deleteVoice(
+            @PathVariable Integer voiceId,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        voiceService.deleteVoice(user.getId(), childId, voiceId);
+        return ApiResponse.success(HttpStatus.OK);
+    }
+
+    // 아이의 목소리 및 분위기 설정 (TTS, 동요, Mood)
+    @PatchMapping("/settings")
+    public ResponseEntity<ApiResponse<Void>> updateVoiceSettings(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @RequestBody VoiceSettingRequest request,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        voiceService.updateVoiceSettings(user.getId(), childId, request);
+        return ApiResponse.success(HttpStatus.OK);
+    }
+
+
+    // 동요 세팅 조회
+    @GetMapping("/song-settings")
+    public ResponseEntity<ApiResponse<SongVoiceSettingResponse>> getSongSettings(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        List<MoodResponseDto> moods = moodService.getAllMoods(user.getId(), childId);
+
+        // ID 1: 남성, ID 2: 여성 목소리라고 가정
+        VoiceResponse maleVoice = voiceService.getVoiceById(1);
+        VoiceResponse femaleVoice = voiceService.getVoiceById(2);
+
+        List<VoiceResponse> voices = List.of(maleVoice, femaleVoice);
+        SongVoiceSettingResponse response = new SongVoiceSettingResponse(moods, voices);
+        return ApiResponse.success(response);
+    }
+
+    // tts 세팅
+    @GetMapping("/tts-settings")
+    public ResponseEntity<ApiResponse<TtsVoiceSettingResponse>> getTtsSettings(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user
+    ) {
+        Integer userId = authenticationUtil.getCurrentUserId(user);
+
+        // 기본 남/여 목소리 (ID 1, 2)
+        VoiceResponse maleVoice = voiceService.getVoiceById(1);
+        VoiceResponse femaleVoice = voiceService.getVoiceById(2);
+        List<VoiceResponse> defaultVoices = List.of(maleVoice, femaleVoice);
+
+        // 자녀가 업로드한 커스텀 목소리
+        List<VoiceResponse> customVoices = voiceService.getVoicesByChildId(userId, childId);
+
+        TtsVoiceSettingResponse response = new TtsVoiceSettingResponse(defaultVoices, customVoices);
+        return ApiResponse.success(response);
+    }
+
+
 } 

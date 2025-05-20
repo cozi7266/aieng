@@ -20,16 +20,20 @@ public class  LearningStorybook extends BaseEntity {
     private Storybook storybook;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id2", nullable = false)
+    @JoinColumn(name = "learning_id", nullable = false)
     private Learning learning;
 
     @Column(name = "page_order", nullable = false)
-    private Integer order;
+    private Integer pageOrder;
 
     @Builder
-    public LearningStorybook(Storybook storybook, Learning learning, Integer order) {
+    public LearningStorybook(Storybook storybook, Learning learning, Integer pageOrder) {
         this.storybook = storybook;
         this.learning = learning;
-        this.order = order;
+        this.pageOrder = pageOrder;
+    }
+
+    public void setStorybook(Storybook storybook) {
+        this.storybook = storybook;
     }
 }

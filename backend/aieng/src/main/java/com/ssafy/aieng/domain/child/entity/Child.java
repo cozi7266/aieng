@@ -1,7 +1,9 @@
 package com.ssafy.aieng.domain.child.entity;
 
+import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.user.enums.Gender;
+import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -34,8 +36,23 @@ public class Child extends BaseEntity {
     private String imgUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_id")
-    private User parent;
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    // 단어 TTS용 목소리 (nullable)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tts_voice_id")
+    private Voice ttsVoice;
+
+    // 동요 생성용 목소리 (nullable)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "song_voice_id")
+    private Voice songVoice;
+
+    // 동요 생성용 기본 분위기 (nullable)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mood_id")
+    private Mood mood;
 
     // 아이 프로필 수정
     public void updateChildProfile(String name, Gender gender, LocalDate birthdate, String imgUrl) {
@@ -53,4 +70,17 @@ public class Child extends BaseEntity {
     public void setImgUrl(String newImg) {
         this.imgUrl = newImg;
     }
+
+    public void setTtsVoice(Voice ttsVoice) {
+        this.ttsVoice = ttsVoice;
+    }
+
+    public void setSongVoice(Voice songVoice) {
+        this.songVoice = songVoice;
+    }
+
+    public void setMood(Mood mood) {
+        this.mood = mood;
+    }
+
 }
