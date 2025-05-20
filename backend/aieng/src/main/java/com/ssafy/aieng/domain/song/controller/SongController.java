@@ -39,15 +39,14 @@ public class SongController {
     }
 
     // 동요 (Redis -> RDB 저장)
-    @GetMapping("/sessions/{sessionId}/storybooks/{storybookId}/save-song")
+    @GetMapping("/sessions/{sessionId}/save-song")
     public ResponseEntity<ApiResponse<SongGenerateResponseDto>> getGeneratedSongFromRedis(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestHeader("X-Child-Id") Integer childId,
-            @PathVariable Integer sessionId,
-            @PathVariable Integer storybookId
+            @PathVariable Integer sessionId
 
     ) {
-        SongGenerateResponseDto response = songService.getGeneratedSong(user.getId(), childId, sessionId, storybookId);
+        SongGenerateResponseDto response = songService.getGeneratedSong(user.getId(), childId, sessionId);
         return ApiResponse.success(response);
     }
 
@@ -84,7 +83,7 @@ public class SongController {
     }
 
     // 동요 생성 상태
-    @GetMapping("/sessions/{sessionId}/storybook/{storybookId}/status")
+    @GetMapping("/sessions/{sessionId}/status")
     public ResponseEntity<ApiResponse<SongStatusResponse>> getSongStatus(
             @PathVariable Integer sessionId,
             @PathVariable Integer storybookId,
