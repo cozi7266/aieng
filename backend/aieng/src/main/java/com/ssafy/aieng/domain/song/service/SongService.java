@@ -279,7 +279,6 @@ public class SongService {
         song.softDelete();
     }
 
-    // 동요 생성 상태
     // 동요 생성 상태 조회
     @Transactional(readOnly = true)
     public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
