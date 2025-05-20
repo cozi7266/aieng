@@ -16,6 +16,8 @@ import com.ssafy.aieng.domain.learning.repository.LearningRepository;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.theme.repository.ThemeRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
+import com.ssafy.aieng.domain.voice.entity.Voice;
+import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.domain.word.entity.Word;
 import com.ssafy.aieng.domain.word.repository.WordRepository;
 import com.ssafy.aieng.global.common.redis.service.RedisService;
@@ -32,13 +34,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import java.util.Comparator;
+
+import java.util.*;
 
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +53,7 @@ public class LearningService {
     private final ThemeRepository themeRepository;
     private final WordRepository wordRepository;
     private final ChildRepository childRepository;
+    private final VoiceRepository voiceRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -99,11 +100,27 @@ public class LearningService {
         Word wordEntity = wordRepository.findByWordEn(wordEn)
                 .orElseThrow(() -> new CustomException(ErrorCode.WORD_NOT_FOUND));
 
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+
+        String ttsVoiceUrl = null;
+        if (child.getTtsVoice() != null && child.getTtsVoice().getAudioUrl() != null) {
+            ttsVoiceUrl = child.getTtsVoice().getAudioUrl();
+        } else {
+            List<Voice> allVoices = voiceRepository.findAll();
+            if (allVoices.isEmpty()) {
+                throw new CustomException(ErrorCode.VOICE_NOT_FOUND);
+            }
+            Voice randomVoice = allVoices.get(new Random().nextInt(allVoices.size()));
+            ttsVoiceUrl = randomVoice.getAudioUrl();
+        }
+
         GenerateContentRequest request = GenerateContentRequest.builder()
                 .userId(userId)
                 .sessionId(sessionId)
                 .theme(themeKo)
                 .wordEn(wordEn)
+                .ttsVoiceUrl(ttsVoiceUrl)
                 .build();
 
         try {
@@ -118,12 +135,13 @@ public class LearningService {
                     String.class
             );
 
-            log.info("📤 FastAPI 요청 전송 완료: userId={}, sessionId={}, word={}", userId, sessionId, wordEn);
+            log.info("📤 FastAPI 요청 전송 완료: userId={}, sessionId={}, word={}, ttsVoiceUrl={}", userId, sessionId, wordEn, ttsVoiceUrl);
         } catch (Exception e) {
             log.error("❌ FastAPI 요청 실패: sessionId={}, word={}", sessionId, wordEn, e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
 
@@ -178,8 +196,6 @@ public class LearningService {
                 learning.updateContent(result);
                 learningRepository.save(learning);
                 session.incrementLearnedCount();
-
-
             }
         } catch (ObjectOptimisticLockingFailureException e) {
             log.warn("🔄 중복 저장 방지: 이미 저장된 Learning 데이터 - sessionId={}, word={}", sessionId, wordEn);

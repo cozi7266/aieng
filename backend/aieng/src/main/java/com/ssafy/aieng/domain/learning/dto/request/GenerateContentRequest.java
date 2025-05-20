@@ -12,4 +12,5 @@ public class GenerateContentRequest {
     private Integer sessionId;
     private String theme;  // themeKo 인데 일부러 수정 안함
     private String wordEn;
+    private String ttsVoiceUrl;
 }
