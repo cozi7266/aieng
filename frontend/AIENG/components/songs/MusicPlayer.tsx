@@ -26,7 +26,6 @@ interface MusicPlayerProps {
   onRepeat: () => void;
   onToggleFavorite: () => void;
   scaleFactor: number;
-  variant?: "song" | "fairytale";
 }
 
 const MusicPlayer: React.FC<MusicPlayerProps> = ({
@@ -39,7 +38,6 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   onRepeat,
   onToggleFavorite,
   scaleFactor = 1,
-  variant = "song",
 }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [sliderValue, setSliderValue] = useState<number[]>([0]);
@@ -242,19 +240,11 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        variant === "fairytale" && styles.fairytaleContainer,
-      ]}
-    >
+    <View style={styles.container}>
       <View style={styles.timeContainer}>
         <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
         <Slider
-          containerStyle={{
-            width: variant === "fairytale" ? "85%" : "70%",
-            paddingHorizontal: 10,
-          }}
+          containerStyle={{ width: "85%", paddingHorizontal: 10 }}
           value={sliderValue}
           onValueChange={handleSliderValueChange}
           minimumValue={0}
@@ -266,12 +256,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
         <Text style={styles.timeText}>{formatTime(duration)}</Text>
       </View>
 
-      <View
-        style={[
-          styles.buttonsContainer,
-          variant === "fairytale" && styles.fairytaleButtonsContainer,
-        ]}
-      >
+      <View style={styles.buttonsContainer}>
         <TouchableOpacity
           style={[styles.controlButton, isRepeat && styles.activeButton]}
           onPress={onRepeat}
@@ -291,13 +276,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.playButton,
-            variant === "fairytale" && styles.fairytalePlayButton,
-          ]}
-          onPress={onPlayPause}
-        >
+        <TouchableOpacity style={styles.playButton} onPress={onPlayPause}>
           <FontAwesome5
             name={isPlaying ? "pause" : "play"}
             size={32 * Math.min(1, scaleFactor)}
@@ -377,19 +356,6 @@ const styles = StyleSheet.create({
   },
   activeButton: {
     backgroundColor: theme.colors.primary,
-  },
-  fairytaleContainer: {
-    backgroundColor: "transparent",
-    padding: 0,
-    marginBottom: 0,
-    shadowOpacity: 0,
-  },
-  fairytaleButtonsContainer: {
-    marginTop: theme.spacing.s,
-  },
-  fairytalePlayButton: {
-    width: 60,
-    height: 60,
   },
 });
 
