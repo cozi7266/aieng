@@ -2,7 +2,6 @@ package com.ssafy.aieng.domain.song.dto.response;
 
 import com.ssafy.aieng.domain.song.entity.Song;
 import com.ssafy.aieng.domain.song.entity.SongStatus;
-import com.ssafy.aieng.domain.book.entity.Storybook;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -20,18 +19,12 @@ public class SongDetailResponseDto {
     private String songUrl;
     private SongStatus status;
     private LocalDateTime createdAt;
-    
-    // 연결된 정보
+
+    // 연관 정보
     private Integer moodId;
     private String moodName;
-    
-    // 그림책 정보
-    private Integer storybookId;
-    private String storybookTitle;
-    private String storybookDescription;
-    private String coverUrl;
 
-    public static SongDetailResponseDto from(Song song, Storybook storybook) {
+    public static SongDetailResponseDto from(Song song) {
         return SongDetailResponseDto.builder()
                 .id(song.getId())
                 .title(song.getTitle())
@@ -42,10 +35,6 @@ public class SongDetailResponseDto {
                 .createdAt(song.getCreatedAt())
                 .moodId(song.getMood().getId())
                 .moodName(song.getMood().getName())
-                .storybookId(storybook.getId())
-                .storybookTitle(storybook.getTitle())
-                .storybookDescription(storybook.getDescription())
-                .coverUrl(storybook.getCoverUrl())
                 .build();
     }
-} 
+}
