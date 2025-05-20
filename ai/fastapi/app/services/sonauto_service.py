@@ -123,7 +123,7 @@ class SonautoService:
             "cached_at": datetime.utcnow().isoformat()
         }
         self.redis.set(redis_key, json.dumps(redis_value))
-        self.redis.expire(redis_key, 3600)
+        self.redis.expire(redis_key, 86400)
 
         logger.info(f"[Sonauto] 노래 생성 완료 및 Redis 저장 완료: {s3_url}")
 
