@@ -33,7 +33,7 @@ public class SongController {
             @PathVariable Integer sessionId
     ) {
         songService.generateSong(user.getId(), childId, sessionId);
-        return ApiResponse.success(null);
+        return ApiResponse.success(HttpStatus.OK);
     }
 
 
