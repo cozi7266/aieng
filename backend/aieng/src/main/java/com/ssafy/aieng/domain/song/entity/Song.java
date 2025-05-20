@@ -48,7 +48,7 @@ public class Song extends BaseEntity {
         this.lyric = lyric;
         this.description = description;
         this.songUrl = songUrl;
-        this.status = SongStatus.REQUESTED;
+        this.status = SongStatus.SAVED;
     }
 
 } 

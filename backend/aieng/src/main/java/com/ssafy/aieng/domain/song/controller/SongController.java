@@ -22,8 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class SongController {
 
     private final SongService songService;
-    private final MoodService moodService;
-    private final VoiceService voiceService;
 
     // 동요 생성 요청(FastAPI로 요청만)
     @PostMapping("/sessions/{sessionId}/generate-song")
