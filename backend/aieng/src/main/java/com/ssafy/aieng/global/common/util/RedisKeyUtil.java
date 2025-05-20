@@ -15,29 +15,20 @@ public class RedisKeyUtil {
     }
 
     /**
-     * 동요 생성 결과(가사, URL 등) 저장용 기본 키
+     * 동요 생성 결과(가사, URL 등) 저장용 키
      * 예: Song:user:3:session:10
-     * @deprecated 그림책 기반으로 확장된 버전 사용 권장
      */
-    @Deprecated
     public static String getGeneratedSongKey(Integer userId, Integer sessionId) {
         return String.format("Song:user:%d:session:%d", userId, sessionId);
     }
 
     /**
      * 동요 생성 상태(REQUESTED, IN_PROGRESS 등) 저장용 키
-     * 예: song:status:session:10:book:5
+     * 예: Song:status:session:10
      */
-    public static String getSongStatusKey(Integer sessionId, Integer storybookId) {
-        return String.format("song:status:session:%d:book:%d", sessionId, storybookId);
+    public static String getSongStatusKey(Integer sessionId) {
+        return String.format("Song:status:session:%d", sessionId);
     }
 
-    /**
-     * 동요 생성 결과(가사, URL 등) 저장용 확장 키 (session + storybook 기반)
-     * 예: Song:user:3:session:10:book:5
-     */
-    public static String getGeneratedSongKey(Integer userId, Integer sessionId, Integer storybookId) {
-        return String.format("Song:user:%d:session:%d:book:%d", userId, sessionId, storybookId);
-    }
+    // ✅ 기존 그림책 기반 키는 더 이상 사용하지 않으므로 제거됨
 }
-

@@ -10,9 +10,10 @@ import java.util.Optional;
 @Repository
 public interface SongRepository extends JpaRepository<Song, Integer> {
 
-    List<Song> findAllByStorybookChildIdOrderByCreatedAtDesc(Integer childId);
 
-    boolean existsByStorybookId(Integer storybookId);
+    boolean existsBySessionId(Integer sessionId);
 
-    Optional<Song> findByStorybookId(Integer storybookId);
+    List<Song> findAllBySession_Child_IdOrderByCreatedAtDesc(Integer childId);
+
+    Optional<Song> findBySessionId(Integer sessionId);
 }
