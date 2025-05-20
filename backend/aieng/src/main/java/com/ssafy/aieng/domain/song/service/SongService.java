@@ -3,6 +3,8 @@ package com.ssafy.aieng.domain.song.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.aieng.domain.book.entity.Storybook;
+import com.ssafy.aieng.domain.book.repository.StorybookRepository;
 import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.mood.repository.MoodRepository;
 import com.ssafy.aieng.domain.session.dto.response.CreateSessionResponse;
@@ -52,6 +54,7 @@ public class SongService {
     private final ChildRepository childRepository;
     private final SessionRepository sessionRepository;
     private final VoiceRepository voiceRepository;
+    private StorybookRepository storybookRepository;
     private final LikedSongRepository likedSongRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final SessionService sessionService;
@@ -253,27 +256,26 @@ public class SongService {
         return SongResponseList.of(childId, songs);
     }
 
-
-    @Transactional(readOnly = true)
+    // 동요 상세
     public SongDetailResponseDto getSongDetail(Integer userId, Integer childId, Integer songId) {
-        // 자녀 조회 + 소유자 검증
-        Child child = childRepository.findById(childId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
-        if (!child.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
-        }
-
-        // 동요 조회
+        // Song 조회
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
 
-        // 소유권 검증: 동요의 세션을 통해 자녀 확인
-        if (!song.getSession().getChild().getId().equals(childId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
-        }
+        // Storybook 조회 (song의 sessionId로 조회)
+        Storybook storybook = storybookRepository.findBySessionId(song.getSession().getId())
+                .orElse(null);
 
-        // 응답 구성
-        return SongDetailResponseDto.from(song);
+        // isLiked 계산 (LikedSong 존재 여부)
+        boolean isLiked = likedSongRepository.existsByChildIdAndSongId(childId, songId);
+
+
+        // DTO로 변환
+        return SongDetailResponseDto.from(
+                song,
+                storybook != null ? storybook.getCoverUrl() : null,
+                isLiked
+        );
     }
 
     // 동요 삭제(Soft Delete)

@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class StorybookListResponse {
+    private Integer sessionId;
     private Integer storybookId;
     private String title;
     private String description;
@@ -15,6 +16,7 @@ public class StorybookListResponse {
 
     public static StorybookListResponse from(Storybook storybook) {
         return StorybookListResponse.builder()
+                .sessionId(storybook.getSession().getId())
                 .storybookId(storybook.getId())
                 .title(storybook.getTitle())
                 .description(storybook.getDescription())
