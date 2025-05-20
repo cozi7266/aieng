@@ -280,6 +280,7 @@ public class SongService {
     }
 
     // 동요 생성 상태
+    // 동요 생성 상태 조회
     @Transactional(readOnly = true)
     public SongStatusResponse getSongStatus(Integer userId, Integer childId, Integer sessionId, Integer storybookId) {
         // 1. 자녀 검증
@@ -303,26 +304,26 @@ public class SongService {
             throw new CustomException(ErrorCode.INVALID_STORYBOOK_ACCESS);
         }
 
-        // 4. Redis 키 설정 (sessionId + storybookId 기준으로 통일)
+        // 4. Redis 키 (sessionId + storybookId 조합 사용)
         String redisStatusKey = RedisKeyUtil.getSongStatusKey(sessionId, storybookId);
         String redisGeneratedKey = RedisKeyUtil.getGeneratedSongKey(userId, sessionId, storybookId);
 
-        // 5. 상태 판별
+        // 5. 상태 조회
         String statusStr = stringRedisTemplate.opsForValue().get(redisStatusKey);
         SongStatus status = (statusStr != null) ? SongStatus.valueOf(statusStr) : SongStatus.NONE;
 
-        // 6. DB 확인
+        // 6. DB 저장 여부 확인
         boolean rdbSaved = songRepository.existsByStorybookId(storybookId);
         Song song = songRepository.findByStorybookId(storybookId).orElse(null);
 
-        // 7. Redis 결과 조회 (조건부)
+        // 7. Redis 결과 조회 (READY 또는 SAVED 상태인 경우만)
         boolean redisKeyExists = false;
         String songUrl = null;
         String lyricsKo = null;
         String lyricsEn = null;
 
         if (status == SongStatus.READY || status == SongStatus.SAVED) {
-            redisKeyExists = stringRedisTemplate.hasKey(redisGeneratedKey);
+            redisKeyExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisGeneratedKey));
             if (redisKeyExists) {
                 Map<Object, Object> redisData = stringRedisTemplate.opsForHash().entries(redisGeneratedKey);
                 songUrl = (String) redisData.getOrDefault("song_url", null);
@@ -331,7 +332,7 @@ public class SongService {
             }
         }
 
-        // 8. DTO 생성
+        // 8. 상태 DTO 구성 후 반환
         SongStatusDetail detail = new SongStatusDetail(
                 (song != null ? song.getId() : null),
                 sessionId,
@@ -345,6 +346,7 @@ public class SongService {
 
         return SongStatusResponse.of(status.name(), detail);
     }
+
 
 
 }
