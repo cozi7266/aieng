@@ -30,8 +30,19 @@ class WordService:
             image_bytes = await DiffusionService().generate_image(image_prompt)
             logger.info("[이미지 생성 완료]")
 
-            audio_bytes = await TTSService().generate_audio(sentence)
-            logger.info("[TTS 생성 완료]")
+            # 3. 오디오 생성 (분기)
+            voice_url = request.ttsVoiceUrl
+            print(voice_url)
+            if voice_url and voice_url.startswith("http"):
+                # zonos (custom voice)
+                # audio_bytes = await TTSService().generate_audio(sentence, voice_url=voice_url)
+                audio_bytes = await TTSService().generate_audio(sentence, gender="MALE")
+            elif voice_url == "male vocal":
+                audio_bytes = await TTSService().generate_audio(sentence, gender="MALE")
+            elif voice_url == "female vocal":
+                audio_bytes = await TTSService().generate_audio(sentence, gender="FEMALE")
+            else:
+                raise ValueError("유효하지 않은 voiceUrl 값입니다.")
 
             # 3. S3 업로드
             try:
