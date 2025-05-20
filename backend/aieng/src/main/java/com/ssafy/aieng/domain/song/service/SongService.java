@@ -82,7 +82,7 @@ public class SongService {
 
         // 상태: REQUESTED
         stringRedisTemplate.opsForValue().set(
-                RedisKeyUtil.getSongStatusKey(sessionId, storybookId),
+                RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
                 SongStatus.REQUESTED.name()
         );
 
@@ -111,7 +111,7 @@ public class SongService {
                         fastApiResponse.getStatusCodeValue(), fastApiResponse.getBody());
 
                 stringRedisTemplate.opsForValue().set(
-                        RedisKeyUtil.getSongStatusKey(sessionId, storybookId),
+                        RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
                         SongStatus.FAILED.name()
                 );
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -121,7 +121,7 @@ public class SongService {
 
             // 상태: IN_PROGRESS
             stringRedisTemplate.opsForValue().set(
-                    RedisKeyUtil.getSongStatusKey(sessionId, storybookId),
+                    RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
                     SongStatus.IN_PROGRESS.name()
             );
 
@@ -129,7 +129,7 @@ public class SongService {
             log.error("❌ 동요 생성 중 오류 발생", e);
 
             stringRedisTemplate.opsForValue().set(
-                    RedisKeyUtil.getSongStatusKey(sessionId, storybookId),
+                    RedisKeyUtil.getSongStatusKey(sessionId, requestDto.getStorybookId()),
                     SongStatus.FAILED.name()
             );
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
