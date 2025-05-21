@@ -1,17 +1,24 @@
 import os
-from pathlib import Path
 from google.cloud import texttospeech
-from app.config import settings
 from app.utils.logger import logger
 
-class TTSService:
-    def __init__(self):
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.TTS_API_KEY
-        self.client = texttospeech.TextToSpeechClient()
-        self.output_dir = Path("tts_outputs")
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    async def generate_audio(self, text: str, gender: str, filename: str = "tts_result") -> bytes:
+class GoogleTTSService:
+    def __init__(self, client: texttospeech.TextToSpeechClient = None):
+        try:
+            if client:
+                self.client = client
+                logger.info("Google TTS 클라이언트 인스턴스 주입 완료")
+            else:
+                logger.info("Google TTS 클라이언트 초기화 중...")
+                self.client = texttospeech.TextToSpeechClient()
+                logger.info("Google TTS 클라이언트 초기화 완료")
+
+        except Exception as e:
+            logger.error(f"Google TTS 클라이언트 초기화 실패: {e}")
+            raise RuntimeError("Google TTS 클라이언트 초기화 중 오류 발생") from e
+
+    async def generate_audio(self, text: str, gender: str = False) -> bytes:
         logger.info(f"[TTSService] TTS 생성 요청: '{text[:50]}'... (길이: {len(text)}자)")
 
         ssml_text = f'''
@@ -42,12 +49,7 @@ class TTSService:
             )
             audio_bytes = response.audio_content
 
-            # 로컬 저장
-            file_path = self.output_dir / f"{filename}.wav"
-            with open(file_path, "wb") as out:
-                out.write(audio_bytes)
-
-            logger.info(f"[TTSService] TTS 생성 및 저장 완료: {file_path}")
+            logger.info(f"[TTSService] TTS 생성 및 저장 완료")
             return audio_bytes
 
         except Exception as e:

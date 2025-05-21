@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  zonos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zonos_container
+    runtime: nvidia
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    volumes:
+      - ./tts_key.json:/app/tts_key.json
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - TTS_API_KEY=/app/tts_key.json
+    stdin_open: true
+    tty: true
+
+  redis:
+    image: redis:7.2
+    container_name: redis_container
+    ports:
+      - "6379:6379"

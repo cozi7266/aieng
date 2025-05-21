@@ -7,15 +7,35 @@ from app.services.gpt_service import GPTService
 from app.utils.logger import logger
 from app.models.song import SongResponse
 
+
 class SonautoService:
-    def __init__(self, redis, s3):
-        self.redis = redis.get_client()
-        self.s3 = s3
-        self.base_url = "https://api.sonauto.ai/v1"
-        self.headers = {
-            "Authorization": f"Bearer {settings.SONAUTO_API_KEY}",
-            "Content-Type": "application/json"
-        }
+    def __init__(self, redis, s3, gpt: GPTService):
+        try:
+            self.redis = redis.get_client()
+            logger.info("Redis 클라이언트 주입 완료 (SonautoService)")
+
+            self.s3 = s3
+            logger.info("S3 클라이언트 주입 완료 (SonautoService)")
+
+            self.gpt = gpt
+            logger.info("GPT 서비스 주입 완료 (SonautoService)")
+
+            self.base_url = "https://api.sonauto.ai/v1"
+            self.headers = {
+                "Authorization": f"Bearer {settings.SONAUTO_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            logger.info("SonautoService 헤더 및 기본 URL 설정 완료")
+
+            # 옵션: API Key 유효성 간단 체크
+            if not settings.SONAUTO_API_KEY:
+                raise ValueError("Sonauto API 키가 설정되지 않았습니다.")
+
+            logger.info("SonautoService 초기화 완료")
+
+        except Exception as e:
+            logger.error(f"SonautoService 초기화 실패: {e}")
+            raise RuntimeError("SonautoService 구성 요소 초기화 중 오류 발생") from e
 
     def get_sentences_from_redis(self, user_id: int, session_id: int) -> list[str]:
         pattern = f"Learning:user:{user_id}:session:{session_id}:word:*"
@@ -32,51 +52,28 @@ class SonautoService:
 
         return sentences
 
-    async def generate_song(self, user_id: int, session_id: int, mood_name: str, voice_name: str) -> dict:
+    async def generate_song(self, user_id: int, session_id: int, mood_name: str, voice_name: str) -> SongResponse:
         # 1. Redis에서 문장 조회
         sentences = self.get_sentences_from_redis(user_id, session_id)
         if len(sentences) < 5:
             raise ValueError("학습 문장은 정확히 5개여야 합니다.")
 
-        logger.info(f"[Sonauto] 세션 {session_id}에서 문장 6개 조회 완료")
+        logger.info(f"[Sonauto] 세션 {session_id}에서 문장 {len(sentences)}개 조회 완료")
 
         # 2. GPT로 가사 및 번역 생성
-        gpt_service = GPTService()
-        title, lyrics_en, lyrics_ko = await gpt_service.generate_lyrics(sentences)
-
+        title, lyrics_en, lyrics_ko = await self.gpt.generate_lyrics(sentences)
         logger.info("[Sonauto] GPT 가사 생성 완료")
 
-
-        print(lyrics_en)
-        # 3. 프롬프트 구성
-        prompt = f"""
-        Create a fun and catchy children's song in English for kids aged 7 to 8.
-
-        Style: Use a playful, repetitive melody similar to "Baby Shark" or "If You’re Happy and You Know It".
-        Purpose: Language learning – help kids memorize and pronounce the following sentences.
-        Structure: 
-        - Repeat each sentence clearly 2–3 times in each verse.
-        - Keep each line rhythmically short and singable.
-        - Add very minimal connecting phrases or fun interjections like “la la la”, “yeah!” if needed.
-        - Ensure the lyrics and melody match naturally.
-
-        Use a cheerful children's music mood with xylophones, claps, and simple percussion.
-        Voice should be clear, slow, and friendly, suitable for early learners (like a kids' TV show voice).
-
-        <sentences>
-        {sentences}
-
-        <mood>
-        {mood_name}
-
-        """
-
-        # 4. Sonauto 요청
+        # 3. Sonauto 요청
         try:
             response = requests.post(
                 f"{self.base_url}/generations",
                 headers=self.headers,
-                json={"tags": ["kids", voice_name], "prompt": prompt, "num_songs": 1}
+                json={
+                    "tags": ["kids", "nursery rhyme", "happy", "children", "educational", "repetitive"],
+                    "prompt": "make song with given lyrics\n Lyrics: " + lyrics_en + "\nVocal Gender: " + voice_name,
+                    "num_songs": 1
+                }
             )
             response.raise_for_status()
             task_id = response.json()["task_id"]
@@ -85,7 +82,7 @@ class SonautoService:
             logger.error(f"[Sonauto] Sonauto API 요청 실패: {e}")
             raise RuntimeError("Sonauto API 요청 실패") from e
 
-        # 5. Polling
+        # 4. Polling
         while True:
             status_resp = requests.get(f"{self.base_url}/generations/status/{task_id}", headers=self.headers)
             status = status_resp.text.strip('"')
@@ -103,8 +100,9 @@ class SonautoService:
         audio_data = requests.get(song_url)
         audio_data.raise_for_status()
 
-        filename = f"song_{session_id}_{uuid.uuid4().hex}.ogg"
-        
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        filename = f"users/{user_id}/sessions/{session_id}/song/song_{timestamp}.ogg"   
+
         try:
             s3_url = self.s3.upload(audio_data.content, filename)
             logger.info("[S3 업로드 완료]")

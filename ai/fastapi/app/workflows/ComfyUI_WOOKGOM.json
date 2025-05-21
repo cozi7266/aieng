@@ -1,0 +1,133 @@
+{
+  "last_node_id": 40,
+  "nodes": [
+    {
+      "id": 33,
+      "type": "text",
+      "class_type": "Text",
+      "widgets_values": [
+        "a cute dog sleeping in a sunny forest"
+      ],
+      "_meta": {
+        "title": "Prompt Text"
+      }
+    },
+    {
+      "id": 34,
+      "inputs": {
+        "text": [
+          33,
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode"
+      }
+    },
+    {
+      "id": 35,
+      "inputs": {
+        "text_g": [
+          34,
+          0
+        ],
+        "text_l": [
+          34,
+          0
+        ]
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "Empty Latent Image"
+      }
+    },
+    {
+      "id": 36,
+      "inputs": {
+        "model": [
+          38,
+          0
+        ],
+        "positive": [
+          34,
+          0
+        ],
+        "negative": [
+          37,
+          0
+        ],
+        "latent_image": [
+          35,
+          0
+        ],
+        "seed": 1234567890,
+        "steps": 20,
+        "cfg": 7,
+        "sampler_name": "euler"
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler"
+      }
+    },
+    {
+      "id": 37,
+      "type": "text",
+      "class_type": "Text",
+      "widgets_values": [
+        "blurry, distorted, low quality"
+      ],
+      "_meta": {
+        "title": "Negative Prompt"
+      }
+    },
+    {
+      "id": 38,
+      "inputs": {},
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "Checkpoint Loader"
+      }
+    },
+    {
+      "id": 39,
+      "inputs": {
+        "samples": [
+          36,
+          0
+        ],
+        "vae": [
+          40,
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    {
+      "id": 40,
+      "inputs": {},
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "VAE Loader"
+      }
+    },
+    {
+      "id": 9,
+      "inputs": {
+        "filename_prefix": "generated",
+        "images": [
+          39,
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "Save Image"
+      }
+    }
+  ]
+}
