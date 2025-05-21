@@ -76,6 +76,7 @@ interface Storybook {
   createdAt: string;
   themeKo?: string;
   themeEn?: string;
+  favorite?: boolean;
 }
 
 interface ApiResponse {
@@ -180,87 +181,19 @@ const SongScreen: React.FC = () => {
   // 오디오 컨텍스트
   const { toggleBgm, stopBgm } = useAudio();
 
-  // 더미 데이터 - 로컬 이미지 유지
-  const mockSongs: Song[] = [
-    {
-      id: "1",
-      title: "Twinkle Twinkle Little Star",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "Twinkle, twinkle, little star\nHow I wonder what you are\nUp above the world so high\nLike a diamond in the sky\nTwinkle, twinkle, little star\nHow I wonder what you are",
-      favorite: false,
-    },
-    // 나머지 노래 데이터는 그대로 유지
-    {
-      id: "2",
-      title: "Old MacDonald Had a Farm",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 180,
-      lyrics:
-        "Old MacDonald had a farm, E-I-E-I-O\nAnd on his farm he had a cow, E-I-E-I-O\nWith a moo moo here and a moo moo there\nHere a moo, there a moo, everywhere a moo moo\nOld MacDonald had a farm, E-I-E-I-O",
-      favorite: false,
-    },
-    {
-      id: "3",
-      title: "The Wheels on the Bus",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "The wheels on the bus go round and round\nRound and round, round and round\nThe wheels on the bus go round and round\nAll through the town",
-      favorite: false,
-    },
-    {
-      id: "4",
-      title: "Itsy Bitsy Spider",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 180,
-      lyrics:
-        "The itsy bitsy spider went up the water spout\nDown came the rain and washed the spider out\nOut came the sun and dried up all the rain\nAnd the itsy bitsy spider went up the spout again",
-      favorite: false,
-    },
-    {
-      id: "5",
-      title: "Baa Baa Black Sheep",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "Baa, baa, black sheep, have you any wool?\nYes sir, yes sir, three bags full\nOne for the master, one for the dame\nAnd one for the little boy who lives down the lane",
-      favorite: false,
-    },
-    {
-      id: "6",
-      title: "Row Row Row Your Boat",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 180,
-      lyrics:
-        "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
-      favorite: false,
-    },
-    {
-      id: "7",
-      title: "Row Row Row Your Boat",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
-      favorite: true,
-    },
-  ];
+  // 즐겨찾기 필터링된 동화책 목록
+  const filteredStorybooks = React.useMemo(() => {
+    return activeTab === "all"
+      ? storybooks
+      : storybooks.filter((book) => {
+          // 현재 선택된 노래가 있고, 해당 노래의 ID가 현재 동화책의 ID와 일치하는 경우
+          if (currentSong && currentSong.id === book.storybookId.toString()) {
+            return currentSong.favorite;
+          }
+          // API에서 받아온 즐겨찾기 상태를 사용
+          return book.favorite;
+        });
+  }, [activeTab, storybooks, currentSong]);
 
   useEffect(() => {
     // 화면 가로 모드 고정 (태블릿용)
@@ -309,7 +242,42 @@ const SongScreen: React.FC = () => {
               coverUrl: book.coverUrl,
             }))
           );
-          setStorybooks(books);
+
+          // 각 동화책의 동요 상태 확인
+          const booksWithSongStatus = await Promise.all(
+            books.map(async (book) => {
+              try {
+                const status = await checkSongStatus(
+                  book.sessionId,
+                  book.storybookId
+                );
+                if (status.status === "SAVED" && status.details.songId) {
+                  const songDetail = await fetchSongDetail(
+                    status.details.songId
+                  );
+                  return {
+                    ...book,
+                    favorite: songDetail.isLiked || false,
+                  };
+                }
+                return {
+                  ...book,
+                  favorite: false,
+                };
+              } catch (error) {
+                console.error(
+                  `[동요 상태 확인 실패] storybookId: ${book.storybookId}`,
+                  error
+                );
+                return {
+                  ...book,
+                  favorite: false,
+                };
+              }
+            })
+          );
+
+          setStorybooks(booksWithSongStatus);
         }
       } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -324,13 +292,7 @@ const SongScreen: React.FC = () => {
     };
 
     lockOrientation();
-    setSongs(mockSongs);
     fetchStorybooks();
-
-    // 첫번째 노래를 기본 선택
-    if (mockSongs.length > 0) {
-      setCurrentSong(mockSongs[0]);
-    }
 
     return () => {
       ScreenOrientation.unlockAsync();
@@ -535,19 +497,53 @@ const SongScreen: React.FC = () => {
 
   const handlePrevious = () => {
     if (currentSong) {
-      const currentIndex = songs.findIndex((s) => s.id === currentSong.id);
+      const currentIndex = storybooks.findIndex(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
       const previousIndex =
-        currentIndex === 0 ? songs.length - 1 : currentIndex - 1;
-      setCurrentSong(songs[previousIndex]);
+        currentIndex === 0 ? storybooks.length - 1 : currentIndex - 1;
+      const previousBook = storybooks[previousIndex];
+      const artistText = previousBook.themeKo
+        ? `${previousBook.themeKo}${
+            previousBook.themeEn ? ` (${previousBook.themeEn})` : ""
+          }`
+        : "동화";
+      handleSongPress({
+        id: previousBook.storybookId.toString(),
+        title: previousBook.title,
+        artist: artistText,
+        imageUrl: { uri: previousBook.coverUrl },
+        audioUrl: require("../assets/sounds/sample.mp3"),
+        duration: 228,
+        lyrics: previousBook.description,
+        favorite: false,
+      });
     }
   };
 
   const handleNext = () => {
     if (currentSong) {
-      const currentIndex = songs.findIndex((s) => s.id === currentSong.id);
+      const currentIndex = storybooks.findIndex(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
       const nextIndex =
-        currentIndex === songs.length - 1 ? 0 : currentIndex + 1;
-      setCurrentSong(songs[nextIndex]);
+        currentIndex === storybooks.length - 1 ? 0 : currentIndex + 1;
+      const nextBook = storybooks[nextIndex];
+      const artistText = nextBook.themeKo
+        ? `${nextBook.themeKo}${
+            nextBook.themeEn ? ` (${nextBook.themeEn})` : ""
+          }`
+        : "동화";
+      handleSongPress({
+        id: nextBook.storybookId.toString(),
+        title: nextBook.title,
+        artist: artistText,
+        imageUrl: { uri: nextBook.coverUrl },
+        audioUrl: require("../assets/sounds/sample.mp3"),
+        duration: 228,
+        lyrics: nextBook.description,
+        favorite: false,
+      });
     }
   };
 
@@ -738,9 +734,6 @@ const SongScreen: React.FC = () => {
       }
     }
   };
-
-  const filteredSongs =
-    activeTab === "all" ? songs : songs.filter((song) => song.favorite);
 
   // 동적 스타일 생성
   const dynamicStyles = {
@@ -957,7 +950,7 @@ const SongScreen: React.FC = () => {
         {/* 왼쪽 - 노래 그리드 */}
         <View style={[styles.leftContainer, dynamicStyles.contentPadding]}>
           <FlatList
-            data={storybooks}
+            data={filteredStorybooks}
             keyExtractor={(item) => item.storybookId.toString()}
             numColumns={numColumns}
             columnWrapperStyle={{ justifyContent: "flex-start" }}
@@ -976,7 +969,7 @@ const SongScreen: React.FC = () => {
                     audioUrl: require("../assets/sounds/sample.mp3"),
                     duration: 228,
                     lyrics: item.description,
-                    favorite: false,
+                    favorite: item.favorite || false,
                   }}
                   isActive={isActive}
                   isPlaying={isActive && isPlaying}
@@ -989,7 +982,7 @@ const SongScreen: React.FC = () => {
                       audioUrl: require("../assets/sounds/sample.mp3"),
                       duration: 228,
                       lyrics: item.description,
-                      favorite: false,
+                      favorite: item.favorite || false,
                     })
                   }
                   onStoryPress={() =>
@@ -1001,7 +994,7 @@ const SongScreen: React.FC = () => {
                       audioUrl: require("../assets/sounds/sample.mp3"),
                       duration: 228,
                       lyrics: item.description,
-                      favorite: false,
+                      favorite: item.favorite || false,
                     })
                   }
                   style={dynamicStyles.songCardSize}
