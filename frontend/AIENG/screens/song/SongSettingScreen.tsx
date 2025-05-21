@@ -99,6 +99,13 @@ interface TTSVoiceResponse {
   error: null | string;
 }
 
+// API 응답 타입 추가
+interface SaveSettingsResponse {
+  success: boolean;
+  data: null;
+  error: null | string;
+}
+
 // 분위기별 이모지 매핑
 const MOOD_EMOJIS: { [key: string]: string } = {
   "nursery rhyme": "🎵",
@@ -397,35 +404,109 @@ const SongSettingScreen: React.FC = () => {
   };
 
   // 설정 저장 및 다음 단계로 진행
-  const handleSaveSettings = () => {
-    const selectedMood = moods.find((mood) => mood.selected);
-    const selectedVoice = voices.find((voice) => voice.selected);
-    const selectedTTSVoice = ttsVoices.find((voice) => voice.selected);
+  const handleSaveSettings = async () => {
+    try {
+      const selectedTTSVoice = ttsVoices.find((voice) => voice.selected);
+      const selectedVoice = voices.find((voice) => voice.selected);
+      const selectedMood = moods.find((mood) => mood.selected);
 
-    // 선택 검증
-    if (!selectedMood || !selectedVoice || !selectedTTSVoice) {
-      console.log("모든 설정을 완료해 주세요.");
-      return;
+      // 선택된 설정이 하나도 없는 경우
+      if (!selectedTTSVoice && !selectedVoice && !selectedMood) {
+        console.log("최소 하나 이상의 설정을 선택해주세요.");
+        return;
+      }
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // 선택된 설정만 포함하는 요청 본문 생성
+      const requestBody: {
+        ttsVoiceId?: number;
+        songVoiceId?: number;
+        moodId?: number;
+      } = {};
+
+      if (selectedTTSVoice) {
+        requestBody.ttsVoiceId = selectedTTSVoice.voiceId;
+      }
+      if (selectedVoice) {
+        requestBody.songVoiceId = selectedVoice.voiceId;
+      }
+      if (selectedMood) {
+        requestBody.moodId = selectedMood.moodId;
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/settings");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+      console.log("Body:", requestBody);
+
+      const response = await axios.patch<SaveSettingsResponse>(
+        "https://www.aieng.co.kr/api/voice/settings",
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        // Home 화면으로 이동
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "Home" }],
+          })
+        );
+      } else {
+        throw new Error(response.data.error || "설정 저장에 실패했습니다.");
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
     }
-
-    console.log("Selected mood:", selectedMood);
-    console.log("Selected voice:", selectedVoice);
-    console.log("Selected TTS voice:", selectedTTSVoice);
-
-    // TODO: API 연동 시 여기에 모든 설정을 한번에 전송
-    // const settings = {
-    //   mood: selectedMood,
-    //   voice: selectedVoice,
-    //   ttsVoice: selectedTTSVoice,
-    // };
-
-    // Home 화면으로 이동
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
-      })
-    );
   };
 
   return (
