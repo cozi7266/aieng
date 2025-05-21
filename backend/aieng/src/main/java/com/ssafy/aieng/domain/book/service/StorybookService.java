@@ -50,7 +50,8 @@ public class StorybookService {
     );
 
     private static final String DEFAULT_IMAGE_URL =
-            "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Sample_User_Icon.png/480px-Sample_User_Icon.png";
+            "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80";
+
 
 
     // 그림책 생성
@@ -93,7 +94,8 @@ public class StorybookService {
 
         // 대표 이미지(첫 번째 학습 이미지)
         List<Learning> learnings = learningRepository.findAllBySessionIdAndLearnedTrueOrderByPageOrder(sessionId);
-        String coverUrl = learnings.isEmpty() ? DEFAULT_IMAGE_URL : learnings.get(0).getImgUrl();
+        String coverUrl = learnings.isEmpty() ? DEFAULT_IMAGE_URL :
+                learnings.get((int)(Math.random() * learnings.size())).getImgUrl();
 
         // 5. Storybook 생성
         Storybook storybook = Storybook.builder()
