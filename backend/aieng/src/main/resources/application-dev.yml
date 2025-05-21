@@ -41,6 +41,10 @@ logging:
     com.zaxxer.hikari.HikariConfig: off  # 커넥션 풀 로그 제거
     com.zaxxer.hikari: off
 
+external:
+  fastapi:
+    base-url: "http://175.121.93.70:51528"
+
 oauth:
   kakao:
     redirect-uri: http://localhost:8080/oauth/kakao/callback
