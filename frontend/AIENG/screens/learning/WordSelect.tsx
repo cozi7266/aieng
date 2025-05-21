@@ -590,7 +590,7 @@ const WordSelectScreen: React.FC = () => {
                   {completedCount}/{totalWords}
                 </Text>
               </View>
-              <BGMToggleButton style={styles.headerButton} />
+              {/* <BGMToggleButton style={styles.headerButton} /> */}
             </View>
           </View>
 

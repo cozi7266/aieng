@@ -140,7 +140,7 @@ const HomeScreenContent: React.FC<HomeScreenContentProps> = ({
               resizeMode="contain"
             />
             <View style={styles.headerButtons}>
-              <BGMToggleButton style={styles.headerButton} />
+              {/* <BGMToggleButton style={styles.headerButton} /> */}
               <ProfileButton style={styles.headerButton} />
             </View>
           </View>

@@ -161,8 +161,8 @@ const WordcardScreen: React.FC = () => {
               <Text style={styles.headerTitle}>아이잉 : 단어 도감</Text>
             </View>
             <View style={styles.headerButtons}>
-              <BGMToggleButton style={styles.headerButton} />
-              <ProfileButton style={styles.headerButton} />
+              {/* <BGMToggleButton style={styles.headerButton} /> */}
+              {/* <ProfileButton style={styles.headerButton} /> */}
             </View>
           </View>
 

@@ -100,6 +100,7 @@ const WordQuizScreen: React.FC = () => {
   // 퀴즈 단계 계산 (1/4, 2/4, 3/4, 4/4)
   const totalSteps = 4;
   const currentStep = currentQuestionIndex + 1;
+  const progressPercentage = (currentStep / totalSteps) * 100;
   const isLastQuestion = currentStep === totalSteps;
 
   // 애니메이션 값
@@ -335,8 +336,8 @@ const WordQuizScreen: React.FC = () => {
           </Text>
         </View>
         <View style={styles.headerButtons}>
-          <BGMToggleButton style={styles.headerButton} />
-          <ProfileButton style={styles.headerButton} />
+          {/* <BGMToggleButton style={styles.headerButton} /> */}
+          {/* <ProfileButton style={styles.headerButton} /> */}
           <HelpButton
             onPress={() => setHelpModalVisible(true)}
             style={styles.headerButton}
@@ -347,10 +348,7 @@ const WordQuizScreen: React.FC = () => {
       {/* 진행 바 */}
       <View style={styles.duoProgressContainer}>
         <View
-          style={[
-            styles.duoProgressFill,
-            { width: `${(currentStep / totalSteps) * 100}%` },
-          ]}
+          style={[styles.duoProgressFill, { width: `${progressPercentage}%` }]}
         />
       </View>
 

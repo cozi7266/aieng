@@ -24,6 +24,7 @@ import NavigationWarningAlert from "../../components/navigation/NavigationWarnin
 import { CommonActions } from "@react-navigation/native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Audio } from "expo-av";
 
 type SongSettingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -106,18 +107,23 @@ interface SaveSettingsResponse {
   error: null | string;
 }
 
+// API 응답 타입 추가
+interface DeleteVoiceResponse {
+  success: boolean;
+  data: null;
+  error: null | string;
+}
+
 // 분위기별 이모지 매핑
 const MOOD_EMOJIS: { [key: string]: string } = {
-  "nursery rhyme": "🎵",
-  children: "👶",
-  kids: "👧",
   happy: "😊",
-  playful: "🎈",
-  slow: "🐢",
-  educational: "📚",
-  repetitive: "🔄",
-  brighton: "✨",
-  "easy listening": "🎧",
+  calm: "🧘",
+  energetic: "💪",
+  playful: "😜",
+  love: "❤️",
+  fun: "🎉",
+  educational: "🎓",
+  warm: "🌞",
 };
 
 const SongSettingScreen: React.FC = () => {
@@ -136,6 +142,36 @@ const SongSettingScreen: React.FC = () => {
     tabText: {
       fontSize: theme.typography.button.fontSize * scaleFactor,
     },
+    savedRecordingsContainer: {
+      width: "100%",
+      marginTop: theme.spacing.xl,
+      paddingHorizontal: theme.spacing.m,
+    },
+    savedRecordingsList: {
+      maxHeight: 200,
+      marginTop: theme.spacing.m,
+    },
+    savedRecordingItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: theme.spacing.m,
+      backgroundColor: "white",
+      borderRadius: theme.borderRadius.medium,
+      marginBottom: theme.spacing.s,
+      ...theme.shadows.default,
+    },
+    savedRecordingTime: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    savedRecordingControls: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+    },
+    savedRecordingButton: {
+      padding: theme.spacing.s,
+    },
   };
 
   // 상태 관리
@@ -146,6 +182,23 @@ const SongSettingScreen: React.FC = () => {
   const [isTTSRecording, setIsTTSRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 녹음 관련 상태 추가
+  const [recordingStatus, setRecordingStatus] = useState<
+    "notStarted" | "recording" | "finished"
+  >("notStarted");
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [maxRecordingDuration] = useState(15); // 15초 최대
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(
+    null
+  );
+  const [savedRecordings, setSavedRecordings] = useState<
+    { id: string; uri: string; timestamp: number }[]
+  >([]);
 
   // 화면 가로 모드 고정
   useEffect(() => {
@@ -382,24 +435,551 @@ const SongSettingScreen: React.FC = () => {
     );
   };
 
-  // TTS 목소리 추가 처리
-  const handleAddTTSVoice = () => {
-    setIsTTSRecording(true);
+  // 저장된 녹음 불러오기
+  useEffect(() => {
+    loadSavedRecordings();
+  }, []);
 
-    // 녹음 과정 시뮬레이션 (실제 녹음 기능으로 대체 필요)
-    setTimeout(() => {
-      setIsTTSRecording(false);
-      fetchTTSVoices(); // 목소리 추가 후 목록 새로고침
-    }, 2000);
+  const loadSavedRecordings = async () => {
+    try {
+      const savedData = await AsyncStorage.getItem("savedRecordings");
+      if (savedData) {
+        setSavedRecordings(JSON.parse(savedData));
+      }
+    } catch (err) {
+      console.error("저장된 녹음 불러오기 실패:", err);
+    }
+  };
+
+  // 파일을 Blob으로 변환하는 함수
+  const prepareAudioFile = async (recordedUri: string): Promise<Blob> => {
+    try {
+      console.log("[파일 변환 시작]");
+      console.log("Recorded URI:", recordedUri);
+
+      const response = await fetch(recordedUri);
+      if (!response.ok) {
+        throw new Error(`파일 변환 실패: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      console.log("[파일 변환 성공]");
+      console.log("Blob size:", blob.size);
+      console.log("Blob type:", blob.type);
+
+      return blob;
+    } catch (error) {
+      console.error("[파일 변환 실패]");
+      console.log("Error:", error);
+      throw error;
+    }
+  };
+
+  // Presigned URL 요청
+  const getPresignedUrl = async (contentType = "audio/m4a", expires = 300) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token || !selectedChildId) {
+        throw new Error("인증 정보가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[Presigned URL 요청]");
+      console.log(
+        "URL:",
+        `https://www.aieng.co.kr/api/voice/presigned-url?contentType=${contentType}&expires=${expires}`
+      );
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+      });
+
+      // Presigned URL 요청
+      const response = await axios.get(
+        `https://www.aieng.co.kr/api/voice/presigned-url?contentType=${contentType}&expires=${expires}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[Presigned URL 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (
+        response.data.success &&
+        response.data.data?.presignedUrl &&
+        response.data.data?.fileUrl
+      ) {
+        return response.data.data;
+      } else {
+        console.error("Presigned URL 응답 형식 오류:", response.data);
+        throw new Error(
+          response.data.error || "Presigned URL 획득에 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      console.error("[Presigned URL 요청 실패]");
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        throw new Error(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Error:", error.message);
+        throw error;
+      }
+    }
+  };
+
+  // S3 업로드
+  const uploadToS3 = async (
+    presignedUrl: string,
+    recordedUri: string,
+    contentType = "audio/m4a"
+  ) => {
+    try {
+      console.log("[S3 업로드 시작]");
+      console.log("Presigned URL:", presignedUrl);
+      console.log("Recorded URI:", recordedUri);
+      console.log("Content Type:", contentType);
+
+      // 방법 1: Blob으로 변환 후 업로드
+      try {
+        const fileBlob = await prepareAudioFile(recordedUri);
+        console.log("[S3 업로드 요청 - Blob 방식]");
+
+        const response = await axios.put(presignedUrl, fileBlob, {
+          headers: {
+            "Content-Type": contentType,
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+        });
+
+        console.log("[S3 업로드 응답 - Blob 방식]");
+        console.log("Status:", response.status);
+        console.log("Headers:", response.headers);
+
+        if (response.status === 200) {
+          console.log("[S3 업로드 성공 - Blob 방식]");
+          return true;
+        }
+      } catch (blobError) {
+        console.error("[Blob 방식 업로드 실패]", blobError);
+        console.log("FormData 방식으로 재시도합니다.");
+      }
+
+      // 방법 2: FormData로 직접 전송
+      console.log("[S3 업로드 요청 - FormData 방식]");
+      const formData = new FormData();
+      const file = {
+        uri: recordedUri,
+        type: contentType,
+        name: recordedUri.split("/").pop() || "recording.m4a",
+      } as any; // React Native의 FormData 타입 문제로 인한 임시 해결책
+
+      formData.append("file", file);
+
+      const response = await axios.put(presignedUrl, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+
+      console.log("[S3 업로드 응답 - FormData 방식]");
+      console.log("Status:", response.status);
+      console.log("Headers:", response.headers);
+
+      if (response.status === 200) {
+        console.log("[S3 업로드 성공 - FormData 방식]");
+        return true;
+      } else {
+        throw new Error(`S3 업로드 실패: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error("[S3 업로드 실패]");
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", error.response.data);
+        throw new Error(
+          `S3 업로드 실패: ${error.response.status} - ${
+            error.response.data || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "S3 서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Error:", error.message);
+        throw error;
+      }
+    }
+  };
+
+  // 음성 URL 등록
+  const registerVoiceUrl = async (fileUrl: string) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token || !selectedChildId) {
+        throw new Error("인증 정보가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[음성 URL 등록 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/voice-url");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+      });
+      console.log("Body:", { audioUrl: fileUrl });
+
+      const response = await axios.post(
+        "https://www.aieng.co.kr/api/voice/voice-url",
+        { audioUrl: fileUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[음성 URL 등록 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        return true;
+      } else {
+        throw new Error(
+          response.data.message || "음성 URL 등록에 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      console.error("[음성 URL 등록 실패]");
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        throw new Error(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Error:", error.message);
+        throw error;
+      }
+    }
+  };
+
+  // 녹음 저장 함수 수정
+  const saveRecordingToLocal = async () => {
+    if (!recordedUri) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // 1. Presigned URL 요청
+      const { presignedUrl, fileUrl } = await getPresignedUrl();
+
+      // 2. S3에 파일 업로드
+      await uploadToS3(presignedUrl, recordedUri);
+
+      // 3. 음성 URL 등록
+      await registerVoiceUrl(fileUrl);
+
+      // 4. 로컬 저장소에 저장
+      const newRecording = {
+        id: Date.now().toString(),
+        uri: recordedUri,
+        timestamp: Date.now(),
+      };
+
+      const updatedRecordings = [...savedRecordings, newRecording];
+      await AsyncStorage.setItem(
+        "savedRecordings",
+        JSON.stringify(updatedRecordings)
+      );
+      setSavedRecordings(updatedRecordings);
+      setError(null);
+
+      // 5. TTS 목소리 목록 새로고침
+      await fetchTTSVoices();
+
+      // 6. 녹음 상태 초기화
+      resetRecording();
+    } catch (err: any) {
+      console.error("녹음 저장 실패:", err);
+      if (err.response) {
+        console.log("Status:", err.response.status);
+        console.log("Data:", JSON.stringify(err.response.data, null, 2));
+        setError(
+          `서버 오류: ${err.response.status} - ${
+            err.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (err.request) {
+        console.log("Request:", err.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", err.config);
+        setError(err.message || "녹음을 저장할 수 없습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 녹음 삭제
+  const deleteRecording = async (id: string) => {
+    try {
+      const updatedRecordings = savedRecordings.filter((rec) => rec.id !== id);
+      await AsyncStorage.setItem(
+        "savedRecordings",
+        JSON.stringify(updatedRecordings)
+      );
+      setSavedRecordings(updatedRecordings);
+      setError(null);
+    } catch (err) {
+      console.error("녹음 삭제 실패:", err);
+      setError("녹음을 삭제할 수 없습니다.");
+    }
+  };
+
+  // 녹음 시작
+  const startRecording = async () => {
+    try {
+      setError(null);
+
+      // 권한 요청
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        setError("마이크 권한이 필요합니다.");
+        return;
+      }
+
+      // 녹음 준비
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      // 이전 녹음 정리
+      if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch (err) {
+          console.log("이전 녹음 정리 중 오류:", err);
+        }
+      }
+
+      // 녹음 시작
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+      setRecordingStatus("recording");
+
+      // 타이머 시작
+      setRecordingDuration(0);
+      const timer = setInterval(() => {
+        setRecordingDuration((prev) => {
+          if (prev >= maxRecordingDuration - 1) {
+            clearInterval(timer);
+            stopRecording();
+            return maxRecordingDuration;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+
+      setRecordingTimer(timer);
+
+      // 최대 녹음 시간 후 자동 중지
+      setTimeout(() => {
+        if (newRecording) {
+          stopRecording();
+        }
+      }, maxRecordingDuration * 1000);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+      setError("녹음을 시작할 수 없습니다. 다시 시도해주세요.");
+      setRecordingStatus("notStarted");
+    }
+  };
+
+  // 녹음 중지
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    try {
+      // 타이머 중지
+      if (recordingTimer) {
+        clearInterval(recordingTimer);
+        setRecordingTimer(null);
+      }
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecordedUri(uri);
+      setRecordingStatus("finished");
+      setRecording(null);
+
+      // 오디오 모드 재설정
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+    } catch (err) {
+      console.error("Failed to stop recording", err);
+      setError("녹음을 중지할 수 없습니다. 다시 시도해주세요.");
+    }
+  };
+
+  // 녹음 리셋
+  const resetRecording = async () => {
+    if (recording) {
+      try {
+        await recording.stopAndUnloadAsync();
+      } catch (err) {
+        console.log("녹음 정리 중 오류:", err);
+      }
+    }
+    if (sound) {
+      try {
+        await sound.unloadAsync();
+      } catch (err) {
+        console.log("소리 정리 중 오류:", err);
+      }
+    }
+    setRecordingStatus("notStarted");
+    setRecordedUri(null);
+    setRecordingDuration(0);
+    setSound(null);
+    setIsPlaying(false);
+    setError(null);
+  };
+
+  // 녹음된 소리 재생
+  const playRecording = async (uri: string) => {
+    try {
+      if (sound) {
+        await sound.unloadAsync();
+      }
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: true }
+      );
+
+      setSound(newSound);
+      setIsPlaying(true);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && !status.isPlaying && status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
+    } catch (err) {
+      console.error("Failed to play recording", err);
+      setError("녹음을 재생할 수 없습니다.");
+      setIsPlaying(false);
+    }
+  };
+
+  // TTS 목소리 추가 처리 업데이트
+  const handleAddTTSVoice = () => {
+    resetRecording(); // 녹음 상태 초기화하고 준비
+    setActiveTab("tts"); // TTS 탭으로 전환
   };
 
   // TTS 목소리 삭제 처리
   const handleDeleteTTSVoice = async (voiceId: number) => {
     try {
-      // TODO: 목소리 삭제 API 호출
-      await fetchTTSVoices(); // 삭제 후 목록 새로고침
-    } catch (err) {
+      const token = await AsyncStorage.getItem("accessToken");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", `https://www.aieng.co.kr/api/voice/${voiceId}`);
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      });
+
+      const response = await axios.delete<DeleteVoiceResponse>(
+        `https://www.aieng.co.kr/api/voice/${voiceId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        // 목소리 목록 새로고침
+        await fetchTTSVoices();
+      } else {
+        throw new Error(response.data.error || "목소리 삭제에 실패했습니다.");
+      }
+    } catch (err: any) {
       console.error("목소리 삭제 실패:", err);
+      if (err.response) {
+        console.log("Status:", err.response.status);
+        console.log("Data:", JSON.stringify(err.response.data, null, 2));
+        setError(
+          `서버 오류: ${err.response.status} - ${
+            err.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (err.request) {
+        console.log("Request:", err.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", err.config);
+        setError(
+          err.message || "목소리를 삭제할 수 없습니다. 다시 시도해주세요."
+        );
+      }
     }
   };
 
@@ -514,10 +1094,10 @@ const SongSettingScreen: React.FC = () => {
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <BackButton
+          {/* <BackButton
             onPress={() => navigation.goBack()}
             style={styles.backButton}
-          />
+          /> */}
           <Text style={styles.headerTitle}>설정</Text>
         </View>
 
@@ -679,16 +1259,196 @@ const SongSettingScreen: React.FC = () => {
                     style={styles.voiceItem}
                     scaleFactor={scaleFactor}
                   />
+
+                  {/* 저장된 녹음 목록 */}
+                  {savedRecordings.length > 0 && (
+                    <View style={styles.savedRecordingsContainer}>
+                      <View
+                        style={[
+                          styles.sectionHeader,
+                          { marginBottom: theme.spacing.xs },
+                        ]}
+                      >
+                        <Text style={styles.sectionTitle}>저장된 녹음</Text>
+                        <Text style={styles.sectionSubtitle}>
+                          저장된 녹음 목록입니다.{"\n"}
+                          재생하여 확인하거나 삭제할 수 있습니다.
+                        </Text>
+                      </View>
+                      <ScrollView style={styles.savedRecordingsList}>
+                        {savedRecordings.map((rec) => (
+                          <View key={rec.id} style={styles.savedRecordingItem}>
+                            <Text style={styles.savedRecordingTime}>
+                              {new Date(rec.timestamp).toLocaleString()}
+                            </Text>
+                            <View style={styles.savedRecordingControls}>
+                              <TouchableOpacity
+                                style={styles.savedRecordingButton}
+                                onPress={() => playRecording(rec.uri)}
+                              >
+                                <FontAwesome5
+                                  name="play"
+                                  size={20}
+                                  color={theme.colors.primary}
+                                />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.savedRecordingButton}
+                                onPress={() => deleteRecording(rec.id)}
+                              >
+                                <FontAwesome5
+                                  name="trash"
+                                  size={20}
+                                  color="#FF3B30"
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
                 </ScrollView>
               )}
             </View>
 
-            {/* 우측 - 추후 추가될 내용 */}
+            {/* 우측 - 녹음 UI */}
             <View style={styles.rightContainer}>
-              <Text style={styles.sectionTitle}>추가 설정</Text>
-              <Text style={styles.sectionSubtitle}>
-                추후 추가될 설정 내용이 들어갈 자리입니다.
-              </Text>
+              {recordingStatus === "notStarted" ? (
+                // 녹음 전 상태
+                <View style={styles.recordingContainer}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>목소리 녹음하기</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      아래 버튼을 눌러 10~15초 동안 문장을{"\n"}또박또박
+                      읽어주세요.
+                    </Text>
+                  </View>
+
+                  <View style={styles.recordingContent}>
+                    <View style={styles.timerContainer}>
+                      <Text style={styles.timerText}>
+                        00:{maxRecordingDuration.toString().padStart(2, "0")}
+                      </Text>
+                      <View style={styles.progressBarContainer}>
+                        <View style={[styles.progressBarEmpty]} />
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.recordButton]}
+                      onPress={startRecording}
+                    >
+                      <FontAwesome5 name="microphone" size={24} color="white" />
+                      <Text style={styles.recordButtonText}>녹음 시작</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : recordingStatus === "recording" ? (
+                // 녹음 중 상태
+                <View style={styles.recordingContainer}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>녹음 중...</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      녹음 중입니다. 또박또박 문장을 읽어주세요.{"\n"}
+                      녹음은 최대 {maxRecordingDuration}초까지 가능합니다.
+                    </Text>
+                  </View>
+
+                  <View style={styles.recordingContent}>
+                    <View style={styles.timerContainer}>
+                      <Text style={styles.timerText}>
+                        00:
+                        {(maxRecordingDuration - recordingDuration)
+                          .toString()
+                          .padStart(2, "0")}
+                      </Text>
+                      <View style={styles.progressBarContainer}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            {
+                              width: `${
+                                (recordingDuration / maxRecordingDuration) * 100
+                              }%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.recordButton, styles.stopButton]}
+                      onPress={stopRecording}
+                    >
+                      <FontAwesome5 name="stop" size={24} color="white" />
+                      <Text style={styles.recordButtonText}>녹음 중지</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                // 녹음 완료 상태
+                <View style={styles.recordingContainer}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>녹음 완료!</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      녹음이 완료되었습니다!{"\n"}
+                      녹음한 목소리를 확인하고 저장할 수 있습니다.
+                    </Text>
+                  </View>
+
+                  <View style={styles.recordingContent}>
+                    <View style={styles.playbackControls}>
+                      <TouchableOpacity
+                        style={[styles.controlButton]}
+                        onPress={() =>
+                          recordedUri && playRecording(recordedUri)
+                        }
+                        disabled={isPlaying}
+                      >
+                        <FontAwesome5
+                          name={isPlaying ? "pause" : "play"}
+                          size={24}
+                          color={theme.colors.primary}
+                        />
+                        <Text style={styles.controlButtonText}>
+                          {isPlaying ? "일시정지" : "재생"}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.controlButton]}
+                        onPress={resetRecording}
+                      >
+                        <FontAwesome5
+                          name="redo"
+                          size={24}
+                          color={theme.colors.primary}
+                        />
+                        <Text style={styles.controlButtonText}>다시 녹음</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.controlButton, styles.saveButton]}
+                        onPress={saveRecordingToLocal}
+                        disabled={isLoading}
+                      >
+                        <FontAwesome5 name="save" size={24} color="white" />
+                        <Text
+                          style={[
+                            styles.controlButtonText,
+                            styles.saveButtonText,
+                          ]}
+                        >
+                          {isLoading ? "저장 중..." : "저장"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {error && <Text style={styles.errorText}>{error}</Text>}
             </View>
           </>
         )}
@@ -696,11 +1456,13 @@ const SongSettingScreen: React.FC = () => {
 
       {/* 하단 버튼 */}
       <View style={styles.buttonContainer}>
-        <Button
-          title="저장하기"
+        <TouchableOpacity
+          style={[styles.recordButton]}
           onPress={handleSaveSettings}
-          variant="primary"
-        />
+        >
+          <FontAwesome5 name="save" size={24} color="white" />
+          <Text style={styles.recordButtonText}>저장하기</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -777,6 +1539,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: theme.spacing.l,
   },
+  sectionHeader: {
+    marginBottom: theme.spacing.l,
+  },
   sectionTitle: {
     ...theme.typography.subTitle,
     color: theme.colors.primary,
@@ -785,13 +1550,13 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     ...theme.typography.body,
     color: theme.colors.subText,
-    marginBottom: theme.spacing.l,
   },
   moodGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.s,
+    paddingTop: theme.spacing.xl,
   },
   moodItem: {
     width: "22%",
@@ -818,6 +1583,130 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     textAlign: "center",
     marginTop: theme.spacing.l,
+  },
+  // 녹음 관련 스타일
+  recordingContainer: {
+    flex: 1,
+    width: "100%",
+  },
+  recordingContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingTop: theme.spacing.xs,
+    gap: theme.spacing.s,
+  },
+  recordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.m,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.pill,
+    minWidth: 200,
+    ...theme.shadows.default,
+  },
+  stopButton: {
+    backgroundColor: "#FF3B30",
+  },
+  recordButtonText: {
+    ...theme.typography.button,
+    color: "white",
+    marginLeft: theme.spacing.s,
+  },
+  timerContainer: {
+    width: "80%",
+    alignItems: "center",
+    marginBottom: theme.spacing.s,
+  },
+  timerText: {
+    ...theme.typography.subTitle,
+    color: theme.colors.primary,
+  },
+  progressBarContainer: {
+    width: "100%",
+    height: 24,
+    backgroundColor: "#E0E0E0",
+    borderRadius: theme.borderRadius.pill,
+    overflow: "hidden",
+  },
+  progressBarEmpty: {
+    height: "100%",
+    width: "0%",
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.borderRadius.pill,
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.pill,
+  },
+  playbackControls: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: theme.spacing.l,
+  },
+  controlButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.m,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    width: 150,
+    marginHorizontal: theme.spacing.s,
+  },
+  controlButtonText: {
+    ...theme.typography.button,
+    color: theme.colors.primary,
+    fontSize: 22,
+    marginTop: theme.spacing.xs,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  saveButtonText: {
+    color: "white",
+  },
+  disabledButton: {
+    borderColor: "gray",
+    opacity: 0.7,
+  },
+  disabledButtonText: {
+    color: "gray",
+  },
+  savedRecordingsContainer: {
+    width: "100%",
+    marginTop: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.m,
+  },
+  savedRecordingsList: {
+    maxHeight: 200,
+    marginTop: theme.spacing.m,
+  },
+  savedRecordingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: theme.spacing.m,
+    backgroundColor: "white",
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.s,
+    ...theme.shadows.default,
+  },
+  savedRecordingTime: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+  },
+  savedRecordingControls: {
+    flexDirection: "row",
+    gap: theme.spacing.m,
+  },
+  savedRecordingButton: {
+    padding: theme.spacing.s,
   },
 });
 

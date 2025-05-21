@@ -29,6 +29,7 @@ import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { NavigationAlert } from "../../components/navigation/NavigationAlert";
 
 // 라우트 파라미터 타입 정의
 type WordSentenceParams = {
@@ -92,10 +93,21 @@ const WordSentenceScreen: React.FC = () => {
   const [helpModalVisible, setHelpModalVisible] = useState(false);
   const [currentWord, setCurrentWord] = useState<string>("");
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [pronunciationFeedback, setPronunciationFeedback] = useState<{
+    recognized_text: string;
+    expected_text: string;
+    accuracy: number;
+    confidence: number;
+    feedback: string;
+  } | null>(null);
 
-  // 진행 단계 (2/3 표시를 위한 변수)
+  // 진행 단계 (2/2 표시를 위한 변수)
   const currentStep = 2;
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   // 애니메이션 값
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -464,6 +476,182 @@ const WordSentenceScreen: React.FC = () => {
     );
   };
 
+  // 발음 평가 시작
+  const startPronunciationTest = async () => {
+    try {
+      setError(null);
+      setIsRecording(true);
+
+      // 권한 요청
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        setError("마이크 권한이 필요합니다.");
+        return;
+      }
+
+      // 녹음 준비
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      // 이전 녹음 정리
+      if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch (err) {
+          console.log("이전 녹음 정리 중 오류:", err);
+        }
+      }
+
+      // 녹음 시작
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+    } catch (err) {
+      console.error("녹음 시작 실패:", err);
+      setError("녹음을 시작할 수 없습니다.");
+      setIsRecording(false);
+    }
+  };
+
+  // 발음 평가 중지 및 평가
+  const stopPronunciationTest = async () => {
+    if (!recording) return;
+
+    try {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      if (!uri) {
+        throw new Error("녹음 파일을 저장할 수 없습니다.");
+      }
+      setRecordedUri(uri);
+      setRecording(null);
+
+      // 오디오 모드 재설정
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
+      // 발음 평가 API 호출
+      await evaluatePronunciation(uri);
+    } catch (err) {
+      console.error("녹음 중지 실패:", err);
+      setError("녹음을 중지할 수 없습니다.");
+    }
+  };
+
+  // 발음 평가 API 호출
+  const evaluatePronunciation = async (audioUri: string) => {
+    try {
+      setIsEvaluating(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token || !selectedChildId) {
+        throw new Error("인증 정보가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[발음 평가 API 요청]");
+      console.log(
+        "URL:",
+        `https://www.aieng.co.kr/api/voice/pronounce-test?expectedText=${encodeURIComponent(
+          sentence?.word || ""
+        )}`
+      );
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "multipart/form-data",
+      });
+
+      // FormData 생성
+      const formData = new FormData();
+      formData.append("audio_file", {
+        uri: audioUri,
+        type: "audio/m4a",
+        name: "recording.m4a",
+      } as any);
+
+      // API 호출
+      console.log("[API 호출 시작]");
+      const apiResponse = await axios.post(
+        `https://www.aieng.co.kr/api/voice/pronounce-test?expectedText=${encodeURIComponent(
+          sentence?.word || ""
+        )}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 10000,
+        }
+      );
+
+      console.log("[API 응답]");
+      console.log("Status:", apiResponse.status);
+      console.log("Data:", JSON.stringify(apiResponse.data, null, 2));
+
+      if (apiResponse.data) {
+        setPronunciationFeedback(apiResponse.data.data);
+        // 모달로 결과 표시
+        NavigationAlert.show({
+          title: "발음 평가 결과",
+          message: `인식된 단어: ${apiResponse.data.data.recognized_text}\n\n정확도: ${apiResponse.data.data.accuracy}%\n신뢰도: ${apiResponse.data.data.confidence}%\n\n${apiResponse.data.data.feedback}`,
+          confirmText: "확인",
+          onConfirm: () => {
+            setPronunciationFeedback(null);
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error("[발음 평가 실패 상세 정보]");
+      if (err.response) {
+        console.error("Status:", err.response.status);
+        console.error("Data:", JSON.stringify(err.response.data, null, 2));
+        console.error(
+          "Headers:",
+          JSON.stringify(err.response.headers, null, 2)
+        );
+        NavigationAlert.show({
+          title: "발음 평가 실패",
+          message: `서버 오류: ${err.response.status} - ${
+            err.response.data?.message || "알 수 없는 오류"
+          }`,
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+      } else if (err.request) {
+        console.error("Request:", err.request);
+        NavigationAlert.show({
+          title: "발음 평가 실패",
+          message: "서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.",
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+      } else {
+        console.error("Error Message:", err.message);
+        NavigationAlert.show({
+          title: "발음 평가 실패",
+          message: err.message || "발음 평가에 실패했습니다.",
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+      }
+      console.error("Config:", JSON.stringify(err.config, null, 2));
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
   // 로딩 화면 표시
   if (isLoading || !sentence) {
     return <LoadingScreen message="문장을 불러오는 중..." />;
@@ -552,17 +740,37 @@ const WordSentenceScreen: React.FC = () => {
             </View>
             <View style={styles.textContainer}>
               {renderHighlightedSentence()}
-              <TouchableOpacity
-                onPress={handleCardPlay}
-                style={styles.playButton}
-              >
-                <FontAwesome5
-                  name="volume-up"
-                  size={27}
-                  color={theme.colors.primary}
-                  style={styles.soundIcon}
-                />
-              </TouchableOpacity>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  onPress={handleCardPlay}
+                  style={styles.playButton}
+                >
+                  <FontAwesome5
+                    name="volume-up"
+                    size={27}
+                    color={theme.colors.primary}
+                    style={styles.soundIcon}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.divider}>/</Text>
+                <TouchableOpacity
+                  onPress={
+                    isRecording ? stopPronunciationTest : startPronunciationTest
+                  }
+                  style={[
+                    styles.playButton,
+                    isRecording && styles.recordingButton,
+                  ]}
+                  disabled={isEvaluating}
+                >
+                  <FontAwesome5
+                    name={isRecording ? "stop" : "microphone"}
+                    size={27}
+                    color={isRecording ? "#FF3B30" : theme.colors.primary}
+                    style={styles.soundIcon}
+                  />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.koreanSentence}>
                 {sentence.sentenceKorean}
               </Text>
@@ -878,12 +1086,53 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(81, 75, 242, 0.15)",
     zIndex: 0,
   },
-  playButton: {
-    // marginTop: theme.spacing.xs,
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: theme.spacing.m,
     marginBottom: theme.spacing.m,
+  },
+  divider: {
+    fontSize: 24,
+    color: theme.colors.primary,
+    fontWeight: "bold",
+    marginHorizontal: theme.spacing.xs,
+  },
+  playButton: {
+    padding: 10,
+  },
+  recordingButton: {
+    backgroundColor: "#FF3B30",
+    borderRadius: 50,
+    padding: 10,
   },
   soundIcon: {
     // paddingTop: theme.spacing.xs,
+  },
+  feedbackContainer: {
+    marginTop: theme.spacing.m,
+    padding: theme.spacing.m,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  feedbackTitle: {
+    ...theme.typography.subTitle,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.s,
+  },
+  feedbackText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  feedbackMessage: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontStyle: "italic",
+    marginTop: theme.spacing.s,
   },
 });
 
