@@ -12,15 +12,16 @@ public class VoiceResponse {
     private String name;
     private String description;
     private String audioUrl;
+    private boolean isDefault;
 
     public static VoiceResponse from(Voice voice) {
-
-        return new VoiceResponse(
-                voice.getId(),
-                voice.getChildId(),
-                voice.getName(),
-                voice.getDescription(),
-                voice.getAudioUrl()
-        );
+        return VoiceResponse.builder()
+                .voiceId(voice.getId())
+                .childId(voice.getChildId())
+                .name(voice.getName())
+                .description(voice.getDescription())
+                .audioUrl(voice.getAudioUrl())
+                .isDefault(voice.getChildId() == null)
+                .build();
     }
 } 

@@ -45,12 +45,9 @@ import java.time.Duration;
 @Slf4j
 public class LearningService {
 
-    private final UserRepository userRepository;
-    private final RedisService redisService;
+
     private final LearningRepository learningRepository;
     private final SessionRepository sessionRepository;
-    private final ChildService childService;
-    private final ThemeRepository themeRepository;
     private final WordRepository wordRepository;
     private final ChildRepository childRepository;
     private final VoiceRepository voiceRepository;

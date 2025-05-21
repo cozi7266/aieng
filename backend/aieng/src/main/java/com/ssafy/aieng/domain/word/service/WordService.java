@@ -42,5 +42,4 @@ public class WordService {
       return WordResponse.of(word);
    }
 
-
 }

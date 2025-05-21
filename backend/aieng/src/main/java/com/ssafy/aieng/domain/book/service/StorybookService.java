@@ -77,9 +77,19 @@ public class StorybookService {
             throw new CustomException(ErrorCode.STORYBOOK_CREATION_FAILED);
         }
 
-        // 4. 그림책 기본 제목/설명 자동 생성
-        String title = session.getChild().getName() + "의 그림책";
-        String description = LocalDate.now() + "의 학습을 바탕으로 생성된 그림책입니다.";
+        // 4. 그림책 기본 제목/설명 자동 생성 (랜덤 선택)
+        String childName = session.getChild().getName();
+        String today = LocalDate.now().toString();
+
+        String title = String.format(
+                TITLE_TEMPLATES.get((int) (Math.random() * TITLE_TEMPLATES.size())),
+                childName
+        );
+
+        String descTemplate = DESCRIPTION_TEMPLATES.get((int) (Math.random() * DESCRIPTION_TEMPLATES.size()));
+        String description = descTemplate.contains("%s") && descTemplate.indexOf("%s") != descTemplate.lastIndexOf("%s")
+                ? String.format(descTemplate, childName, today)
+                : String.format(descTemplate, childName);
 
         // 대표 이미지(첫 번째 학습 이미지)
         List<Learning> learnings = learningRepository.findAllBySessionIdAndLearnedTrueOrderByPageOrder(sessionId);
