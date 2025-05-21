@@ -152,6 +152,22 @@ interface SongDetailResponse {
   };
 }
 
+interface SongInfo {
+  title: string;
+  artist: string;
+  imageUrl: { uri: string };
+  favorite: boolean;
+}
+
+interface StorybookWithSong extends Storybook {
+  songInfo?: {
+    title: string;
+    artist: string;
+    imageUrl: { uri: string };
+    favorite: boolean;
+  };
+}
+
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
   const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
@@ -160,7 +176,7 @@ const SongScreen: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
-  const [storybooks, setStorybooks] = useState<Storybook[]>([]);
+  const [storybooks, setStorybooks] = useState<StorybookWithSong[]>([]);
   const [currentSongStatus, setCurrentSongStatus] = useState<SongStatus | null>(
     null
   );
@@ -258,6 +274,14 @@ const SongScreen: React.FC = () => {
                   return {
                     ...book,
                     favorite: songDetail.isLiked || false,
+                    songInfo: {
+                      title: songDetail.title,
+                      artist: `${songDetail.themeKo}${
+                        songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+                      }`,
+                      imageUrl: { uri: songDetail.bookCover },
+                      favorite: songDetail.isLiked || false,
+                    },
                   };
                 }
                 return {
@@ -760,6 +784,98 @@ const SongScreen: React.FC = () => {
     },
   };
 
+  const SongCardItem: React.FC<{
+    item: StorybookWithSong;
+    isActive: boolean;
+    isPlaying: boolean;
+    onPress: (song: Song) => void;
+    onStoryPress: (song: Song) => void;
+    style: any;
+    scaleFactor: number;
+    isStoryButtonEnabled: boolean;
+  }> = ({
+    item,
+    isActive,
+    isPlaying,
+    onPress,
+    onStoryPress,
+    style,
+    scaleFactor,
+    isStoryButtonEnabled,
+  }) => {
+    const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
+    const artistText = item.themeKo
+      ? `${item.themeKo}${item.themeEn ? ` (${item.themeEn})` : ""}`
+      : "동화";
+
+    useEffect(() => {
+      const checkAndGetSongInfo = async () => {
+        try {
+          const status = await checkSongStatus(
+            item.sessionId,
+            item.storybookId
+          );
+          if (status.status === "SAVED" && status.details.songId) {
+            const songDetail = await fetchSongDetail(status.details.songId);
+            setSongInfo({
+              title: songDetail.title,
+              artist: `${songDetail.themeKo}${
+                songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+              }`,
+              imageUrl: { uri: songDetail.bookCover },
+              favorite: songDetail.isLiked || false,
+            });
+          }
+        } catch (error) {
+          console.error("동요 정보 조회 실패:", error);
+        }
+      };
+
+      checkAndGetSongInfo();
+    }, [item.storybookId]);
+
+    return (
+      <SongCard
+        song={{
+          id: item.storybookId.toString(),
+          title: item.songInfo?.title || item.title,
+          artist: item.songInfo?.artist || artistText,
+          imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
+          audioUrl: require("../assets/sounds/sample.mp3"),
+          duration: 228,
+          favorite: item.songInfo?.favorite || item.favorite || false,
+        }}
+        isActive={isActive}
+        isPlaying={isPlaying}
+        onPress={() =>
+          onPress({
+            id: item.storybookId.toString(),
+            title: item.songInfo?.title || item.title,
+            artist: item.songInfo?.artist || artistText,
+            imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
+            audioUrl: require("../assets/sounds/sample.mp3"),
+            duration: 228,
+            favorite: item.songInfo?.favorite || item.favorite || false,
+          })
+        }
+        onStoryPress={() =>
+          onStoryPress({
+            id: item.storybookId.toString(),
+            title: item.songInfo?.title || item.title,
+            artist: item.songInfo?.artist || artistText,
+            imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
+            audioUrl: require("../assets/sounds/sample.mp3"),
+            duration: 228,
+            favorite: item.songInfo?.favorite || item.favorite || false,
+          })
+        }
+        style={style}
+        scaleFactor={scaleFactor}
+        isStoryButtonEnabled={isStoryButtonEnabled}
+      />
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* 헤더 */}
@@ -959,44 +1075,14 @@ const SongScreen: React.FC = () => {
               const artistText = item.themeKo
                 ? `${item.themeKo}${item.themeEn ? ` (${item.themeEn})` : ""}`
                 : "동화";
+
               return (
-                <SongCard
-                  song={{
-                    id: item.storybookId.toString(),
-                    title: item.title,
-                    artist: artistText,
-                    imageUrl: { uri: item.coverUrl },
-                    audioUrl: require("../assets/sounds/sample.mp3"),
-                    duration: 228,
-                    lyrics: item.description,
-                    favorite: item.favorite || false,
-                  }}
+                <SongCardItem
+                  item={item}
                   isActive={isActive}
                   isPlaying={isActive && isPlaying}
-                  onPress={() =>
-                    handleSongPress({
-                      id: item.storybookId.toString(),
-                      title: item.title,
-                      artist: artistText,
-                      imageUrl: { uri: item.coverUrl },
-                      audioUrl: require("../assets/sounds/sample.mp3"),
-                      duration: 228,
-                      lyrics: item.description,
-                      favorite: item.favorite || false,
-                    })
-                  }
-                  onStoryPress={() =>
-                    handleNavigateToStory({
-                      id: item.storybookId.toString(),
-                      title: item.title,
-                      artist: artistText,
-                      imageUrl: { uri: item.coverUrl },
-                      audioUrl: require("../assets/sounds/sample.mp3"),
-                      duration: 228,
-                      lyrics: item.description,
-                      favorite: item.favorite || false,
-                    })
-                  }
+                  onPress={handleSongPress}
+                  onStoryPress={handleNavigateToStory}
                   style={dynamicStyles.songCardSize}
                   scaleFactor={scaleFactor}
                   isStoryButtonEnabled={
