@@ -1094,10 +1094,10 @@ const SongSettingScreen: React.FC = () => {
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <BackButton
+          {/* <BackButton
             onPress={() => navigation.goBack()}
             style={styles.backButton}
-          />
+          /> */}
           <Text style={styles.headerTitle}>설정</Text>
         </View>
 

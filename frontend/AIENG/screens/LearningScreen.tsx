@@ -252,13 +252,14 @@ const LearningScreen: React.FC = () => {
             </View>
 
             <View style={styles.headerButtons}>
-              <BGMToggleButton style={styles.headerButton} />
+              {/* <BGMToggleButton style={styles.headerButton} /> */}
             </View>
           </View>
 
           <View style={styles.contentContainer}>
             <Text style={styles.subtitle}>
-              테마를 선택하여 단어를 배워보세요!
+              테마를 선택하여 단어를 배워보세요! / 완료가 된 테마는 퀴즈를 풀 수
+              있어요!
             </Text>
 
             <FlatList
