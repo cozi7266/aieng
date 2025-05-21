@@ -77,6 +77,7 @@ const FairytaleScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [activeTab, setActiveTab] = useState<"story" | "lyrics">("story");
 
   // For responsive design
   const scaleFactor = Math.min(width / 2000, height / 1200);
@@ -281,11 +282,33 @@ const FairytaleScreen: React.FC = () => {
       paddingVertical: theme.spacing.m * scaleFactor,
       paddingHorizontal: theme.spacing.xl * scaleFactor,
     },
-    headerTitle: {
-      fontSize: theme.typography.title.fontSize * scaleFactor,
-    },
     pageIndicator: {
       fontSize: theme.typography.caption.fontSize * scaleFactor,
+    },
+    tabButton: {
+      paddingVertical: theme.spacing.s * scaleFactor,
+      paddingHorizontal: theme.spacing.l * scaleFactor,
+    },
+    tabSelector: {
+      flexDirection: "row",
+      backgroundColor: theme.colors.background,
+      borderRadius: theme.borderRadius.pill,
+      padding: 4,
+      position: "absolute",
+      left: "50%",
+      transform: [{ translateX: -65 }], // 탭 선택기의 절반 너비만큼 왼쪽으로 이동
+    },
+    tab: {
+      borderRadius: theme.borderRadius.pill,
+    },
+    activeTab: {
+      backgroundColor: theme.colors.primary,
+    },
+    tabText: {
+      fontSize: theme.typography.button.fontSize * scaleFactor,
+    },
+    activeTabText: {
+      color: "white",
     },
   };
 
@@ -337,10 +360,48 @@ const FairytaleScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           />
-          <Text style={[styles.headerTitle, dynamicStyles.headerTitle]}>
-            {fairytale.title}
-          </Text>
         </View>
+
+        {/* 탭 선택기 */}
+        <View style={styles.tabSelector}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              dynamicStyles.tabButton,
+              activeTab === "story" && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab("story")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                dynamicStyles.tabText,
+                activeTab === "story" && styles.activeTabText,
+              ]}
+            >
+              그림책
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              dynamicStyles.tabButton,
+              activeTab === "lyrics" && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab("lyrics")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                dynamicStyles.tabText,
+                activeTab === "lyrics" && styles.activeTabText,
+              ]}
+            >
+              동요 가사
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.pageIndicator}>
           <Text style={[styles.pageIndicatorText, dynamicStyles.pageIndicator]}>
             {fairytale.pages[currentPageIndex].pageOrder} /{" "}
@@ -351,61 +412,70 @@ const FairytaleScreen: React.FC = () => {
 
       {/* Main Content */}
       <View style={styles.contentContainer}>
-        {/* Fairy Tale Carousel + 자막 오버레이 */}
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            width: "90%",
-            alignSelf: "center",
-            marginTop: theme.spacing.s,
-          }}
-        >
-          <FairytaleCarousel
-            pages={fairytale.pages.map((page) => ({
-              id: page.wordId.toString(),
-              imageUrl: { uri: page.wordImgUrl },
-              text: page.sentence,
-            }))}
-            currentIndex={currentPageIndex}
-            onPrevious={handlePreviousPage}
-            onNext={handleNextPage}
-            scaleFactor={scaleFactor}
-          />
-          {/* 자막 클릭 시 TTS 재생 */}
-          <TouchableOpacity
-            style={styles.subtitleOverlay}
-            onPress={() => {
-              console.log(
-                "현재 페이지 데이터:",
-                fairytale.pages[currentPageIndex]
-              );
-              playTts(fairytale.pages[currentPageIndex].sentenceTtsUrl);
+        {/* 탭에 따른 컨텐츠 전환 */}
+        {activeTab === "story" ? (
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              width: "90%",
+              alignSelf: "center",
+              marginTop: theme.spacing.s,
             }}
           >
-            <View style={styles.subtitleContainer}>
-              <View style={styles.subtitleRow}>
-                <TouchableOpacity
-                  style={styles.soundButton}
-                  onPress={() =>
-                    playTts(fairytale.pages[currentPageIndex].sentenceTtsUrl)
-                  }
-                >
-                  <FontAwesome5 name="volume-up" size={24} color="white" />
-                </TouchableOpacity>
-                <View>
-                  <Text style={styles.subtitleText}>
-                    {fairytale.pages[currentPageIndex].sentence}
-                  </Text>
-                  <Text style={styles.subtitleTextKo}>
-                    {fairytale.pages[currentPageIndex].translation}
-                  </Text>
+            <FairytaleCarousel
+              pages={fairytale.pages.map((page) => ({
+                id: page.wordId.toString(),
+                imageUrl: { uri: page.wordImgUrl },
+                text: page.sentence,
+              }))}
+              currentIndex={currentPageIndex}
+              onPrevious={handlePreviousPage}
+              onNext={handleNextPage}
+              scaleFactor={scaleFactor}
+            />
+            {/* 자막 클릭 시 TTS 재생 */}
+            <TouchableOpacity
+              style={styles.subtitleOverlay}
+              onPress={() => {
+                console.log(
+                  "현재 페이지 데이터:",
+                  fairytale.pages[currentPageIndex]
+                );
+                playTts(fairytale.pages[currentPageIndex].sentenceTtsUrl);
+              }}
+            >
+              <View style={styles.subtitleContainer}>
+                <View style={styles.subtitleRow}>
+                  <TouchableOpacity
+                    style={styles.soundButton}
+                    onPress={() =>
+                      playTts(fairytale.pages[currentPageIndex].sentenceTtsUrl)
+                    }
+                  >
+                    <FontAwesome5 name="volume-up" size={24} color="white" />
+                  </TouchableOpacity>
+                  <View>
+                    <Text style={styles.subtitleText}>
+                      {fairytale.pages[currentPageIndex].sentence}
+                    </Text>
+                    <Text style={styles.subtitleTextKo}>
+                      {fairytale.pages[currentPageIndex].translation}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        </View>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.lyricsContainer}>
+            <Text style={styles.lyricsText}>
+              동요 가사가 여기에 표시됩니다.
+            </Text>
+          </View>
+        )}
+
         {/* Music Player */}
         <View style={styles.playerContainer}>
           {song && (
@@ -445,6 +515,7 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
+    width: 100,
   },
   backButton: {
     marginRight: theme.spacing.m,
@@ -524,6 +595,39 @@ const styles = StyleSheet.create({
   errorText: {
     ...theme.typography.body,
     color: theme.colors.primary,
+  },
+  lyricsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.l,
+  },
+  lyricsText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
+  tabSelector: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.pill,
+    padding: 4,
+    position: "absolute",
+    left: "50%",
+    transform: [{ translateX: -65 }], // 탭 선택기의 절반 너비만큼 왼쪽으로 이동
+  },
+  tab: {
+    borderRadius: theme.borderRadius.pill,
+  },
+  activeTab: {
+    backgroundColor: theme.colors.primary,
+  },
+  tabText: {
+    ...theme.typography.button,
+    color: theme.colors.text,
+  },
+  activeTabText: {
+    color: "white",
   },
 });
 
