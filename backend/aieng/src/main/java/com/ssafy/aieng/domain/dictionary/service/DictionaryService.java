@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,24 +35,31 @@ public class DictionaryService {
     @Transactional(readOnly = true)
     public List<DictionaryThemesResponse> getThemesWithProgress(Integer childId, Integer userId) {
 
-        // 자녀 소유 검증
+        // 1. 자녀 소유 검증
         if (!childRepository.existsByIdAndUserId(childId, userId)) {
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);
         }
 
-        // 전체 테마 조회
+        // 2. 전체 테마 조회
         List<Theme> themes = themeRepository.findAll();
 
-        // 자녀가 학습한 단어 목록 조회
+        // 3. 자녀가 학습한 단어 목록 조회
         List<Learning> learnings = learningRepository.findAllBySession_Child_IdAndLearnedTrue(childId);
 
-        // 테마별 응답 생성
+        // 4. 테마 ID별로 학습한 단어 ID 모으기 (중복 제거됨)
+        Map<Integer, Set<Integer>> themeIdToLearnedWordIds = learnings.stream()
+                .collect(Collectors.groupingBy(
+                        l -> l.getWord().getTheme().getId(),
+                        Collectors.mapping(l -> l.getWord().getId(), Collectors.toSet())
+                ));
+
+        // 5. 응답 생성
         return themes.stream()
                 .map(theme -> {
                     int totalWords = theme.getTotalWords();
-                    int learnedCount = (int) learnings.stream()
-                            .filter(learning -> learning.getWord().getTheme().getId().equals(theme.getId()))
-                            .count();
+                    int learnedCount = themeIdToLearnedWordIds
+                            .getOrDefault(theme.getId(), Set.of())
+                            .size();
 
                     return DictionaryThemesResponse.of(
                             theme.getId(),
@@ -64,6 +72,7 @@ public class DictionaryService {
                 })
                 .collect(Collectors.toList());
     }
+
 
     // 단어도감 특정 테마의 전체 단어 조회 (단어별 학습 여부 포함)
     @Transactional(readOnly = true)
