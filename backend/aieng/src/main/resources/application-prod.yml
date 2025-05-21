@@ -54,3 +54,4 @@ app:
 external:
   fastapi:
     base-url: "http://175.121.93.70:51528"
+
