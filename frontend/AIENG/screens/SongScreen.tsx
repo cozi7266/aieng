@@ -483,7 +483,7 @@ const SongScreen: React.FC = () => {
       if (status.status === "SAVED" && status.details.songId) {
         const songDetail = await fetchSongDetail(status.details.songId);
         setCurrentSong({
-          id: songDetail.songId.toString(),
+          id: storybook.storybookId.toString(),
           title: songDetail.title,
           artist: songDetail.themeKo,
           imageUrl: { uri: songDetail.bookCover },
@@ -501,10 +501,10 @@ const SongScreen: React.FC = () => {
           moodId: songDetail.moodId,
           moodName: songDetail.moodName,
         });
-        setIsPlaying(false); // 새로운 노래 선택 시 재생 상태 초기화
+        setIsPlaying(false);
       } else {
         setCurrentSong(song);
-        setIsPlaying(false); // 새로운 노래 선택 시 재생 상태 초기화
+        setIsPlaying(false);
       }
       setCurrentSongStatus(status);
     } catch (error) {
