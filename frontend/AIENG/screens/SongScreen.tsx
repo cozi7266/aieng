@@ -1295,7 +1295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.borderRadius.medium,
     minWidth: 200,
