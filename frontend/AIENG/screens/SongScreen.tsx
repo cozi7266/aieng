@@ -718,21 +718,29 @@ const SongScreen: React.FC = () => {
     if (!currentSong) return;
 
     try {
-      const sessionId = await AsyncStorage.getItem("currentSessionId");
       const token = await AsyncStorage.getItem("accessToken");
       const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-      if (!sessionId || !token || !selectedChildId) {
+      if (!token || !selectedChildId) {
         throw new Error("필요한 정보가 없습니다.");
       }
 
+      // 현재 선택된 동화책의 세션 ID를 찾습니다
+      const currentStorybook = storybooks.find(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
+
+      if (!currentStorybook) {
+        throw new Error("현재 선택된 동화책을 찾을 수 없습니다.");
+      }
+
       console.log("[동요 저장 요청]", {
-        sessionId,
+        sessionId: currentStorybook.sessionId,
         storybookId: currentSong.id,
       });
 
       const response = await axios.get(
-        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/save-song`,
+        `https://www.aieng.co.kr/api/songs/sessions/${currentStorybook.sessionId}/save-song`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
