@@ -2,8 +2,10 @@ package com.ssafy.aieng.domain.voice.controller;
 
 import com.ssafy.aieng.domain.mood.dto.MoodResponseDto;
 import com.ssafy.aieng.domain.mood.service.MoodService;
+import com.ssafy.aieng.domain.voice.dto.request.PronounceTestRequest;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceSettingRequest;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceUploadRequest;
+import com.ssafy.aieng.domain.voice.dto.response.PronounceTestResponse;
 import com.ssafy.aieng.domain.voice.dto.response.SongVoiceSettingResponse;
 import com.ssafy.aieng.domain.voice.dto.response.TtsVoiceSettingResponse;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
@@ -18,7 +20,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -128,5 +132,15 @@ public class VoiceController {
         return ApiResponse.success(response);
     }
 
-
+    // 발음 테스트
+    @PostMapping("/pronounce-test")
+    public ResponseEntity<ApiResponse<PronounceTestResponse>> getPronounceTest(
+            @RequestHeader("X-Child-Id") Integer childId,
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestParam("expectedText") String expectedText,
+            @RequestPart("audio_file") MultipartFile audioFile
+    ) throws IOException {
+        PronounceTestResponse response = voiceService.getPronounceTest(childId, user.getId(), expectedText, audioFile);
+        return ApiResponse.success(response);
+    }
 } 
