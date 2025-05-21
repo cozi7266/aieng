@@ -68,7 +68,7 @@ export type RootStackParamList = {
     theme: string;
     sessionId: string;
   };
-  FairytaleScreen: { songId: string };
+  FairytaleScreen: { storybookId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

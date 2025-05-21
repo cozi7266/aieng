@@ -31,7 +31,7 @@ type FairytaleScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 type FairytaleScreenRouteProp = RouteProp<
-  RootStackParamList & { FairytaleScreen: { songId: string } },
+  RootStackParamList & { FairytaleScreen: { storybookId: string } },
   "FairytaleScreen"
 >;
 
@@ -129,7 +129,7 @@ const FairytaleScreen: React.FC = () => {
           throw new Error("선택된 자녀 ID가 없습니다.");
         }
 
-        const url = `${API_BASE_URL}/api/books/${route.params.songId}`;
+        const url = `${API_BASE_URL}/api/books/${route.params.storybookId}`;
         console.log("[API 요청] URL:", url);
         console.log("[API 요청] Headers:", {
           Authorization: `Bearer ${token}`,
@@ -235,7 +235,7 @@ const FairytaleScreen: React.FC = () => {
         sound.unloadAsync();
       }
     };
-  }, [route.params.songId]);
+  }, [route.params.storybookId]);
 
   const handlePreviousPage = () => {
     if (fairytale && currentPageIndex > 0) {

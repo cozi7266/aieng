@@ -520,7 +520,7 @@ const SongScreen: React.FC = () => {
   };
 
   const handleNavigateToStory = (song: Song) => {
-    navigation.navigate("FairytaleScreen", { songId: song.id });
+    navigation.navigate("FairytaleScreen", { storybookId: song.id });
   };
 
   const handlePlayPause = () => {
