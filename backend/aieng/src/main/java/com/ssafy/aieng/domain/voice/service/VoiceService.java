@@ -181,12 +181,12 @@ public class VoiceService {
         return VoiceResponse.from(voice);
     }
 
-     // 자녀 ID에 해당하는 커스텀(사용자 업로드) 목소리만 조회
-     public List<VoiceResponse> getDefaultVoices() {
-         return voiceRepository.findAllDefaultVoices().stream()
-                 .map(VoiceResponse::from)
-                 .toList();
-     }
+
+    
+    public List<VoiceResponse> getDefaultVoices() {
+        return voiceRepository.findAllDefaultVoices()
+                .stream().map(VoiceResponse::from).toList();
+    }
 
     public List<VoiceResponse> getCustomVoicesByChildId(Integer userId, Integer childId) {
         Child child = childRepository.findById(childId)
@@ -194,10 +194,12 @@ public class VoiceService {
         if (!child.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
-        return voiceRepository.findAllCustomVoicesForChild(childId).stream()
-                .map(VoiceResponse::from)
-                .toList();
+
+        return voiceRepository.findAllCustomVoicesForChild(childId)
+                .stream().map(VoiceResponse::from).toList();
     }
+
+
 
     @Value("${external.fastapi.base-url}")
     private String fastApiBaseUrl = "http://175.121.93.70:51528";

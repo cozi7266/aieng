@@ -20,9 +20,12 @@ public interface VoiceRepository extends JpaRepository<Voice, Integer> {
     @Query("SELECT v FROM Voice v WHERE v.childId IS NULL ORDER BY v.createdAt DESC")
     List<Voice> findDefaultVoices();
 
-    @Query("SELECT v FROM Voice v WHERE v.childId IS NULL OR v.childId = 0 OR v.childId = :childId")
-    List<Voice> findAllCustomVoicesForChild(@Param("childId") Integer childId);
 
-    @Query("SELECT v FROM Voice v WHERE v.childId IS NULL OR v.childId = 0")
+    // (1) 기본 보이스 (child_id IS NULL)
+    @Query("SELECT v FROM Voice v WHERE v.childId IS NULL")
     List<Voice> findAllDefaultVoices();
+
+    // (2) 특정 자녀의 커스텀 보이스만 (child_id = :childId)
+    @Query("SELECT v FROM Voice v WHERE v.childId = :childId")
+    List<Voice> findAllCustomVoicesForChild(@Param("childId") Integer childId);
 } 

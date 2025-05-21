@@ -123,9 +123,7 @@ public class VoiceController {
     ) {
         Integer userId = authenticationUtil.getCurrentUserId(user);
 
-        // 디폴트 보이스 전체 조회
         List<VoiceResponse> defaultVoices = voiceService.getDefaultVoices();
-        // 해당 자녀의 커스텀 보이스만
         List<VoiceResponse> customVoices = voiceService.getCustomVoicesByChildId(userId, childId);
 
         TtsVoiceSettingResponse response = new TtsVoiceSettingResponse(defaultVoices, customVoices);
