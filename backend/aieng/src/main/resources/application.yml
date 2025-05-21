@@ -9,3 +9,10 @@ spring:
 
   jpa:
     open-in-view: false
+
+aws:
+  s3:
+    bucket: aieng
+  region: ap-northeast-2
+  access-key: ${S3_ACCESS_KEY}
+  secret-key: ${S3_SECRET_KEY}

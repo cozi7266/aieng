@@ -73,3 +73,8 @@ typing_extensions==4.13.2
 urllib3==1.26.20
 uvicorn==0.34.2
 zipp==3.21.0
+google-cloud-speech
+python-Levenshtein
+sounddevice
+scipy
+python-multipart

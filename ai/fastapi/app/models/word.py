@@ -1,13 +1,17 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class WordRequest(BaseModel):
-    childId: int
+    userId: int
     sessionId: int
-    wordId: int
-    word: str
+    wordEn: str
+    theme: str
+    ttsVoiceUrl: Optional[str] = None  # Zonos (커스텀 보이스)
 
 class WordResponse(BaseModel):
-    word: str
+    wordEn: str
     sentence: str
+    translation: str
+    imagePrompt: str
     imageUrl: str
     audioUrl: str
