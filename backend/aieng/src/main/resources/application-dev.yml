@@ -57,9 +57,3 @@ cholog:
   logger:
     api-key: 086f8ef7-02fc-42cb-a7a9-3b0c9a87488a
 
-aws:
-  s3:
-    bucket: aieng
-  region: ap-northeast-2
-  access-key: ${S3_ACCESS_KEY}
-  secret-key: ${S3_SECRET_KEY}

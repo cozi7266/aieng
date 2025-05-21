@@ -3,6 +3,7 @@ package com.ssafy.aieng.domain.voice.repository;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -18,4 +19,7 @@ public interface VoiceRepository extends JpaRepository<Voice, Integer> {
     // 기본(default) 목소리 목록 조회
     @Query("SELECT v FROM Voice v WHERE v.childId IS NULL ORDER BY v.createdAt DESC")
     List<Voice> findDefaultVoices();
+
+    @Query("SELECT v FROM Voice v WHERE v.childId IS NULL OR v.childId = 0 OR v.childId = :childId")
+    List<Voice> findAllCustomVoicesForChild(@Param("childId") Integer childId);
 } 
