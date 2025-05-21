@@ -22,6 +22,8 @@ import VoiceItem from "../../components/songs/VoiceItem";
 import { theme } from "../../Theme";
 import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
 import { CommonActions } from "@react-navigation/native";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type SongSettingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -46,10 +48,34 @@ interface Voice {
 
 // TTS 목소리 인터페이스
 interface TTSVoice {
-  id: string;
+  voiceId: number;
+  childId: number | null;
   name: string;
-  gender: "male" | "female" | "custom";
+  description: string;
+  audioUrl: string;
   selected: boolean;
+}
+
+// API 응답 타입
+interface TTSVoiceResponse {
+  success: boolean;
+  data: {
+    defaultVoices: {
+      voiceId: number;
+      childId: number | null;
+      name: string;
+      description: string;
+      audioUrl: string;
+    }[];
+    customVoices: {
+      voiceId: number;
+      childId: number | null;
+      name: string;
+      description: string;
+      audioUrl: string;
+    }[];
+  };
+  error: null | string;
 }
 
 const SongSettingScreen: React.FC = () => {
@@ -98,23 +124,10 @@ const SongSettingScreen: React.FC = () => {
     },
   ]);
 
-  const [ttsVoices, setTTSVoices] = useState<TTSVoice[]>([
-    {
-      id: "1",
-      name: "남자 목소리",
-      gender: "male",
-      selected: false,
-    },
-    {
-      id: "2",
-      name: "여자 목소리",
-      gender: "female",
-      selected: false,
-    },
-  ]);
-
-  const [isRecording, setIsRecording] = useState(false);
+  const [ttsVoices, setTTSVoices] = useState<TTSVoice[]>([]);
   const [isTTSRecording, setIsTTSRecording] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 화면 가로 모드 고정
   useEffect(() => {
@@ -151,34 +164,105 @@ const SongSettingScreen: React.FC = () => {
     );
   };
 
+  // TTS 목소리 설정 조회
+  const fetchTTSVoices = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/tts-settings");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+
+      const response = await axios.get<TTSVoiceResponse>(
+        "https://www.aieng.co.kr/api/voice/tts-settings",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        const { defaultVoices, customVoices } = response.data.data;
+
+        // 기본 목소리와 커스텀 목소리를 합쳐서 상태 업데이트
+        const allVoices = [
+          ...defaultVoices.map((voice) => ({ ...voice, selected: false })),
+          ...customVoices.map((voice) => ({ ...voice, selected: false })),
+        ];
+
+        setTTSVoices(allVoices);
+      } else {
+        throw new Error(
+          response.data.error || "목소리 설정을 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 TTS 목소리 설정 조회
+  useEffect(() => {
+    fetchTTSVoices();
+  }, []);
+
   // TTS 목소리 선택 처리
-  const handleTTSVoiceSelect = (voiceId: string) => {
+  const handleTTSVoiceSelect = (voiceId: number) => {
     setTTSVoices((prevVoices) =>
       prevVoices.map((voice) => ({
         ...voice,
-        selected: voice.id === voiceId,
+        selected: voice.voiceId === voiceId,
       }))
     );
-  };
-
-  // 목소리 추가 처리
-  const handleAddVoice = () => {
-    setIsRecording(true);
-
-    // 녹음 과정 시뮬레이션 (실제 녹음 기능으로 대체 필요)
-    setTimeout(() => {
-      setIsRecording(false);
-
-      // 새 목소리 추가
-      const newVoice: Voice = {
-        id: `custom-${Date.now()}`,
-        name: "내 목소리",
-        gender: "custom",
-        selected: false,
-      };
-
-      setVoices((prev) => [...prev, newVoice]);
-    }, 2000);
   };
 
   // TTS 목소리 추가 처리
@@ -188,27 +272,18 @@ const SongSettingScreen: React.FC = () => {
     // 녹음 과정 시뮬레이션 (실제 녹음 기능으로 대체 필요)
     setTimeout(() => {
       setIsTTSRecording(false);
-
-      // 새 TTS 목소리 추가
-      const newVoice: TTSVoice = {
-        id: `custom-${Date.now()}`,
-        name: "내 목소리",
-        gender: "custom",
-        selected: false,
-      };
-
-      setTTSVoices((prev) => [...prev, newVoice]);
+      fetchTTSVoices(); // 목소리 추가 후 목록 새로고침
     }, 2000);
   };
 
-  // 목소리 삭제 처리
-  const handleDeleteVoice = (voiceId: string) => {
-    setVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
-  };
-
   // TTS 목소리 삭제 처리
-  const handleDeleteTTSVoice = (voiceId: string) => {
-    setTTSVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
+  const handleDeleteTTSVoice = async (voiceId: number) => {
+    try {
+      // TODO: 목소리 삭제 API 호출
+      await fetchTTSVoices(); // 삭제 후 목록 새로고침
+    } catch (err) {
+      console.error("목소리 삭제 실패:", err);
+    }
   };
 
   // 설정 저장 및 다음 단계로 진행
@@ -290,7 +365,7 @@ const SongSettingScreen: React.FC = () => {
                 activeTab === "tts" && styles.activeTabText,
               ]}
             >
-              목소리(TTS)
+              TTS 설정
             </Text>
           </TouchableOpacity>
         </View>
@@ -359,38 +434,50 @@ const SongSettingScreen: React.FC = () => {
                 이상 눌러 내 목소리 변경)
               </Text>
 
-              <ScrollView contentContainerStyle={styles.voiceGrid}>
-                {ttsVoices.map((voice) => (
+              {isLoading ? (
+                <Text>로딩 중...</Text>
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <ScrollView contentContainerStyle={styles.voiceGrid}>
+                  {ttsVoices.map((voice) => (
+                    <VoiceItem
+                      key={voice.voiceId}
+                      id={voice.voiceId.toString()}
+                      name={voice.name}
+                      gender={
+                        voice.voiceId <= 2
+                          ? voice.voiceId === 1
+                            ? "male"
+                            : "female"
+                          : "custom"
+                      }
+                      isSelected={voice.selected}
+                      onPress={() => handleTTSVoiceSelect(voice.voiceId)}
+                      onDelete={
+                        voice.voiceId > 2
+                          ? () => handleDeleteTTSVoice(voice.voiceId)
+                          : undefined
+                      }
+                      style={styles.voiceItem}
+                      scaleFactor={scaleFactor}
+                    />
+                  ))}
+
+                  {/* TTS 목소리 추가 버튼 */}
                   <VoiceItem
-                    key={voice.id}
-                    id={voice.id}
-                    name={voice.name}
-                    gender={voice.gender}
-                    isSelected={voice.selected}
-                    onPress={() => handleTTSVoiceSelect(voice.id)}
-                    onDelete={
-                      voice.gender === "custom"
-                        ? () => handleDeleteTTSVoice(voice.id)
-                        : undefined
-                    }
+                    id="add-tts-voice"
+                    name={isTTSRecording ? "녹음 중..." : "내 목소리 추가"}
+                    gender="custom"
+                    isSelected={false}
+                    isAddButton={true}
+                    onPress={handleAddTTSVoice}
+                    disabled={isTTSRecording}
                     style={styles.voiceItem}
                     scaleFactor={scaleFactor}
                   />
-                ))}
-
-                {/* TTS 목소리 추가 버튼 */}
-                <VoiceItem
-                  id="add-tts-voice"
-                  name={isTTSRecording ? "녹음 중..." : "내 목소리 추가"}
-                  gender="custom"
-                  isSelected={false}
-                  isAddButton={true}
-                  onPress={handleAddTTSVoice}
-                  disabled={isTTSRecording}
-                  style={styles.voiceItem}
-                  scaleFactor={scaleFactor}
-                />
-              </ScrollView>
+                </ScrollView>
+              )}
             </View>
 
             {/* 우측 - 추후 추가될 내용 */}
@@ -522,6 +609,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: theme.spacing.l,
     marginTop: theme.spacing.xl,
+  },
+  errorText: {
+    color: theme.colors.error,
+    ...theme.typography.body,
+    textAlign: "center",
+    marginTop: theme.spacing.l,
   },
 });
 
