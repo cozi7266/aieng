@@ -22,4 +22,7 @@ public interface VoiceRepository extends JpaRepository<Voice, Integer> {
 
     @Query("SELECT v FROM Voice v WHERE v.childId IS NULL OR v.childId = 0 OR v.childId = :childId")
     List<Voice> findAllCustomVoicesForChild(@Param("childId") Integer childId);
+
+    @Query("SELECT v FROM Voice v WHERE v.childId IS NULL OR v.childId = 0")
+    List<Voice> findAllDefaultVoices();
 } 
