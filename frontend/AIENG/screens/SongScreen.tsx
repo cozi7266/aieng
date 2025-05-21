@@ -1201,6 +1201,7 @@ const SongScreen: React.FC = () => {
                     : "동요를 생성하면 가사가 표시됩니다"
                 }
                 scaleFactor={scaleFactor}
+                variant="song"
               />
 
               {/* 동요 상태에 따른 UI 표시 */}

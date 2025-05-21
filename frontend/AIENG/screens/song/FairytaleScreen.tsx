@@ -603,6 +603,7 @@ const FairytaleScreen: React.FC = () => {
               <SongLyrics
                 lyrics={song.lyrics || "가사가 없습니다"}
                 scaleFactor={scaleFactor}
+                variant="fairytale"
               />
             ) : (
               <Text style={styles.lyricsText}>동요를 불러오는 중입니다...</Text>
@@ -734,7 +735,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: theme.spacing.l,
+    width: "90%",
+    alignSelf: "center",
+    marginTop: theme.spacing.s,
+    height: "55%",
   },
   lyricsText: {
     ...theme.typography.body,
