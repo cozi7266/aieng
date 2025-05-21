@@ -32,7 +32,7 @@ type SongSettingScreenNavigationProp = NativeStackNavigationProp<
 
 // 분위기 인터페이스
 interface Mood {
-  id: string;
+  moodId: number;
   name: string;
   emoji: string;
   selected: boolean;
@@ -40,9 +40,11 @@ interface Mood {
 
 // 목소리 인터페이스
 interface Voice {
-  id: string;
+  voiceId: number;
+  childId: number | null;
   name: string;
-  gender: "male" | "female" | "custom";
+  description: string;
+  audioUrl: string;
   selected: boolean;
 }
 
@@ -57,6 +59,25 @@ interface TTSVoice {
 }
 
 // API 응답 타입
+interface SongSettingResponse {
+  success: boolean;
+  data: {
+    moods: {
+      moodId: number;
+      name: string;
+    }[];
+    voices: {
+      voiceId: number;
+      childId: number | null;
+      name: string;
+      description: string;
+      audioUrl: string;
+    }[];
+  };
+  error: null | string;
+}
+
+// TTS API 응답 타입
 interface TTSVoiceResponse {
   success: boolean;
   data: {
@@ -78,6 +99,20 @@ interface TTSVoiceResponse {
   error: null | string;
 }
 
+// 분위기별 이모지 매핑
+const MOOD_EMOJIS: { [key: string]: string } = {
+  "nursery rhyme": "🎵",
+  children: "👶",
+  kids: "👧",
+  happy: "😊",
+  playful: "🎈",
+  slow: "🐢",
+  educational: "📚",
+  repetitive: "🔄",
+  brighton: "✨",
+  "easy listening": "🎧",
+};
+
 const SongSettingScreen: React.FC = () => {
   const navigation = useNavigation<SongSettingScreenNavigationProp>();
   const { width, height } = useWindowDimensions();
@@ -98,32 +133,8 @@ const SongSettingScreen: React.FC = () => {
 
   // 상태 관리
   const [activeTab, setActiveTab] = useState<"song" | "tts">("song");
-  const [moods, setMoods] = useState<Mood[]>([
-    { id: "1", name: "행복", emoji: "😊", selected: false },
-    { id: "2", name: "슬픔", emoji: "😢", selected: false },
-    { id: "3", name: "신남", emoji: "🎉", selected: false },
-    { id: "4", name: "화남", emoji: "😡", selected: false },
-    { id: "5", name: "사랑", emoji: "❤️", selected: false },
-    { id: "6", name: "놀람", emoji: "😲", selected: false },
-    { id: "7", name: "평온", emoji: "😌", selected: false },
-    { id: "8", name: "설렘", emoji: "🥰", selected: false },
-  ]);
-
-  const [voices, setVoices] = useState<Voice[]>([
-    {
-      id: "1",
-      name: "남자 목소리",
-      gender: "male",
-      selected: false,
-    },
-    {
-      id: "2",
-      name: "여자 목소리",
-      gender: "female",
-      selected: false,
-    },
-  ]);
-
+  const [moods, setMoods] = useState<Mood[]>([]);
+  const [voices, setVoices] = useState<Voice[]>([]);
   const [ttsVoices, setTTSVoices] = useState<TTSVoice[]>([]);
   const [isTTSRecording, setIsTTSRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,22 +155,121 @@ const SongSettingScreen: React.FC = () => {
     };
   }, []);
 
+  // 동요 설정 조회
+  const fetchSongSettings = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/song-settings");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+
+      const response = await axios.get<SongSettingResponse>(
+        "https://www.aieng.co.kr/api/voice/song-settings",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        const { moods: apiMoods, voices: apiVoices } = response.data.data;
+
+        // 분위기에 이모지 추가
+        const moodsWithEmoji = apiMoods.map((mood) => ({
+          ...mood,
+          emoji: MOOD_EMOJIS[mood.name] || "😊", // 기본 이모지 설정
+          selected: false,
+        }));
+
+        // 목소리 상태 업데이트
+        const voicesWithSelected = apiVoices.map((voice) => ({
+          ...voice,
+          selected: false,
+        }));
+
+        setMoods(moodsWithEmoji);
+        setVoices(voicesWithSelected);
+      } else {
+        throw new Error(
+          response.data.error || "동요 설정을 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 동요 설정 조회
+  useEffect(() => {
+    fetchSongSettings();
+  }, []);
+
   // 분위기 선택 처리
-  const handleMoodSelect = (moodId: string) => {
+  const handleMoodSelect = (moodId: number) => {
     setMoods((prevMoods) =>
       prevMoods.map((mood) => ({
         ...mood,
-        selected: mood.id === moodId,
+        selected: mood.moodId === moodId,
       }))
     );
   };
 
   // 목소리 선택 처리
-  const handleVoiceSelect = (voiceId: string) => {
+  const handleVoiceSelect = (voiceId: number) => {
     setVoices((prevVoices) =>
       prevVoices.map((voice) => ({
         ...voice,
-        selected: voice.id === voiceId,
+        selected: voice.voiceId === voiceId,
       }))
     );
   };
@@ -385,20 +495,26 @@ const SongSettingScreen: React.FC = () => {
                 선택 가능)
               </Text>
 
-              <ScrollView contentContainerStyle={styles.voiceGrid}>
-                {voices.map((voice) => (
-                  <VoiceItem
-                    key={voice.id}
-                    id={voice.id}
-                    name={voice.name}
-                    gender={voice.gender}
-                    isSelected={voice.selected}
-                    onPress={() => handleVoiceSelect(voice.id)}
-                    style={styles.voiceItem}
-                    scaleFactor={scaleFactor}
-                  />
-                ))}
-              </ScrollView>
+              {isLoading ? (
+                <Text>로딩 중...</Text>
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <ScrollView contentContainerStyle={styles.voiceGrid}>
+                  {voices.map((voice) => (
+                    <VoiceItem
+                      key={voice.voiceId}
+                      id={voice.voiceId.toString()}
+                      name={voice.name}
+                      gender={voice.voiceId === 1 ? "male" : "female"}
+                      isSelected={voice.selected}
+                      onPress={() => handleVoiceSelect(voice.voiceId)}
+                      style={styles.voiceItem}
+                      scaleFactor={scaleFactor}
+                    />
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
             {/* 우측 - 분위기 설정 */}
@@ -408,20 +524,26 @@ const SongSettingScreen: React.FC = () => {
                 생성될 동요의 분위기를 선택해주세요
               </Text>
 
-              <View style={styles.moodGrid}>
-                {moods.map((mood) => (
-                  <MoodItem
-                    key={mood.id}
-                    id={mood.id}
-                    name={mood.name}
-                    emoji={mood.emoji}
-                    isSelected={mood.selected}
-                    onPress={() => handleMoodSelect(mood.id)}
-                    style={styles.moodItem}
-                    scaleFactor={scaleFactor}
-                  />
-                ))}
-              </View>
+              {isLoading ? (
+                <Text>로딩 중...</Text>
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <View style={styles.moodGrid}>
+                  {moods.map((mood) => (
+                    <MoodItem
+                      key={mood.moodId}
+                      id={mood.moodId.toString()}
+                      name={mood.name}
+                      emoji={mood.emoji}
+                      isSelected={mood.selected}
+                      onPress={() => handleMoodSelect(mood.moodId)}
+                      style={styles.moodItem}
+                      scaleFactor={scaleFactor}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           </>
         ) : (
@@ -611,7 +733,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.xl,
   },
   errorText: {
-    color: theme.colors.error,
+    color: "#FF3B30", // 직접 에러 색상 지정
     ...theme.typography.body,
     textAlign: "center",
     marginTop: theme.spacing.l,
