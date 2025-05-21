@@ -93,9 +93,9 @@ const WordSentenceScreen: React.FC = () => {
   const [currentWord, setCurrentWord] = useState<string>("");
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // 진행 단계 (2/3 표시를 위한 변수)
+  // 진행 단계 (2/2 표시를 위한 변수)
   const currentStep = 2;
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   // 애니메이션 값
   const pulseAnim = useRef(new Animated.Value(1)).current;

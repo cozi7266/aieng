@@ -81,9 +81,9 @@ const WordListeningScreen: React.FC = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
 
-  // 진행 단계 (1/3 표시를 위한 변수)
+  // 진행 단계 (1/2 표시를 위한 변수)
   const currentStep = 1;
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   // 애니메이션 값
   const pulseAnim = useRef(new Animated.Value(1)).current;
