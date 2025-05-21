@@ -62,7 +62,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.3'
 
     implementation 'com.ssafy.lab.s12-final:S12P31B207:v1.1.0'
-
+    implementation 'software.amazon.awssdk:s3:2.21.36'
 
 }
 

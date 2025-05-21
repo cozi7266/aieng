@@ -5,19 +5,36 @@ import com.ssafy.aieng.domain.child.entity.Child;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.mood.entity.Mood;
 import com.ssafy.aieng.domain.mood.repository.MoodRepository;
+import com.ssafy.aieng.domain.voice.dto.request.PronounceTestRequest;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceSettingRequest;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceUploadRequest;
+import com.ssafy.aieng.domain.voice.dto.response.PronounceTestResponse;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
+import org.springframework.beans.factory.annotation.Value;
+
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
+import java.io.IOException;
 
-import java.util.Arrays;
+import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 
@@ -25,9 +42,11 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class VoiceService {
 
+
     private final VoiceRepository voiceRepository;
     private final ChildRepository childRepository;
     private final MoodRepository moodRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     // 음성파일 URL 등록
     @Transactional
@@ -162,7 +181,6 @@ public class VoiceService {
         return VoiceResponse.from(voice);
     }
 
-
      // 자녀 ID에 해당하는 커스텀(사용자 업로드) 목소리만 조회
     public List<VoiceResponse> getCustomVoicesByChildId(Integer userId, Integer childId) {
         Child child = childRepository.findById(childId)
@@ -176,4 +194,55 @@ public class VoiceService {
                 .map(VoiceResponse::from)
                 .toList();
     }
+
+    @Value("${external.fastapi.base-url}")
+    private String fastApiBaseUrl = "http://175.121.93.70:51528";
+
+    // 발음 테스트
+    public PronounceTestResponse getPronounceTest(
+            Integer childId, Integer userId, String expectedText, MultipartFile audioFile
+    ) throws IOException {
+        // 1. 자녀 존재 및 소유자 검증
+        Child child = childRepository.findById(childId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
+        if (!child.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        // 2. 쿼리 파라미터 추가
+        String url = fastApiBaseUrl + "/pronunciation/evaluate?expected_text=" +
+                UriUtils.encodeQueryParam(expectedText, "UTF-8");
+
+        // 3. Multipart/form-data body 생성
+        File tempFile = File.createTempFile("audio-", ".ogg");
+        try {
+            audioFile.transferTo(tempFile);
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("audio_file", new FileSystemResource(tempFile));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(body, headers);
+
+            // 4. FastAPI로 POST 요청
+            ResponseEntity<PronounceTestResponse> response = restTemplate.postForEntity(
+                    url,
+                    httpEntity,
+                    PronounceTestResponse.class
+            );
+
+            if (response.getBody() == null) {
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+            return response.getBody();
+
+        } finally {
+            // 5. 임시 파일 삭제 (에러 여부 관계 없이 삭제)
+            tempFile.delete();
+        }
+    }
+
+
 } 
