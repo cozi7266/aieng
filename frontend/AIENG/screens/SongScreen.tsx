@@ -59,6 +59,7 @@ interface Song {
 }
 
 interface Storybook {
+  sessionId: number;
   storybookId: number;
   title: string;
   description: string;
@@ -68,7 +69,14 @@ interface Storybook {
 
 interface ApiResponse {
   success: boolean;
-  data: Storybook[];
+  data: {
+    sessionId: number;
+    storybookId: number;
+    title: string;
+    description: string;
+    coverUrl: string;
+    createdAt: string;
+  }[];
   error: null | string;
 }
 
@@ -259,7 +267,8 @@ const SongScreen: React.FC = () => {
           console.log(
             "[동화책 목록]",
             books.map((book) => ({
-              id: book.storybookId,
+              sessionId: book.sessionId,
+              storybookId: book.storybookId,
               title: book.title,
               coverUrl: book.coverUrl,
             }))
@@ -366,22 +375,24 @@ const SongScreen: React.FC = () => {
 
   const handleSongPress = async (song: Song) => {
     try {
-      const sessionId = await AsyncStorage.getItem("currentSessionId");
+      const storybook = storybooks.find(
+        (book) => book.storybookId.toString() === song.id
+      );
 
-      if (!sessionId) {
-        console.error("현재 세션 ID가 없습니다.");
+      if (!storybook) {
+        console.error("해당하는 동화책을 찾을 수 없습니다.");
         return;
       }
 
-      const storybookId = parseInt(song.id);
-
       console.log("[동요 상태 확인]", {
-        sessionId,
-        storybookId,
-        songId: song.id,
+        sessionId: storybook.sessionId,
+        storybookId: storybook.storybookId,
       });
 
-      const status = await checkSongStatus(parseInt(sessionId), storybookId);
+      const status = await checkSongStatus(
+        storybook.sessionId,
+        storybook.storybookId
+      );
       console.log("동화/동요 상태:", status);
 
       setCurrentSong(song);
