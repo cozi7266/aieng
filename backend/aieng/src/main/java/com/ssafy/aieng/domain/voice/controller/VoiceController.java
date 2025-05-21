@@ -123,12 +123,7 @@ public class VoiceController {
     ) {
         Integer userId = authenticationUtil.getCurrentUserId(user);
 
-        // 기본 남/여 목소리 (ID 1, 2)
-        VoiceResponse maleVoice = voiceService.getVoiceById(1);
-        VoiceResponse femaleVoice = voiceService.getVoiceById(2);
-        List<VoiceResponse> defaultVoices = List.of(maleVoice, femaleVoice);
-
-        // 자녀가 업로드한 커스텀 목소리
+        List<VoiceResponse> defaultVoices = voiceService.getDefaultVoices();
         List<VoiceResponse> customVoices = voiceService.getCustomVoicesByChildId(userId, childId);
 
         TtsVoiceSettingResponse response = new TtsVoiceSettingResponse(defaultVoices, customVoices);
