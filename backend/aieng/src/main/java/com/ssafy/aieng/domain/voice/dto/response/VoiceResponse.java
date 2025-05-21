@@ -7,17 +7,21 @@ import lombok.Getter;
 @Getter
 @Builder
 public class VoiceResponse {
-    private Integer id;
+    private Integer voiceId;
+    private Integer childId;
     private String name;
     private String description;
     private String audioUrl;
+    private boolean isDefault;
 
     public static VoiceResponse from(Voice voice) {
         return VoiceResponse.builder()
-                .id(voice.getId())
+                .voiceId(voice.getId())
+                .childId(voice.getChildId())
                 .name(voice.getName())
                 .description(voice.getDescription())
                 .audioUrl(voice.getAudioUrl())
+                .isDefault(voice.getChildId() == null)
                 .build();
     }
 } 

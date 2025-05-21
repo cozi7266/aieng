@@ -50,3 +50,8 @@ oauth:
 
 app:
   domain: http://www.aieng.co.kr
+
+external:
+  fastapi:
+    base-url: "http://175.121.93.70:51528"
+

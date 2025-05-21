@@ -15,7 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -29,10 +31,10 @@ public class ChildService {
 
     // 아이 프로필 생성
     @Transactional
-    public void createChildProfile(Integer parentId, ChildProfileCreateRequest request) {
+    public void createChildProfile(Integer userId, ChildProfileCreateRequest request) {
 
         // 1. 부모 유저 조회
-        User parentUser = userRepository.findById(parentId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 2. 이미지 URL 결정
@@ -46,7 +48,7 @@ public class ChildService {
                 .gender(request.getChildGender())
                 .birthdate(request.getChildBirthdate())
                 .imgUrl(request.getChildImgUrl())
-                .parent(parentUser)
+                .user(user)
                 .build();
 
         childRepository.save(child);
@@ -54,22 +56,22 @@ public class ChildService {
 
 
     // 아이 프로필 조회
-    public ChildInfoResponse getChildInfo(Integer parentId, Integer childId) {
+    public ChildInfoResponse getChildInfo(Integer userId, Integer childId) {
 
         // 1. 자녀 조회 (부모 ID 포함 조건)
-        Child child = childRepository.findByParentIdAndId(parentId, childId)
+        Child child = childRepository.findByUserIdAndId(userId, childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
 
         // 2. 응답 객체로 변환
-        return ChildInfoResponse.of(child.getParent(), child);
+        return ChildInfoResponse.of(child.getUser(), child);
     }
 
     // 아이 프로필 수정
     @Transactional
-    public void updateChildProfile(Integer parentId, Integer childId, ChildProfileUpdateRequest request) {
+    public void updateChildProfile(Integer userId, Integer childId, ChildProfileUpdateRequest request) {
 
         // 1. 자녀 조회
-        Child child = childRepository.findByParentIdAndId(parentId, childId)
+        Child child = childRepository.findByUserIdAndId(userId, childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
 
         // 2. 기존 엔티티 수정 (dirty checking)
@@ -81,13 +83,12 @@ public class ChildService {
         );
     }
 
-
     // 아이 프로필 삭제 (Soft Delete)
     @Transactional
-    public void deleteChildProfile(Integer parentId, Integer childId) {
+    public void deleteChildProfile(Integer userId, Integer childId) {
 
         // 1. 자녀 조회
-        Child child = childRepository.findByParentIdAndId(parentId, childId)
+        Child child = childRepository.findByUserIdAndId(userId, childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
 
         // 2. Soft delete 처리
@@ -95,10 +96,10 @@ public class ChildService {
     }
 
     // 아이 프로필 이미지 등록, 수정, 삭제 (아이 등록 후에 사용하는 기능)
-    public void updateChildProfileImg(Integer parentId, Integer childId, ChildProfileImgUpdateRequest request) {
+    public void updateChildProfileImg(Integer userId, Integer childId, ChildProfileImgUpdateRequest request) {
 
         // 1. 자녀 조회
-        Child child = childRepository.findByParentIdAndId(parentId, childId)
+        Child child = childRepository.findByUserIdAndId(userId, childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
 
         String currentImg = child.getImgUrl();
@@ -118,12 +119,27 @@ public class ChildService {
     }
 
     // 부모와 자녀가 맞는지 확인
-    public void validateChildOwnership(Integer childId, Integer parentId) {
-        if (!childRepository.existsByIdAndParentId(childId, parentId)) {
+    public void validateChildOwnership(Integer childId, Integer userId) {
+        if (!childRepository.existsByIdAndUserId(childId, userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_CHILD_ACCESS)
                     .addParameter("childId", childId)
-                    .addParameter("parentId", parentId);
+                    .addParameter("userId", userId);
         }
     }
+
+    public List<ChildInfoResponse> findChildInfoList(Integer userId) {
+        // 1. 유저 검증 (예외 처리 포함 가능)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 해당 유저의 삭제되지 않은 아이들 조회
+        List<Child> children = childRepository.findAllByUserIdAndDeletedFalse(userId);
+
+        // 3. Child → ChildInfoResponse 변환
+        return children.stream()
+                .map(child -> ChildInfoResponse.of(user, child))
+                .collect(Collectors.toList());
+    }
+
 
 }

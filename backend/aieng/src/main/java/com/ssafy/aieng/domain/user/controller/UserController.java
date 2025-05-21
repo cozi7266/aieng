@@ -26,8 +26,6 @@ public class UserController {
 
     private final AuthenticationUtil authenticationUtil;
     private final UserService userService;
-    private final JwtTokenProvider jwtTokenProvider;
-
 
     // Authorization 헤더의 Bearer 토큰을 검증하고 유저 존재 여부를 반환합니다.  @return 유효한 토큰이고 유저가 존재하면 true, 아니면 false
     @GetMapping("/validate")
@@ -49,9 +47,8 @@ public class UserController {
             Integer userId = null;
 
             if (principal instanceof UserPrincipal userPrincipal) {
-                userId = userPrincipal.getId(); // ✅ 여기서 안전하게 꺼냄
+                userId = userPrincipal.getId();
             } else {
-                log.warn("[Token Validation] 인증 주체가 UserPrincipal이 아님: {}", principal);
                 return ApiResponse.fail("올바르지 않은 인증 정보입니다.", HttpStatus.UNAUTHORIZED);
             }
 
@@ -59,11 +56,9 @@ public class UserController {
             return ApiResponse.success(userExists);
 
         } catch (IllegalArgumentException e) {
-            log.warn("[Token Validation] 잘못된 Authorization 헤더 형식: {}", authorizationHeader);
             return ApiResponse.fail("Authorization 헤더 형식이 잘못되었습니다.", HttpStatus.BAD_REQUEST);
 
         } catch (Exception e) {
-            log.error("[Token Validation] 유저 조회 실패", e);
             return ApiResponse.fail("서버 오류로 인해 토큰을 검증할 수 없습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -85,7 +80,7 @@ public class UserController {
         Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
         userService.deleteUser(userId);
 
-        return ResponseEntity.noContent().build();  // 204 No Content
+        return ResponseEntity.noContent().build();
     }
 
      // 닉네임 중복확인 (회원의 닉네임 중복)
@@ -102,13 +97,10 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody UserProfileCreateRequest request){
 
-        // userPrincipal에서 직접 userId 추출
         Integer userId = userPrincipal.getId();
 
-        // 유저 프로필 등록
         userService.createUserProfile(userId, request);
 
-        // 응답 반환
         return ApiResponse.success(HttpStatus.OK);
     }
 
@@ -117,13 +109,10 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserProfileResponse>> findUserProfile(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        // userPrincipal에서 직접 userId 추출
         Integer userId = userPrincipal.getId();
 
-        // 유저 정보 조회
         UserProfileResponse UserProfileResponse = userService.getParentInfo(userId);
 
-        // 응답 반환
         return ApiResponse.success(UserProfileResponse);
     }
 
@@ -133,13 +122,10 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestBody UserProfileUpdateRequest request) {
 
-        // userPrincipal에서 직접 userId 추출
         Integer userId = userPrincipal.getId();
 
-        // 유저 프로필 수정
         userService.updateUserProfile(userId, request);
 
-        // 응답 반환
         return ApiResponse.success(HttpStatus.OK);
     }
 

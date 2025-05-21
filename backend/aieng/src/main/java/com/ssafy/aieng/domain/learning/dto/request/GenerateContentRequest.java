@@ -10,7 +10,7 @@ import lombok.*;
 public class GenerateContentRequest {
     private Integer userId;
     private Integer sessionId;
-    private Integer childId;
-    private Integer wordId;
-    private String word;
+    private String theme;  // themeKo 인데 일부러 수정 안함
+    private String wordEn;
+    private String ttsVoiceUrl;
 }

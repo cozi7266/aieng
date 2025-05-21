@@ -7,13 +7,16 @@ import lombok.Getter;
 @Getter
 @Builder
 public class ThemeResponse {
-    private String themeName;
+
+    private String themeKo;
+    private String themeEn;
     private String imageUrl;
-    private Byte totalWords;
+    private Integer totalWords;
 
     public static ThemeResponse from(Theme theme) {
         return ThemeResponse.builder()
-                .themeName(theme.getThemeName())
+                .themeKo(theme.getThemeKo())
+                .themeEn(theme.getThemeEn())
                 .imageUrl(theme.getImageUrl())
                 .totalWords(theme.getTotalWords())
                 .build();

@@ -7,12 +7,12 @@ import lombok.Getter;
 @Getter
 @Builder
 public class MoodResponseDto {
-    private Integer id;
+    private Integer moodId;
     private String name;
 
     public static MoodResponseDto from(Mood mood) {
         return MoodResponseDto.builder()
-                .id(mood.getId())
+                .moodId(mood.getId())
                 .name(mood.getName())
                 .build();
     }

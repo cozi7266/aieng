@@ -1,47 +1,25 @@
 package com.ssafy.aieng.domain.learning.repository;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
 import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
 import com.ssafy.aieng.domain.learning.entity.Learning;
-import com.ssafy.aieng.domain.learning.entity.Session;
+import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.word.entity.Word;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.data.domain.Pageable;
-
-import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface LearningRepository extends JpaRepository<Learning, Integer> {
 
-    List<Learning> findTop5ByWordThemeIdAndLearnedTrueOrderByLearnedAtDesc(Integer themeId);
-
-    @Query("""
-    SELECT new com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse(
-        t.themeName,
-        t.imageUrl,
-        t.totalWords,
-        CAST(COUNT(DISTINCT CASE WHEN l.learned = true THEN l.word.id END) AS int)
-    )
-    FROM Learning l
-    JOIN l.session s
-    JOIN s.theme t
-    WHERE s.child.id = :childId
-    GROUP BY t.id, t.themeName, t.imageUrl, t.totalWords
-""")
-    Page<ThemeProgressResponse> findThemeProgressByChildId(@Param("childId") Integer childId, Pageable pageable);
-
-    Page<Learning> findAllBySessionId(Integer id, Pageable pageable);
-
-    @Query("SELECT l FROM Learning l JOIN l.session s WHERE s.child.id = :childId AND l.learned = true ORDER BY l.learnedAt DESC")
-    List<Learning> findAllByChildIdAndLearnedTrueOrderByLearnedAtDesc(@Param("childId") Integer childId);
-
-    Optional<Learning> findBySessionAndWord(Session session, Word word);
-
+    // 세션 ID와 단어 ID로 Learning 엔티티 1개 조회
     @Query("""
         SELECT l FROM Learning l
         WHERE l.session.id = :sessionId AND l.word.id = :wordId
@@ -49,21 +27,20 @@ public interface LearningRepository extends JpaRepository<Learning, Integer> {
     Optional<Learning> findBySessionIdAndWordId(@Param("sessionId") Integer sessionId,
                                                 @Param("wordId") Integer wordId);
 
-    @Query("SELECT COUNT(l) FROM Learning l " +
-            "WHERE l.session.child.parent = :user " +
-            "AND l.learned = :learned")
-    long countBySessionChildParentAndLearned(@Param("user") User user, @Param("learned") boolean learned);
 
-    @Query("""
-        SELECT l
-        FROM Learning l
-        JOIN l.session s
-        WHERE s.child.id = :childId
-        AND l.word.id = :wordId
-        AND l.learned = true
-    """)
-    Optional<Learning> findByChildIdAndWordIdAndLearnedTrue(
-            @Param("childId") Integer childId,
-            @Param("wordId") Integer wordId
-    );
+    // 세션 ID로 삭제되지 않은 Learning 목록 조회
+    List<Learning> findAllBySessionIdAndDeletedFalse(Integer sessionId);
+
+    // 세션 ID로 학습 완료(learned)된 Learning 개수 반환
+    long countBySessionIdAndLearned(Integer sessionId, boolean b);
+
+    // 세션 ID로 학습 완료된 Learning 목록 조회
+    List<Learning> findAllBySessionIdAndLearnedTrue(Integer sessionId);
+
+    // 세션 ID로 학습 완료된 Learning을 pageOrder 순으로 조회
+    List<Learning> findAllBySessionIdAndLearnedTrueOrderByPageOrder(Integer sessionId);
+
+    // 자녀 ID로 학습 완료된 Learning 전체 조회 (세션 구분 없음)
+    List<Learning> findAllBySession_Child_IdAndLearnedTrue(Integer childId);
+
 }

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class OAuthController {
     private final OAuthService oAuthService;
 
-
+    // [공통] 소셜 로그인 (provider: "google", "kakao" 등) - code로 로그인 처리
     @PostMapping("/{provider}")
     public ResponseEntity<ApiResponse<OAuthLoginResponse>> socialLogin(
             @PathVariable String provider,
@@ -33,7 +33,7 @@ public class OAuthController {
     }
 
 
-    // 네이버 전용 endpoint
+    // [네이버 전용] 네이버 로그인 (code, state 사용)
     @PostMapping("/naver")
     public ResponseEntity<ApiResponse<OAuthLoginResponse>> naverLogin(
             @RequestBody OAuthLoginRequest request) {
@@ -47,6 +47,7 @@ public class OAuthController {
         return ApiResponse.success(loginResult.getResponse(), responseCookie);
     }
 
+    // [앱 전용] 카카오 Access Token 직접 받아서 로그인 (code 없이 token 사용)
     @PostMapping("/kakao/token")
     public ResponseEntity<ApiResponse<OAuthLoginResponse>> kakaoLoginWithToken(
             @RequestBody KakaoTokenLoginRequest request) {

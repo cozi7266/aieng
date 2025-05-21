@@ -1,15 +1,19 @@
+import os
+from pathlib import Path
 from google.cloud import texttospeech
 from app.config import settings
-import os
+from app.utils.logger import logger
 
 class TTSService:
     def __init__(self):
-        # 환경 변수는 시스템에서 설정하거나 여기서 수동 지정 가능
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.TTS_API_KEY
         self.client = texttospeech.TextToSpeechClient()
+        self.output_dir = Path("tts_outputs")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    async def generate_audio(self, text: str) -> bytes:
-        # SSML 처리: 0.5초 쉬고 말하기
+    async def generate_audio(self, text: str, gender: str, filename: str = "tts_result") -> bytes:
+        logger.info(f"[TTSService] TTS 생성 요청: '{text[:50]}'... (길이: {len(text)}자)")
+
         ssml_text = f'''
         <speak>
           <break time="500ms"/>
@@ -21,8 +25,8 @@ class TTSService:
 
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
-            name="en-US-Wavenet-F",
-            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+            name="en-US-Wavenet-D" if gender == "MALE" else "en-US-Wavenet-F",
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE if gender == "MALE" else texttospeech.SsmlVoiceGender.FEMALE
         )
 
         audio_config = texttospeech.AudioConfig(
@@ -30,15 +34,22 @@ class TTSService:
             speaking_rate=0.75
         )
 
-        response = self.client.synthesize_speech(
-            input=synthesis_input,
-            voice=voice,
-            audio_config=audio_config
-        )
+        try:
+            response = self.client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+            audio_bytes = response.audio_content
 
-        output_file = "tts_result.wav"
-        with open(output_file, 'wb') as out:
-            out.write(response.audio_content)
-            print(f"음성 파일 저장 완료: {output_file}")
+            # 로컬 저장
+            file_path = self.output_dir / f"{filename}.wav"
+            with open(file_path, "wb") as out:
+                out.write(audio_bytes)
 
-        return response.audio_content  # bytes 반환
+            logger.info(f"[TTSService] TTS 생성 및 저장 완료: {file_path}")
+            return audio_bytes
+
+        except Exception as e:
+            logger.error(f"[TTSService] TTS 생성 실패: {e}")
+            raise RuntimeError("TTS 생성 중 오류가 발생했습니다.") from e

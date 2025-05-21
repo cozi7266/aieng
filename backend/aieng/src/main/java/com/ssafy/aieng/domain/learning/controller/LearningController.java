@@ -1,31 +1,16 @@
 package com.ssafy.aieng.domain.learning.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.aieng.domain.child.service.ChildService;
+
 import com.ssafy.aieng.domain.learning.dto.response.GeneratedContentResult;
-import com.ssafy.aieng.domain.learning.dto.response.LearningWordResponse;
-import com.ssafy.aieng.domain.learning.dto.response.ThemeProgressResponse;
-import com.ssafy.aieng.domain.learning.entity.Learning;
+import com.ssafy.aieng.domain.learning.dto.response.LearningSessionDetailResponse;
+import com.ssafy.aieng.domain.learning.dto.response.SentenceResponse;
 import com.ssafy.aieng.domain.learning.service.LearningService;
-import com.ssafy.aieng.global.common.CustomPage;
 import com.ssafy.aieng.global.common.response.ApiResponse;
-import com.ssafy.aieng.global.common.util.AuthenticationUtil;
-import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import com.ssafy.aieng.domain.learning.dto.request.GenerateContentRequest;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.client.RestTemplate;
-
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -33,84 +18,39 @@ import org.springframework.web.client.RestTemplate;
 public class LearningController {
 
     private final LearningService learningService;
-    private final ChildService childService;
-    private final AuthenticationUtil authenticationUtil;
-    private final RedisTemplate<String, Object> redisTemplate;
 
-    // 아이별 테마 조회(학습한 단어수도 같이 조회)
-    @GetMapping("/{childId}/theme-progress")
-    public ResponseEntity<ApiResponse<CustomPage<ThemeProgressResponse>>> getThemeProgressByChildId(
-            @PathVariable Integer childId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable
+    // 특정 세션에 포함된 학습 단어 전체 조회 (6개 고정)
+    @GetMapping("/sessions/{sessionId}/words")
+    public ResponseEntity<ApiResponse<LearningSessionDetailResponse>> getLearningSessionDetail(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId
     ) {
-        String cacheKey = "themeProgress:" + userPrincipal.getId() + ":" + childId + ":" + pageable.getPageNumber() + ":" + pageable.getPageSize();
-
-        // 캐시가 있으면 그거 리턴
-        CustomPage<ThemeProgressResponse> cached = (CustomPage<ThemeProgressResponse>) redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            return ApiResponse.success(cached);
-        }
-
-        // 없으면 DB 조회 후 캐시에 저장
-        CustomPage<ThemeProgressResponse> progressPage = learningService.getThemeProgressByChildIdForParent(childId, userPrincipal.getId(), pageable);
-        redisTemplate.opsForValue().set(cacheKey, progressPage);
-
-        return ApiResponse.success(progressPage);
+        LearningSessionDetailResponse response = learningService.getLearningSessionDetail(user.getId(), childId, sessionId);
+        return ApiResponse.success(response);
     }
 
-    // 테마 접속 후 단어 조회
-    @GetMapping("/{childId}/theme/{themeId}/words")
-    public ResponseEntity<ApiResponse<CustomPage<LearningWordResponse>>> getLearningWordsByTheme(
-            @PathVariable Integer childId,
-            @PathVariable Integer themeId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable
+    // fastapi 요청 및 응답 그리고 학습완료
+    @PostMapping("/sessions/{sessionId}/words/{wordEn}/generation")
+    public ResponseEntity<ApiResponse<GeneratedContentResult>> requestAndSaveGeneration(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId,
+            @PathVariable String wordEn
     ) {
-        String cacheKey = String.format("learning:%d:%d:%d:%d:%d",
-                userPrincipal.getId(), childId, themeId,
-                pageable.getPageNumber(), pageable.getPageSize());
-
-        // Redis 캐시 확인
-        CustomPage<LearningWordResponse> cached =
-                (CustomPage<LearningWordResponse>) redisTemplate.opsForValue().get(cacheKey);
-
-        if (cached != null) {
-            return ApiResponse.success(cached);
-        }
-
-        // 없으면 DB 조회 + 캐시 저장
-        CustomPage<LearningWordResponse> result =
-                learningService.getOrCreateLearningSession(childId, themeId, userPrincipal.getId(), pageable);
-
-        redisTemplate.opsForValue().set(cacheKey, result);
-
+        GeneratedContentResult result = learningService.sendRequestAndSave(user.getId(), childId, sessionId, wordEn);
         return ApiResponse.success(result);
     }
 
-    // 아이의 문장과 문장 이미지를 생성하기 위한 기능
-    @PostMapping("/generate")
-    public ResponseEntity<ApiResponse<GeneratedContentResult>> generateWordContent(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @RequestBody GenerateContentRequest request
+    // 아이가 생성한 문장 정보 반환
+    @GetMapping("/sessions/{sessionId}/words/{wordEn}/sentence")
+    public ResponseEntity<ApiResponse<SentenceResponse>> getGeneratedSentence(
+            @AuthenticationPrincipal UserPrincipal user,
+            @RequestHeader("X-Child-Id") Integer childId,
+            @PathVariable Integer sessionId,
+            @PathVariable String wordEn
     ) {
-        // 유저 검증 또는 요청에 포함된 유저 ID 대조 가능
-        GeneratedContentResult result = learningService.generateAndSaveWordContent(
-                userPrincipal.getId(), request
-        );
-        return ApiResponse.success(result);
+        SentenceResponse sentenceResponse = learningService.getSentenceResponse(user.getId(), childId, sessionId, wordEn);
+        return ApiResponse.success(sentenceResponse);
     }
-
-    // 아이가 생성한 문장의 tts 듣기
-    @GetMapping("/children/{childId}/words/{wordId}/sentence/tts")
-    public ResponseEntity<ApiResponse<String>> getSentenceTTS(
-            @PathVariable Integer childId,
-            @PathVariable Integer wordId,
-            @AuthenticationPrincipal UserPrincipal userPrincipal
-    ) {
-        String audioUrl = learningService.getSentenceAudioUrl(userPrincipal.getId(), childId, wordId);
-        return ApiResponse.success(audioUrl);
-    }
-
-
 }
