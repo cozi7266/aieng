@@ -13,6 +13,7 @@ public class CustomAuthentication {
 
     private final ChildRepository childRepository;
 
+    // 유저와 아이 연관 검증
     public void validateChildOwnership(Integer userId, Integer childId) {
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));

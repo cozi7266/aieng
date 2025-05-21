@@ -3,6 +3,7 @@ package com.ssafy.aieng.domain.voice.controller;
 import com.ssafy.aieng.domain.mood.dto.MoodResponseDto;
 import com.ssafy.aieng.domain.mood.service.MoodService;
 import com.ssafy.aieng.domain.voice.dto.request.VoiceSettingRequest;
+import com.ssafy.aieng.domain.voice.dto.request.VoiceUploadRequest;
 import com.ssafy.aieng.domain.voice.dto.response.SongVoiceSettingResponse;
 import com.ssafy.aieng.domain.voice.dto.response.TtsVoiceSettingResponse;
 import com.ssafy.aieng.domain.voice.dto.response.VoiceResponse;
@@ -30,50 +31,28 @@ public class VoiceController {
     private final MoodService moodService;
     private final AuthenticationUtil authenticationUtil;
 
-//    //  목소리 파일 S3에 저장 (백엔드 방식)
-//    @PostMapping(path = "/backend", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ResponseEntity<ApiResponse<VoiceResponse>> createVoice(
-//            @RequestHeader("X-Child-Id") Integer childId,
-//            @ModelAttribute VoiceCreateRequest request,
-//            @AuthenticationPrincipal UserPrincipal userPrincipal
-//    ) {
-//        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-//        VoiceResponse response = voiceService.createVoice(userId, childId, request);
-//        return ApiResponse.success(response);
-//    }
 
-//    // 음성파일 URL 등록
-//    @PostMapping("/voice-url")
-//    public ResponseEntity<ApiResponse<Void>> registerVoiceUrl(
-//            @RequestHeader("X-Child-Id") Integer childId,
-//            @RequestBody VoiceUploadRequest dto,
-//            @AuthenticationPrincipal UserPrincipal userPrincipal
-//    ) {
-//        Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-//        voiceService.saveVoiceUrl(userId, childId, dto);
-//        return ApiResponse.success(HttpStatus.CREATED);
-//    }
-
-
-    // 목소리 목록 조회(디폴트 + 사용자 목소리)
-    @GetMapping("/default")
-    public ResponseEntity<ApiResponse<List<VoiceResponse>>> getVoices(
+    // 음성파일 URL 등록
+    @PostMapping("/voice-url")
+    public ResponseEntity<ApiResponse<Void>> registerVoiceUrl(
             @RequestHeader("X-Child-Id") Integer childId,
+            @RequestBody VoiceUploadRequest dto,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-        List<VoiceResponse> responses = voiceService.getDefaultVoices();
-        return ApiResponse.success(responses);
+        voiceService.saveVoiceUrl(userId, childId, dto);
+        return ApiResponse.success(HttpStatus.CREATED);
     }
 
-    // 특정 아이가 업로드한 목소리 목록 조회
+
+    // 특정 아이가 업로드한 목소리 + 디폴트 목소리 (남,여) 목록 조회
     @GetMapping("/child")
     public ResponseEntity<ApiResponse<List<VoiceResponse>>> getVoicesByChild(
             @RequestHeader("X-Child-Id") Integer childId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         Integer userId = authenticationUtil.getCurrentUserId(userPrincipal);
-        List<VoiceResponse> responses = voiceService.getVoicesByChildId(userId, childId);
+        List<VoiceResponse> responses = voiceService.getDefaultAndChildVoices(userId, childId);
         return ApiResponse.success(responses);
     }
 
@@ -143,7 +122,7 @@ public class VoiceController {
         List<VoiceResponse> defaultVoices = List.of(maleVoice, femaleVoice);
 
         // 자녀가 업로드한 커스텀 목소리
-        List<VoiceResponse> customVoices = voiceService.getVoicesByChildId(userId, childId);
+        List<VoiceResponse> customVoices = voiceService.getCustomVoicesByChildId(userId, childId);
 
         TtsVoiceSettingResponse response = new TtsVoiceSettingResponse(defaultVoices, customVoices);
         return ApiResponse.success(response);
