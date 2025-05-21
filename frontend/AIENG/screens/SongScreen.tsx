@@ -482,10 +482,13 @@ const SongScreen: React.FC = () => {
 
       if (status.status === "SAVED" && status.details.songId) {
         const songDetail = await fetchSongDetail(status.details.songId);
+        const artistText = `${songDetail.themeKo}${
+          songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+        }`;
         setCurrentSong({
           id: storybook.storybookId.toString(),
           title: songDetail.title,
-          artist: songDetail.themeKo,
+          artist: artistText,
           imageUrl: { uri: songDetail.bookCover },
           audioUrl: { uri: songDetail.songUrl },
           duration: songDetail.duration,
@@ -556,22 +559,63 @@ const SongScreen: React.FC = () => {
     navigation.navigate("SongSettingScreen");
   };
 
-  const handleToggleFavorite = () => {
-    if (!currentSong) return;
+  const handleToggleFavorite = async () => {
+    if (!currentSong || !currentSongStatus?.details.songId) return;
 
-    // 즐겨찾기 상태 토글
-    setSongs((prevSongs) =>
-      prevSongs.map((song) =>
-        song.id === currentSong.id
-          ? { ...song, favorite: !song.favorite }
-          : song
-      )
-    );
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-    // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
-    setCurrentSong((prevSong) =>
-      prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
-    );
+      if (!token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      console.log("[동요 즐겨찾기 토글 요청]", {
+        songId: currentSongStatus.details.songId,
+      });
+
+      const response = await axios.post(
+        `https://www.aieng.co.kr/api/songs/${currentSongStatus.details.songId}/like-toggle`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        console.log("[동요 즐겨찾기 토글 성공]", response.data.data);
+
+        // 즐겨찾기 상태 업데이트
+        setSongs((prevSongs) =>
+          prevSongs.map((song) =>
+            song.id === currentSong.id
+              ? { ...song, favorite: response.data.data }
+              : song
+          )
+        );
+
+        // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
+        setCurrentSong((prevSong) =>
+          prevSong ? { ...prevSong, favorite: response.data.data } : null
+        );
+      } else {
+        throw new Error(
+          response.data.error?.message || "즐겨찾기 토글에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      console.error("즐겨찾기 토글 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[즐겨찾기 토글 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
+    }
   };
 
   const handleCreateSong = async () => {
@@ -919,12 +963,15 @@ const SongScreen: React.FC = () => {
             columnWrapperStyle={{ justifyContent: "flex-start" }}
             renderItem={({ item }) => {
               const isActive = currentSong?.id === item.storybookId.toString();
+              const artistText = item.themeKo
+                ? `${item.themeKo}${item.themeEn ? ` (${item.themeEn})` : ""}`
+                : "동화";
               return (
                 <SongCard
                   song={{
                     id: item.storybookId.toString(),
                     title: item.title,
-                    artist: item.themeKo || "동화",
+                    artist: artistText,
                     imageUrl: { uri: item.coverUrl },
                     audioUrl: require("../assets/sounds/sample.mp3"),
                     duration: 228,
@@ -937,7 +984,7 @@ const SongScreen: React.FC = () => {
                     handleSongPress({
                       id: item.storybookId.toString(),
                       title: item.title,
-                      artist: item.themeKo || "동화",
+                      artist: artistText,
                       imageUrl: { uri: item.coverUrl },
                       audioUrl: require("../assets/sounds/sample.mp3"),
                       duration: 228,
@@ -949,7 +996,7 @@ const SongScreen: React.FC = () => {
                     handleNavigateToStory({
                       id: item.storybookId.toString(),
                       title: item.title,
-                      artist: item.themeKo || "동화",
+                      artist: artistText,
                       imageUrl: { uri: item.coverUrl },
                       audioUrl: require("../assets/sounds/sample.mp3"),
                       duration: 228,
@@ -1007,7 +1054,7 @@ const SongScreen: React.FC = () => {
                       },
                     ]}
                   >
-                    {currentSong.themeKo}
+                    {currentSong.artist}
                   </Text>
                 </View>
               </View>
