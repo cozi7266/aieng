@@ -416,11 +416,274 @@ const SongSettingScreen: React.FC = () => {
     }
   };
 
-  // 녹음 저장
+  // 파일을 Blob으로 변환하는 함수
+  const prepareAudioFile = async (recordedUri: string): Promise<Blob> => {
+    try {
+      console.log("[파일 변환 시작]");
+      console.log("Recorded URI:", recordedUri);
+
+      const response = await fetch(recordedUri);
+      if (!response.ok) {
+        throw new Error(`파일 변환 실패: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      console.log("[파일 변환 성공]");
+      console.log("Blob size:", blob.size);
+      console.log("Blob type:", blob.type);
+
+      return blob;
+    } catch (error) {
+      console.error("[파일 변환 실패]");
+      console.log("Error:", error);
+      throw error;
+    }
+  };
+
+  // Presigned URL 요청
+  const getPresignedUrl = async (contentType = "audio/m4a", expires = 300) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token || !selectedChildId) {
+        throw new Error("인증 정보가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[Presigned URL 요청]");
+      console.log(
+        "URL:",
+        `https://www.aieng.co.kr/api/voice/presigned-url?contentType=${contentType}&expires=${expires}`
+      );
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+      });
+
+      // Presigned URL 요청
+      const response = await axios.get(
+        `https://www.aieng.co.kr/api/voice/presigned-url?contentType=${contentType}&expires=${expires}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[Presigned URL 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (
+        response.data.success &&
+        response.data.data?.presignedUrl &&
+        response.data.data?.fileUrl
+      ) {
+        return response.data.data;
+      } else {
+        console.error("Presigned URL 응답 형식 오류:", response.data);
+        throw new Error(
+          response.data.error || "Presigned URL 획득에 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      console.error("[Presigned URL 요청 실패]");
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        throw new Error(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Error:", error.message);
+        throw error;
+      }
+    }
+  };
+
+  // S3 업로드
+  const uploadToS3 = async (
+    presignedUrl: string,
+    recordedUri: string,
+    contentType = "audio/m4a"
+  ) => {
+    try {
+      console.log("[S3 업로드 시작]");
+      console.log("Presigned URL:", presignedUrl);
+      console.log("Recorded URI:", recordedUri);
+      console.log("Content Type:", contentType);
+
+      // 방법 1: Blob으로 변환 후 업로드
+      try {
+        const fileBlob = await prepareAudioFile(recordedUri);
+        console.log("[S3 업로드 요청 - Blob 방식]");
+
+        const response = await axios.put(presignedUrl, fileBlob, {
+          headers: {
+            "Content-Type": contentType,
+          },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+        });
+
+        console.log("[S3 업로드 응답 - Blob 방식]");
+        console.log("Status:", response.status);
+        console.log("Headers:", response.headers);
+
+        if (response.status === 200) {
+          console.log("[S3 업로드 성공 - Blob 방식]");
+          return true;
+        }
+      } catch (blobError) {
+        console.error("[Blob 방식 업로드 실패]", blobError);
+        console.log("FormData 방식으로 재시도합니다.");
+      }
+
+      // 방법 2: FormData로 직접 전송
+      console.log("[S3 업로드 요청 - FormData 방식]");
+      const formData = new FormData();
+      const file = {
+        uri: recordedUri,
+        type: contentType,
+        name: recordedUri.split("/").pop() || "recording.m4a",
+      } as any; // React Native의 FormData 타입 문제로 인한 임시 해결책
+
+      formData.append("file", file);
+
+      const response = await axios.put(presignedUrl, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+
+      console.log("[S3 업로드 응답 - FormData 방식]");
+      console.log("Status:", response.status);
+      console.log("Headers:", response.headers);
+
+      if (response.status === 200) {
+        console.log("[S3 업로드 성공 - FormData 방식]");
+        return true;
+      } else {
+        throw new Error(`S3 업로드 실패: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error("[S3 업로드 실패]");
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", error.response.data);
+        throw new Error(
+          `S3 업로드 실패: ${error.response.status} - ${
+            error.response.data || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "S3 서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Error:", error.message);
+        throw error;
+      }
+    }
+  };
+
+  // 음성 URL 등록
+  const registerVoiceUrl = async (fileUrl: string) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token || !selectedChildId) {
+        throw new Error("인증 정보가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[음성 URL 등록 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/voice-url");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+      });
+      console.log("Body:", { audioUrl: fileUrl });
+
+      const response = await axios.post(
+        "https://www.aieng.co.kr/api/voice/voice-url",
+        { audioUrl: fileUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[음성 URL 등록 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        return true;
+      } else {
+        throw new Error(
+          response.data.message || "음성 URL 등록에 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      console.error("[음성 URL 등록 실패]");
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        throw new Error(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        throw new Error(
+          "서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+        );
+      } else {
+        console.log("Error:", error.message);
+        throw error;
+      }
+    }
+  };
+
+  // 녹음 저장 함수 수정
   const saveRecordingToLocal = async () => {
     if (!recordedUri) return;
 
     try {
+      setIsLoading(true);
+      setError(null);
+
+      // 1. Presigned URL 요청
+      const { presignedUrl, fileUrl } = await getPresignedUrl();
+
+      // 2. S3에 파일 업로드
+      await uploadToS3(presignedUrl, recordedUri);
+
+      // 3. 음성 URL 등록
+      await registerVoiceUrl(fileUrl);
+
+      // 4. 로컬 저장소에 저장
       const newRecording = {
         id: Date.now().toString(),
         uri: recordedUri,
@@ -434,9 +697,31 @@ const SongSettingScreen: React.FC = () => {
       );
       setSavedRecordings(updatedRecordings);
       setError(null);
-    } catch (err) {
+
+      // 5. TTS 목소리 목록 새로고침
+      await fetchTTSVoices();
+
+      // 6. 녹음 상태 초기화
+      resetRecording();
+    } catch (err: any) {
       console.error("녹음 저장 실패:", err);
-      setError("녹음을 저장할 수 없습니다.");
+      if (err.response) {
+        console.log("Status:", err.response.status);
+        console.log("Data:", JSON.stringify(err.response.data, null, 2));
+        setError(
+          `서버 오류: ${err.response.status} - ${
+            err.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (err.request) {
+        console.log("Request:", err.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", err.config);
+        setError(err.message || "녹음을 저장할 수 없습니다.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
