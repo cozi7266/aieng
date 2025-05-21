@@ -9,7 +9,6 @@ import com.ssafy.aieng.domain.user.dto.response.UserProfileResponse;
 import com.ssafy.aieng.domain.user.entity.User;
 import com.ssafy.aieng.domain.child.repository.ChildRepository;
 import com.ssafy.aieng.domain.user.repository.UserRepository;
-import com.ssafy.aieng.global.common.enums.BaseStatus;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
 import lombok.RequiredArgsConstructor;

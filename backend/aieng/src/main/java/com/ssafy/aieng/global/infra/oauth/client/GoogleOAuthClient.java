@@ -34,11 +34,11 @@ public class GoogleOAuthClient {
                 .add(GoogleOAuthConstants.Parameters.CLIENT_SECRET, clientSecret)
                 .add(GoogleOAuthConstants.Parameters.REDIRECT_URI, redirectUri)
                 .add(GoogleOAuthConstants.Parameters.CODE, code)
-                .build(); // 여기서 FormBody 타입으로!
+                .build();
 
         Request request = new Request.Builder()
                 .url(GoogleOAuthConstants.Urls.TOKEN)
-                .post(formBody)  // 여기는 RequestBody 타입을 기대하지만 FormBody는 하위 타입이라 OK
+                .post(formBody)
                 .build();
 
 

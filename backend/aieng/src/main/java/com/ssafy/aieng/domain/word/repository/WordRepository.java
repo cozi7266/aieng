@@ -10,7 +10,9 @@ import java.util.Optional;
 @Repository
 public interface WordRepository extends JpaRepository<Word, Integer> {
 
+    // 테마 따른 전체 단어 조회
     List<Word> findAllByThemeId(Integer themeId);
 
-    Optional<Word> findByWordEn(String word);
+    // 단이 영어 뜻에 따른 조회
+    Optional<Word> findByWordEn(String wordEn);
 }

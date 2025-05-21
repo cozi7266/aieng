@@ -30,5 +30,4 @@ public class RedisKeyUtil {
         return String.format("Song:status:session:%d", sessionId);
     }
 
-    // ✅ 기존 그림책 기반 키는 더 이상 사용하지 않으므로 제거됨
 }
