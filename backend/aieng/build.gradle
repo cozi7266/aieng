@@ -40,9 +40,6 @@ dependencies {
     // API send
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
-//    // elasticsearch
-//    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
-//    implementation 'co.elastic.clients:elasticsearch-java:8.12.0'
 
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -55,17 +52,12 @@ dependencies {
     // OkHttp
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 
-    // 교보문고, 예스25 구매페이지 이동을 위함 크롤링 의존성
-    implementation 'org.jsoup:jsoup:1.17.2'
-
-    // @SchedulerLock 적용
-    implementation 'net.javacrumbs.shedlock:shedlock-spring:5.9.0'
-    implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.9.0'
-
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.3'
+
+    // file upload
 
 
 }

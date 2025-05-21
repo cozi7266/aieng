@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class ThemeResponse {
+
     private String themeKo;
     private String themeEn;
     private String imageUrl;

@@ -57,7 +57,7 @@ public class QuizController {
         return ApiResponse.success(response);
     }
 
-    // 퀴즈 학습 완료
+    // 퀴즈 학습 제출
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> submitAnswer(
             @RequestBody SubmitAnswerRequest request,

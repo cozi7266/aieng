@@ -18,7 +18,7 @@ public class MoodController {
 
     private final MoodService moodService;
 
-    // 목록 조히
+    // 분위기 전체 목록 조회
     @GetMapping
     public ResponseEntity<ApiResponse<List<MoodResponseDto>>> getAllMoods(
             @AuthenticationPrincipal UserPrincipal user,
@@ -28,7 +28,7 @@ public class MoodController {
         return ApiResponse.success(moods);
     }
 
-    // 단건 조회
+    // 분위기 단건 조회
     @GetMapping("/{moodId}")
     public ResponseEntity<ApiResponse<MoodResponseDto>> getMood(
             @AuthenticationPrincipal UserPrincipal user,
@@ -38,7 +38,6 @@ public class MoodController {
         MoodResponseDto mood = moodService.getMood(user.getId(), childId, moodId);
         return ApiResponse.success(mood);
     }
-
 
 }
 

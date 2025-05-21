@@ -6,6 +6,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class SongStatusDetail {
+
     private Integer songId;
     private Integer sessionId;
     private boolean redisKeyExists;
