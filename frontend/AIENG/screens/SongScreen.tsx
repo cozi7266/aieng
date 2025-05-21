@@ -328,6 +328,7 @@ const SongScreen: React.FC = () => {
       currentSongStatus?.status === "REQUESTED" ||
       currentSongStatus?.status === "IN_PROGRESS"
     ) {
+      console.log("[애니메이션 시작]", currentSongStatus.status);
       Animated.loop(
         Animated.timing(spinValue, {
           toValue: 1,
@@ -336,6 +337,7 @@ const SongScreen: React.FC = () => {
         })
       ).start();
     } else {
+      console.log("[애니메이션 중지]", currentSongStatus?.status);
       spinValue.setValue(0);
     }
   }, [currentSongStatus?.status]);
@@ -1217,6 +1219,21 @@ const SongScreen: React.FC = () => {
                         />
                         <Text style={styles.createSongButtonText}>
                           저장하기
+                        </Text>
+                      </TouchableOpacity>
+                    ) : currentSongStatus?.status === "FAILED" ? (
+                      <TouchableOpacity
+                        style={styles.createSongButton}
+                        onPress={handleCreateSong}
+                      >
+                        <FontAwesome5
+                          name="redo"
+                          size={40 * scaleFactor}
+                          color="white"
+                          style={styles.buttonIcon}
+                        />
+                        <Text style={styles.createSongButtonText}>
+                          다시 생성하기
                         </Text>
                       </TouchableOpacity>
                     ) : (
