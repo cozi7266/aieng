@@ -48,3 +48,4 @@ oauth:
     redirect-uri: http://localhost:5173/oauth/google/callback
   naver:
     redirect-uri: http://localhost:5173/oauth/naver/callback
+

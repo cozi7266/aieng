@@ -17,6 +17,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Table(name = "quiz_question")
 public class QuizQuestion extends BaseEntity{
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quiz_id", nullable = false)
     private Quiz quiz;

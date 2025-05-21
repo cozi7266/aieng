@@ -37,6 +37,7 @@ public class OAuthService {
     private final AuthRedisService authRedisService;
     private final KaKaoOAuthClient kakaoOAuthClient;
 
+    // [공통] OAuth provider와 code로 로그인 처리 (구글, 카카오 등)
     public LoginResult handleOAuthLogin(Provider provider, String code) {
         OAuthStrategy strategy = oAuthStrategyMap.get(provider);
         if (strategy == null) {
@@ -67,6 +68,7 @@ public class OAuthService {
         }
     }
 
+    // provider+providerId로 기존 유저 조회, 없으면 신규 생성 (private)
     private User findOrCreateUser(Provider provider, OAuthUserInfo userInfo) {
         return userRepository.findByProviderAndProviderId(provider, userInfo.getId())
                 .map(user -> {
@@ -79,6 +81,7 @@ public class OAuthService {
 
     }
 
+    // 신규 유저 생성 (private)
     private User createUser(OAuthUserInfo userInfo, Provider provider) {
         String nickname = userInfo.getNickname();
         if (nickname == null || nickname.isBlank()) {
@@ -100,8 +103,7 @@ public class OAuthService {
         return savedUser;
     }
 
-
-
+    // 리프레시 토큰으로 액세스 토큰 재발급
     public TokenRefreshResponse refreshToken(String refreshToken) {
         TokenValidationResult validationResult = jwtTokenProvider.validateToken(refreshToken);
         if (!validationResult.isValid()) {
@@ -119,6 +121,7 @@ public class OAuthService {
         return new TokenRefreshResponse(newAccessToken);
     }
 
+    // [네이버 전용] 네이버 OAuth code+state로 로그인 처리
     public LoginResult handleNaverOAuthLogin(String code, String state) {
         OAuthStrategy strategy = oAuthStrategyMap.get(Provider.NAVER);
         if (!(strategy instanceof NaverOAuthStrategy naverStrategy)) {
@@ -147,7 +150,7 @@ public class OAuthService {
         }
     }
 
-    // 안드로이드 앱 OAuth 로그인 (바로 access token 받아오기)
+    // [앱 전용] 카카오 Access Token 직접 받아 로그인 처리
     public LoginResult handleKakaoLoginWithAccessToken(String accessToken) {
         try {
             KakaoUserResponse userResponse = kakaoOAuthClient.getUserInfo(accessToken); // <- 여기 IOException 발생 가능
@@ -182,7 +185,5 @@ public class OAuthService {
             throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
         }
     }
-
-
 
 }

@@ -82,5 +82,4 @@ public class Child extends BaseEntity {
     public void setMood(Mood mood) {
         this.mood = mood;
     }
-
 }

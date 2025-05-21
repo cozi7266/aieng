@@ -64,8 +64,6 @@ public class SessionController {
         return ApiResponse.success(response);
     }
 
-
-
     // 자녀의 특정 세션 삭제 (Soft Delete)
     @PutMapping("/{sessionId}/deactivate")
     public ResponseEntity<ApiResponse<Void>> deactivateSession(

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final OAuthService oAuthService;
 
+    // 리프레시 토큰으로 액세스 토큰 재발급
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenRefreshResponse>> refreshToken(
             @CookieValue(name = "refresh_token", required = false) String refreshToken) {
@@ -31,7 +32,7 @@ public class AuthController {
         return ApiResponse.success(response);
     }
 
-    // 로그아웃
+    // 로그아웃(리프레시 토큰 쿠키 삭제)
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout() {
         ResponseCookie deleteCookie = CookieUtil.deleteRefreshTokenCookie();

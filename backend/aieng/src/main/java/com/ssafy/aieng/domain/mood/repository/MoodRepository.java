@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface MoodRepository extends JpaRepository<Mood, Integer> {
 
+    // 이름으로 Mood 조회
     Optional<Mood> findByName(String moodName);
 }

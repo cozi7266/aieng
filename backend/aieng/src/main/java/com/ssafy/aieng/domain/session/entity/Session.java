@@ -75,13 +75,6 @@ public class Session extends BaseEntity {
         updateProgressRate();
     }
 
-    public void decrementLearnedCount() {
-        if (this.learnedWordCount > 0) {
-            this.learnedWordCount--;
-            updateProgressRate();
-        }
-    }
-
     // 진행률 계산
     public void updateProgressRate() {
         if (totalWordCount != null && totalWordCount > 0) {
@@ -97,23 +90,26 @@ public class Session extends BaseEntity {
         learning.setSession(this);
     }
 
-    // 세션 종료
+    // 세션 종료 시간 기록
     public void finish() {
         this.finishedAt = LocalDateTime.now();
     }
 
+    // 상태를 QUIZ_DONE으로 변경
     public void markQuizDone() {
         if (this.status == SessionStatus.LEARNING) {
             this.status = SessionStatus.QUIZ_DONE;
         }
     }
 
+    // 상태를 STORY_DONE으로 변경
     public void markStoryDone() {
         if (this.status == SessionStatus.QUIZ_DONE) {
             this.status = SessionStatus.STORY_DONE;
         }
     }
 
+    // 상태를 SONG_DONE으로 변경하고 종료 시간 기록
     public void markSongDoneAndFinish() {
         if (this.status == SessionStatus.STORY_DONE) {
             this.status = SessionStatus.SONG_DONE;

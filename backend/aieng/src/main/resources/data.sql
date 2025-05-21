@@ -1,39 +1,40 @@
 
 -- 부모 유저
-INSERT INTO user (id, created_at, updated_at, deleted, nickname, provider_id, provider)
-VALUES (1, NOW(), NOW(), false, '엄마곰', 'kakao-123', 'KAKAO');
+INSERT INTO user (created_at, updated_at, deleted, nickname, provider_id, provider)
+VALUES (NOW(), NOW(), false, '엄마곰', 'kakao-123', 'KAKAO');
 
 -- 자녀
-INSERT INTO child (id, created_at, updated_at, deleted, name, birthdate, gender, user_id)
-VALUES (1, NOW(), NOW(), false, '하이', '2020-05-01', 'F', 1),
-        (2, NOW(), NOW(), false, '하이2', '2019-03-15', 'M', 1),
+INSERT INTO child (created_at, updated_at, deleted, name, birthdate, gender, user_id)
+VALUES(NOW(), NOW(), false, '하이', '2020-05-01', 'F', 1),
+        (NOW(), NOW(), false, '하이2', '2019-03-15', 'M', 1),
 
-        (3, NOW(), NOW(), false, '하이3', '2021-07-20', 'F', 1);
+        ( NOW(), NOW(), false, '하이3', '2021-07-20', 'F', 1);
 -- 주제 (테마)
-INSERT INTO theme (id, created_at, updated_at, deleted, theme_en, theme_ko, image_url, total_words)
+INSERT INTO theme (created_at, updated_at, deleted, theme_en, theme_ko, image_url, total_words)
 VALUES
-    (1, NOW(), NOW(), false, 'animal', '동물', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/animal.jpg', 6),
-    (2, NOW(), NOW(), false, 'fruit', '과일', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/fruit.jpg', 7),
-    (3, NOW(), NOW(), false, 'color', '색깔', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/color.jpg', 8);
+    (NOW(), NOW(), false, 'animal', '동물', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/animal.jpg', 6),
+    (NOW(), NOW(), false, 'fruit', '과일', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/fruit.jpg', 7),
+    (NOW(), NOW(), false, 'color', '색깔', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/theme/color.jpg', 8);
 
 -- 단어
-INSERT INTO word (id, created_at, updated_at, deleted, theme_id, word_ko, word_en, img_url, tts_url)
+INSERT INTO word (created_at, updated_at, deleted, theme_id, word_ko, word_en, img_url, tts_url)
 VALUES
-    (1, NOW(), NOW(), false, 1, '고양이', 'cat', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/cat.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/cat.mp3'),
-    (2, NOW(), NOW(), false, 1, '강아지', 'dog', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/dog.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/dog.mp3'),
-    (3, NOW(), NOW(), false, 1, '토끼', 'rabbit', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/rabbit.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/rabbit.mp3'),
-    (4, NOW(), NOW(), false, 1, '호랑이', 'tiger', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/tiger.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/tiger.mp3'),
-    (5, NOW(), NOW(), false, 1, '곰', 'bear', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/bear.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/bear.mp3'),
-    (6, NOW(), NOW(), false, 1, '사자', 'lion', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/lion.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/lion.mp3'),
-    (7, NOW(), NOW(), false, 1, '코끼리', 'elephant', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/elephant.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/elephant.mp3'),
-    (8, NOW(), NOW(), false, 1, '여우', 'fox', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/fox.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/fox.mp3'),
-    (9, NOW(), NOW(), false, 1, '늑대', 'wolf', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/wolf.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/wolf.mp3'),
-    (10, NOW(), NOW(), false, 1, '원숭이', 'monkey', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/monkey.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/monkey.mp3'),
-    (11, NOW(), NOW(), false, 1, '기린', 'giraffe', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/giraffe.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/giraffe.mp3'),
-    (12, NOW(), NOW(), false, 1, '코뿔소', 'rhinoceros', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/rhinoceros.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/rhinoceros.mp3'),
-    (13, NOW(), NOW(), false, 1, '하마', 'hippopotamus', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/hippo.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/hippo.mp3'),
-    (14, NOW(), NOW(), false, 1, '악어', 'crocodile', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/crocodile.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/crocodile.mp3'),
-    (15, NOW(), NOW(), false, 1, '펭귄', 'penguin', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/penguin.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/penguin.mp3');
+    (NOW(), NOW(), false, 1, '고양이', 'cat', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/cat.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/cat.mp3'),
+    (NOW(), NOW(), false, 1, '강아지', 'dog', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/dog.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/dog.mp3'),
+    (NOW(), NOW(), false, 1, '토끼', 'rabbit', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/rabbit.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/rabbit.mp3'),
+    (NOW(), NOW(), false, 1, '호랑이', 'tiger', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/tiger.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/tiger.mp3'),
+    (NOW(), NOW(), false, 1, '곰', 'bear', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/bear.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/bear.mp3'),
+    (NOW(), NOW(), false, 1, '사자', 'lion', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/lion.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/lion.mp3'),
+    (NOW(), NOW(), false, 1, '코끼리', 'elephant', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/elephant.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/elephant.mp3'),
+    (NOW(), NOW(), false, 1, '여우', 'fox', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/fox.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/fox.mp3'),
+    (NOW(), NOW(), false, 1, '늑대', 'wolf', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/wolf.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/wolf.mp3'),
+    (NOW(), NOW(), false, 1, '원숭이', 'monkey', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/monkey.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/monkey.mp3'),
+    (NOW(), NOW(), false, 1, '기린', 'giraffe', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/giraffe.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/giraffe.mp3'),
+    (NOW(), NOW(), false, 1, '코뿔소', 'rhinoceros', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/rhinoceros.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/rhinoceros.mp3'),
+    (NOW(), NOW(), false, 1, '하마', 'hippopotamus', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/hippo.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/hippo.mp3'),
+    (NOW(), NOW(), false, 1, '악어', 'crocodile', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/crocodile.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/crocodile.mp3'),
+    (NOW(), NOW(), false, 1, '펭귄', 'penguin', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/word/penguin.jpg', 'https://aieng-bucket.s3.ap-northeast-2.amazonaws.com/tts/penguin.mp3');
+
 
 INSERT INTO word (created_at, updated_at, deleted, theme_id, word_ko, word_en, img_url, tts_url)
 VALUES

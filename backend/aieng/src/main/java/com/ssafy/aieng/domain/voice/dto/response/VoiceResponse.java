@@ -14,11 +14,10 @@ public class VoiceResponse {
     private String audioUrl;
 
     public static VoiceResponse from(Voice voice) {
-        Integer childId = (voice.getChild() != null) ? voice.getChild().getId() : null;
 
         return new VoiceResponse(
                 voice.getId(),
-                childId,
+                voice.getChildId(),
                 voice.getName(),
                 voice.getDescription(),
                 voice.getAudioUrl()

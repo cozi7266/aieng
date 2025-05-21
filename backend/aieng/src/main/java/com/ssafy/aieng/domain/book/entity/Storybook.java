@@ -41,12 +41,11 @@ public class Storybook extends BaseEntity {
     @Builder
     public Storybook(Child child, Session session, String coverUrl, String title, String description) {
         this.child = child;
-        this.session = session; // ✅ 추가됨
+        this.session = session;
         this.coverUrl = coverUrl;
         this.title = title;
         this.description = description;
     }
-
 
     public void addLearningStorybook(LearningStorybook learningStorybook) {
         this.learningStorybooks.add(learningStorybook);

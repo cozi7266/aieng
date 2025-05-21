@@ -10,5 +10,6 @@ public class VoiceCreateRequest {
 
     private String name;
     private String description;
-    private MultipartFile audioFile;  // 음성 파일
+    private MultipartFile audioFile; // (백엔드 방식일 때만)
+    private String audioUrl;         // (프론트 방식 일때, S3 직접 업로드 방식일 때만)
 } 
