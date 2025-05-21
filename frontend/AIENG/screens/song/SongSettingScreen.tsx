@@ -109,16 +109,14 @@ interface SaveSettingsResponse {
 
 // 분위기별 이모지 매핑
 const MOOD_EMOJIS: { [key: string]: string } = {
-  "nursery rhyme": "🎵",
-  children: "👶",
-  kids: "👧",
   happy: "😊",
-  playful: "🎈",
-  slow: "🐢",
-  educational: "📚",
-  repetitive: "🔄",
-  brighton: "✨",
-  "easy listening": "🎧",
+  calm: "🧘",
+  energetic: "💪",
+  playful: "😜",
+  love: "❤️",
+  fun: "🎉",
+  educational: "🎓",
+  warm: "🌞",
 };
 
 const SongSettingScreen: React.FC = () => {
@@ -136,6 +134,36 @@ const SongSettingScreen: React.FC = () => {
     },
     tabText: {
       fontSize: theme.typography.button.fontSize * scaleFactor,
+    },
+    savedRecordingsContainer: {
+      width: "100%",
+      marginTop: theme.spacing.xl,
+      paddingHorizontal: theme.spacing.m,
+    },
+    savedRecordingsList: {
+      maxHeight: 200,
+      marginTop: theme.spacing.m,
+    },
+    savedRecordingItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: theme.spacing.m,
+      backgroundColor: "white",
+      borderRadius: theme.borderRadius.medium,
+      marginBottom: theme.spacing.s,
+      ...theme.shadows.default,
+    },
+    savedRecordingTime: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+    },
+    savedRecordingControls: {
+      flexDirection: "row",
+      gap: theme.spacing.m,
+    },
+    savedRecordingButton: {
+      padding: theme.spacing.s,
     },
   };
 
@@ -1197,46 +1225,16 @@ const SongSettingScreen: React.FC = () => {
                     style={styles.voiceItem}
                     scaleFactor={scaleFactor}
                   />
-                </ScrollView>
-              )}
-            </View>
-
-            {/* 우측 - 녹음 UI */}
-            <View style={styles.rightContainer}>
-              {recordingStatus === "notStarted" ? (
-                // 녹음 전 상태
-                <View style={styles.recordingContainer}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>목소리 녹음하기</Text>
-                    <Text style={styles.sectionSubtitle}>
-                      아래 버튼을 눌러 10~15초 동안 문장을{"\n"}또박또박
-                      읽어주세요.
-                    </Text>
-                  </View>
-
-                  <View style={styles.recordingContent}>
-                    <View style={styles.timerContainer}>
-                      <Text style={styles.timerText}>
-                        00:{maxRecordingDuration.toString().padStart(2, "0")}
-                      </Text>
-                      <View style={styles.progressBarContainer}>
-                        <View style={[styles.progressBarEmpty]} />
-                      </View>
-                    </View>
-
-                    <TouchableOpacity
-                      style={[styles.recordButton]}
-                      onPress={startRecording}
-                    >
-                      <FontAwesome5 name="microphone" size={24} color="white" />
-                      <Text style={styles.recordButtonText}>녹음 시작</Text>
-                    </TouchableOpacity>
-                  </View>
 
                   {/* 저장된 녹음 목록 */}
                   {savedRecordings.length > 0 && (
                     <View style={styles.savedRecordingsContainer}>
-                      <View style={styles.sectionHeader}>
+                      <View
+                        style={[
+                          styles.sectionHeader,
+                          { marginBottom: theme.spacing.xs },
+                        ]}
+                      >
                         <Text style={styles.sectionTitle}>저장된 녹음</Text>
                         <Text style={styles.sectionSubtitle}>
                           저장된 녹음 목록입니다.{"\n"}
@@ -1276,6 +1274,41 @@ const SongSettingScreen: React.FC = () => {
                       </ScrollView>
                     </View>
                   )}
+                </ScrollView>
+              )}
+            </View>
+
+            {/* 우측 - 녹음 UI */}
+            <View style={styles.rightContainer}>
+              {recordingStatus === "notStarted" ? (
+                // 녹음 전 상태
+                <View style={styles.recordingContainer}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>목소리 녹음하기</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      아래 버튼을 눌러 10~15초 동안 문장을{"\n"}또박또박
+                      읽어주세요.
+                    </Text>
+                  </View>
+
+                  <View style={styles.recordingContent}>
+                    <View style={styles.timerContainer}>
+                      <Text style={styles.timerText}>
+                        00:{maxRecordingDuration.toString().padStart(2, "0")}
+                      </Text>
+                      <View style={styles.progressBarContainer}>
+                        <View style={[styles.progressBarEmpty]} />
+                      </View>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.recordButton]}
+                      onPress={startRecording}
+                    >
+                      <FontAwesome5 name="microphone" size={24} color="white" />
+                      <Text style={styles.recordButtonText}>녹음 시작</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : recordingStatus === "recording" ? (
                 // 녹음 중 상태
@@ -1489,6 +1522,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.s,
+    paddingTop: theme.spacing.xl,
   },
   moodItem: {
     width: "22%",
@@ -1613,18 +1647,21 @@ const styles = StyleSheet.create({
   savedRecordingsContainer: {
     width: "100%",
     marginTop: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.m,
   },
   savedRecordingsList: {
     maxHeight: 200,
+    marginTop: theme.spacing.m,
   },
   savedRecordingItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: theme.spacing.m,
-    backgroundColor: theme.colors.background,
+    backgroundColor: "white",
     borderRadius: theme.borderRadius.medium,
     marginBottom: theme.spacing.s,
+    ...theme.shadows.default,
   },
   savedRecordingTime: {
     ...theme.typography.body,

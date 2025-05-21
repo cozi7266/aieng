@@ -49,7 +49,7 @@ const MoodItem: React.FC<MoodItemProps> = ({
       <Text
         style={[
           styles.moodName,
-          { fontSize: theme.typography.caption.fontSize * scaleFactor },
+          { fontSize: 24 * scaleFactor },
           isAddButton && styles.addItemText,
         ]}
       >
@@ -74,6 +74,9 @@ const styles = StyleSheet.create({
   moodName: {
     ...theme.typography.caption,
     color: theme.colors.text,
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
   },
   selectedItem: {
     borderWidth: 3,
