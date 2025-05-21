@@ -52,12 +52,10 @@ public class KaKaoOAuthClient {
 
         try (Response response = okHttpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                System.err.println("❌ 카카오 사용자 정보 조회 실패: HTTP " + response.code());
                 throw new IOException("카카오 사용자 정보 조회 실패");
             }
 
             String rawJson = response.body().string();
-            System.out.println("📦 Kakao Raw JSON Response: " + rawJson);
 
             return objectMapper.readValue(rawJson, KakaoUserResponse.class);
         }

@@ -1,6 +1,5 @@
 package com.ssafy.aieng.global.common.redis.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -14,7 +13,7 @@ import java.util.List;
 public class RedisService {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper(); // ObjectMapper 필요
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public void save(String key, Object value, long ttlSeconds) {
         redisTemplate.opsForValue().set(key, value, Duration.ofSeconds(ttlSeconds));

@@ -49,3 +49,6 @@ oauth:
   naver:
     redirect-uri: http://localhost:5173/oauth/naver/callback
 
+cholog:
+  logger:
+    api-key: 086f8ef7-02fc-42cb-a7a9-3b0c9a87488a

@@ -21,7 +21,11 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven { url 'https://jitpack.io' }
+
 }
+
+
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -57,7 +61,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.3'
 
-    // file upload
+    implementation 'com.ssafy.lab.s12-final:S12P31B207:v1.1.0'
 
 
 }

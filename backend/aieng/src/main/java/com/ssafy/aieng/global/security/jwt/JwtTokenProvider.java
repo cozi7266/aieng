@@ -28,7 +28,6 @@ public class JwtTokenProvider {
     private final long accessTokenValidTime = 24 * 60 * 60 * 1000L; // 24시간
     private final long refreshTokenValidTime = 14 * 24 * 60 * 60 * 1000L; // 14일
 
-
     // SecretKey 생성
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
