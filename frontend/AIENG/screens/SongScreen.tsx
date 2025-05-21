@@ -255,7 +255,6 @@ const SongScreen: React.FC = () => {
               sessionId: book.sessionId,
               storybookId: book.storybookId,
               title: book.title,
-              coverUrl: book.coverUrl,
             }))
           );
 
@@ -359,8 +358,6 @@ const SongScreen: React.FC = () => {
         throw new Error("선택된 자녀 ID가 없습니다.");
       }
 
-      console.log("[동요 상태 확인]", { sessionId, storybookId });
-
       const response = await axios.get<SongStatusResponse>(
         `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/status`,
         {
@@ -375,7 +372,12 @@ const SongScreen: React.FC = () => {
       );
 
       if (response.data.success) {
-        console.log("[동요 상태]", response.data);
+        const { details } = response.data.data;
+        const { lyricsEn, lyricsKo, ...detailsWithoutLyrics } = details;
+        console.log("[동요 상태]", {
+          status: response.data.data.status,
+          details: detailsWithoutLyrics,
+        });
         return response.data.data;
       } else {
         throw new Error(
@@ -408,8 +410,6 @@ const SongScreen: React.FC = () => {
         throw new Error("선택된 자녀 ID가 없습니다.");
       }
 
-      console.log("[동요 상세 정보 요청]", { songId });
-
       const response = await axios.get<SongDetailResponse>(
         `https://www.aieng.co.kr/api/songs/${songId}`,
         {
@@ -424,7 +424,13 @@ const SongScreen: React.FC = () => {
       );
 
       if (response.data.success) {
-        console.log("[동요 상세 정보]", response.data.data);
+        const { lyric, description, ...songDetailWithoutLyrics } =
+          response.data.data;
+        console.log("[동요 상세 정보]", {
+          ...songDetailWithoutLyrics,
+          hasLyrics: !!lyric,
+          hasDescription: !!description,
+        });
         return response.data.data;
       } else {
         throw new Error(
@@ -838,8 +844,8 @@ const SongScreen: React.FC = () => {
       <SongCard
         song={{
           id: item.storybookId.toString(),
-          title: item.songInfo?.title || item.title,
-          artist: item.songInfo?.artist || artistText,
+          title: item.songInfo?.title || "동요 생성🎶",
+          artist: item.songInfo?.artist || "",
           imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
           audioUrl: require("../assets/sounds/sample.mp3"),
           duration: 228,
@@ -850,8 +856,8 @@ const SongScreen: React.FC = () => {
         onPress={() =>
           onPress({
             id: item.storybookId.toString(),
-            title: item.songInfo?.title || item.title,
-            artist: item.songInfo?.artist || artistText,
+            title: item.songInfo?.title || "동요 생성🎶",
+            artist: item.songInfo?.artist || "",
             imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
             audioUrl: require("../assets/sounds/sample.mp3"),
             duration: 228,
@@ -861,8 +867,8 @@ const SongScreen: React.FC = () => {
         onStoryPress={() =>
           onStoryPress({
             id: item.storybookId.toString(),
-            title: item.songInfo?.title || item.title,
-            artist: item.songInfo?.artist || artistText,
+            title: item.songInfo?.title || "동요 생성🎶",
+            artist: item.songInfo?.artist || "",
             imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
             audioUrl: require("../assets/sounds/sample.mp3"),
             duration: 228,
@@ -1140,7 +1146,11 @@ const SongScreen: React.FC = () => {
 
               {/* 가사 */}
               <SongLyrics
-                lyrics={currentSong.lyrics || "가사가 없습니다"}
+                lyrics={
+                  currentSongStatus?.status === "SAVED"
+                    ? currentSong.lyrics || "가사가 없습니다"
+                    : "동요를 생성하면 가사가 표시됩니다"
+                }
                 scaleFactor={scaleFactor}
               />
 
