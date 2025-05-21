@@ -17,6 +17,7 @@ import { theme } from "../../Theme";
 import { useAudio } from "../../contexts/AudioContext";
 import MusicPlayer from "../../components/songs/MusicPlayer";
 import FairytaleCarousel from "../../components/songs/FairytaleCarousel";
+import SongLyrics from "../../components/songs/SongLyrics";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -31,7 +32,9 @@ type FairytaleScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 type FairytaleScreenRouteProp = RouteProp<
-  RootStackParamList & { FairytaleScreen: { storybookId: string } },
+  RootStackParamList & {
+    FairytaleScreen: { storybookId: string; songId?: string };
+  },
   "FairytaleScreen"
 >;
 
@@ -55,6 +58,31 @@ interface Fairytale {
   pages: FairytalePage[];
 }
 
+interface SongDetailResponse {
+  success: boolean;
+  data: {
+    sessionId: number;
+    songId: number;
+    title: string;
+    lyric: string;
+    description: string;
+    bookCover: string;
+    themeEn: string;
+    themeKo: string;
+    isLiked: boolean;
+    songUrl: string;
+    status: string;
+    duration: number;
+    createdAt: string;
+    moodId: number;
+    moodName: string;
+  };
+  error: null | {
+    code: string;
+    message: string;
+  };
+}
+
 interface Song {
   id: string;
   title: string;
@@ -62,7 +90,17 @@ interface Song {
   imageUrl: any;
   audioUrl: any;
   duration: number;
+  lyrics?: string;
   favorite?: boolean;
+  themeKo?: string;
+  themeEn?: string;
+  songUrl?: string;
+  isLiked?: boolean;
+  bookCover?: string;
+  status?: string;
+  createdAt?: string;
+  moodId?: number;
+  moodName?: string;
 }
 
 const FairytaleScreen: React.FC = () => {
@@ -85,17 +123,6 @@ const FairytaleScreen: React.FC = () => {
   // Audio context from the app
   const { stopBgm } = useAudio();
 
-  // Mock song data for development
-  const mockSong: Song = {
-    id: "1",
-    title: "Twinkle Twinkle Little Star",
-    artist: "Traditional",
-    imageUrl: require("../../assets/icon.png"),
-    audioUrl: require("../../assets/sounds/sample.mp3"),
-    duration: 228,
-    favorite: false,
-  };
-
   const playTts = async (ttsUrl: string) => {
     try {
       console.log("TTS 재생 시작:", ttsUrl);
@@ -111,6 +138,74 @@ const FairytaleScreen: React.FC = () => {
       setSound(newSound);
     } catch (error) {
       console.error("TTS 재생 중 오류 발생:", error);
+    }
+  };
+
+  const fetchSongDetail = async (songId: string) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      const response = await axios.get<SongDetailResponse>(
+        `${API_BASE_URL}/api/songs/${songId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const songDetail = response.data.data;
+        const artistText = `${songDetail.themeKo}${
+          songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+        }`;
+
+        setSong({
+          id: songDetail.songId.toString(),
+          title: songDetail.title,
+          artist: artistText,
+          imageUrl: { uri: songDetail.bookCover },
+          audioUrl: { uri: songDetail.songUrl },
+          duration: songDetail.duration,
+          lyrics: songDetail.lyric,
+          favorite: songDetail.isLiked,
+          themeKo: songDetail.themeKo,
+          themeEn: songDetail.themeEn,
+          songUrl: songDetail.songUrl,
+          isLiked: songDetail.isLiked,
+          bookCover: songDetail.bookCover,
+          status: songDetail.status,
+          createdAt: songDetail.createdAt,
+          moodId: songDetail.moodId,
+          moodName: songDetail.moodName,
+        });
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 상세 정보 조회에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      console.error("동요 상세 정보 조회 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 상세 정보 조회 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
+      throw error;
     }
   };
 
@@ -146,13 +241,10 @@ const FairytaleScreen: React.FC = () => {
           },
         });
 
-        console.log("[API 응답] 전체 데이터:", response.data);
-
         if (response.data.success) {
           const storybookData = response.data.data;
           console.log("[API 응답] 동화책 데이터:", storybookData);
 
-          // 데이터 구조 확인
           if (
             !storybookData ||
             !storybookData.pages ||
@@ -165,7 +257,6 @@ const FairytaleScreen: React.FC = () => {
             throw new Error("동화책 데이터 형식이 올바르지 않습니다.");
           }
 
-          // 데이터 변환
           const transformedData: Fairytale = {
             storybookId: storybookData.storybookId,
             coverUrl: storybookData.coverUrl,
@@ -186,7 +277,15 @@ const FairytaleScreen: React.FC = () => {
 
           console.log("[변환된 데이터]", transformedData);
           setFairytale(transformedData);
-          setSong(mockSong); // Mock song data 설정
+
+          // songId가 있는 경우 동요 정보 가져오기
+          if (route.params.songId) {
+            try {
+              await fetchSongDetail(route.params.songId);
+            } catch (error) {
+              console.error("동요 정보 조회 실패:", error);
+            }
+          }
         } else {
           console.error("[API 응답 실패]", response.data);
           setError(
@@ -235,7 +334,7 @@ const FairytaleScreen: React.FC = () => {
         sound.unloadAsync();
       }
     };
-  }, [route.params.storybookId]);
+  }, [route.params.storybookId, route.params.songId]);
 
   const handlePreviousPage = () => {
     if (fairytale && currentPageIndex > 0) {
@@ -269,11 +368,41 @@ const FairytaleScreen: React.FC = () => {
     setIsRepeat(!isRepeat);
   };
 
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = async () => {
     if (!song) return;
-    setSong((prevSong) =>
-      prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
-    );
+
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/songs/${song.id}/like-toggle`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setSong((prevSong) =>
+          prevSong ? { ...prevSong, favorite: response.data.data } : null
+        );
+      } else {
+        throw new Error(
+          response.data.error?.message || "즐겨찾기 토글에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      console.error("즐겨찾기 토글 실패:", error);
+    }
   };
 
   // Dynamic styles based on screen size
@@ -470,9 +599,14 @@ const FairytaleScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.lyricsContainer}>
-            <Text style={styles.lyricsText}>
-              동요 가사가 여기에 표시됩니다.
-            </Text>
+            {song ? (
+              <SongLyrics
+                lyrics={song.lyrics || "가사가 없습니다"}
+                scaleFactor={scaleFactor}
+              />
+            ) : (
+              <Text style={styles.lyricsText}>동요를 불러오는 중입니다...</Text>
+            )}
           </View>
         )}
 

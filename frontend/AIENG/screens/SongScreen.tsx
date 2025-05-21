@@ -520,7 +520,38 @@ const SongScreen: React.FC = () => {
   };
 
   const handleNavigateToStory = (song: Song) => {
-    navigation.navigate("FairytaleScreen", { storybookId: song.id });
+    // 현재 선택된 동화책의 세션 ID를 찾습니다
+    const currentStorybook = storybooks.find(
+      (book) => book.storybookId.toString() === song.id
+    );
+
+    if (!currentStorybook) {
+      console.error("현재 선택된 동화책을 찾을 수 없습니다.");
+      return;
+    }
+
+    // 동요 상태 확인
+    checkSongStatus(currentStorybook.sessionId, currentStorybook.storybookId)
+      .then((status) => {
+        if (status.status === "SAVED" && status.details.songId) {
+          navigation.navigate("FairytaleScreen", {
+            storybookId: song.id,
+            songId: status.details.songId.toString(),
+          });
+        } else {
+          // 동요가 없는 경우
+          navigation.navigate("FairytaleScreen", {
+            storybookId: song.id,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("동요 상태 확인 실패:", error);
+        // 에러 발생 시 동화책 ID만 전달
+        navigation.navigate("FairytaleScreen", {
+          storybookId: song.id,
+        });
+      });
   };
 
   const handlePlayPause = () => {

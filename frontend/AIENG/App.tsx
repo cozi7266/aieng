@@ -68,7 +68,10 @@ export type RootStackParamList = {
     theme: string;
     sessionId: string;
   };
-  FairytaleScreen: { storybookId: string };
+  FairytaleScreen: {
+    storybookId: string;
+    songId?: string; // 동요 ID 추가
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
