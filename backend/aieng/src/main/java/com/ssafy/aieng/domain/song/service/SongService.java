@@ -48,7 +48,7 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class SongService {
 
-    private static final String FASTAPI_URL = "https://www.aieng.co.kr/fastapi/songs/";
+    private static final String FASTAPI_URL = "http://175.121.93.70:51528/songs/";
 
     private final SongRepository songRepository;
     private final MoodRepository moodRepository;
