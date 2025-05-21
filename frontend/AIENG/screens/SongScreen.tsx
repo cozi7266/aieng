@@ -56,19 +56,39 @@ interface Song {
   duration: number;
   lyrics?: string;
   favorite: boolean;
+  themeKo?: string;
+  themeEn?: string;
+  songUrl?: string;
+  isLiked?: boolean;
+  bookCover?: string;
+  status?: string;
+  createdAt?: string;
+  moodId?: number;
+  moodName?: string;
 }
 
 interface Storybook {
+  sessionId: number;
   storybookId: number;
   title: string;
   description: string;
   coverUrl: string;
   createdAt: string;
+  themeKo?: string;
+  themeEn?: string;
+  favorite?: boolean;
 }
 
 interface ApiResponse {
   success: boolean;
-  data: Storybook[];
+  data: {
+    sessionId: number;
+    storybookId: number;
+    title: string;
+    description: string;
+    coverUrl: string;
+    createdAt: string;
+  }[];
   error: null | string;
 }
 
@@ -107,6 +127,47 @@ interface SongStatus {
   };
 }
 
+interface SongDetailResponse {
+  success: boolean;
+  data: {
+    sessionId: number;
+    songId: number;
+    title: string;
+    lyric: string;
+    description: string;
+    bookCover: string;
+    themeEn: string;
+    themeKo: string;
+    isLiked: boolean;
+    songUrl: string;
+    status: string;
+    duration: number;
+    createdAt: string;
+    moodId: number;
+    moodName: string;
+  };
+  error: null | {
+    code: string;
+    message: string;
+  };
+}
+
+interface SongInfo {
+  title: string;
+  artist: string;
+  imageUrl: { uri: string };
+  favorite: boolean;
+}
+
+interface StorybookWithSong extends Storybook {
+  songInfo?: {
+    title: string;
+    artist: string;
+    imageUrl: { uri: string };
+    favorite: boolean;
+  };
+}
+
 const SongScreen: React.FC = () => {
   const navigation = useNavigation<SongScreenNavigationProp>();
   const { width, height } = useWindowDimensions(); // 동적 화면 크기 사용
@@ -115,7 +176,7 @@ const SongScreen: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
-  const [storybooks, setStorybooks] = useState<Storybook[]>([]);
+  const [storybooks, setStorybooks] = useState<StorybookWithSong[]>([]);
   const [currentSongStatus, setCurrentSongStatus] = useState<SongStatus | null>(
     null
   );
@@ -136,87 +197,19 @@ const SongScreen: React.FC = () => {
   // 오디오 컨텍스트
   const { toggleBgm, stopBgm } = useAudio();
 
-  // 더미 데이터 - 로컬 이미지 유지
-  const mockSongs: Song[] = [
-    {
-      id: "1",
-      title: "Twinkle Twinkle Little Star",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "Twinkle, twinkle, little star\nHow I wonder what you are\nUp above the world so high\nLike a diamond in the sky\nTwinkle, twinkle, little star\nHow I wonder what you are",
-      favorite: false,
-    },
-    // 나머지 노래 데이터는 그대로 유지
-    {
-      id: "2",
-      title: "Old MacDonald Had a Farm",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 180,
-      lyrics:
-        "Old MacDonald had a farm, E-I-E-I-O\nAnd on his farm he had a cow, E-I-E-I-O\nWith a moo moo here and a moo moo there\nHere a moo, there a moo, everywhere a moo moo\nOld MacDonald had a farm, E-I-E-I-O",
-      favorite: false,
-    },
-    {
-      id: "3",
-      title: "The Wheels on the Bus",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "The wheels on the bus go round and round\nRound and round, round and round\nThe wheels on the bus go round and round\nAll through the town",
-      favorite: false,
-    },
-    {
-      id: "4",
-      title: "Itsy Bitsy Spider",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 180,
-      lyrics:
-        "The itsy bitsy spider went up the water spout\nDown came the rain and washed the spider out\nOut came the sun and dried up all the rain\nAnd the itsy bitsy spider went up the spout again",
-      favorite: false,
-    },
-    {
-      id: "5",
-      title: "Baa Baa Black Sheep",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "Baa, baa, black sheep, have you any wool?\nYes sir, yes sir, three bags full\nOne for the master, one for the dame\nAnd one for the little boy who lives down the lane",
-      favorite: false,
-    },
-    {
-      id: "6",
-      title: "Row Row Row Your Boat",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/background-music.mp3"),
-      duration: 180,
-      lyrics:
-        "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
-      favorite: false,
-    },
-    {
-      id: "7",
-      title: "Row Row Row Your Boat",
-      artist: "Traditional",
-      imageUrl: require("../assets/icon.png"),
-      audioUrl: require("../assets/sounds/sample.mp3"),
-      duration: 228,
-      lyrics:
-        "Row, row, row your boat\nGently down the stream\nMerrily, merrily, merrily, merrily\nLife is but a dream",
-      favorite: true,
-    },
-  ];
+  // 즐겨찾기 필터링된 동화책 목록
+  const filteredStorybooks = React.useMemo(() => {
+    return activeTab === "all"
+      ? storybooks
+      : storybooks.filter((book) => {
+          // 현재 선택된 노래가 있고, 해당 노래의 ID가 현재 동화책의 ID와 일치하는 경우
+          if (currentSong && currentSong.id === book.storybookId.toString()) {
+            return currentSong.favorite;
+          }
+          // API에서 받아온 즐겨찾기 상태를 사용
+          return book.favorite;
+        });
+  }, [activeTab, storybooks, currentSong]);
 
   useEffect(() => {
     // 화면 가로 모드 고정 (태블릿용)
@@ -259,12 +252,55 @@ const SongScreen: React.FC = () => {
           console.log(
             "[동화책 목록]",
             books.map((book) => ({
-              id: book.storybookId,
+              sessionId: book.sessionId,
+              storybookId: book.storybookId,
               title: book.title,
-              coverUrl: book.coverUrl,
             }))
           );
-          setStorybooks(books);
+
+          // 각 동화책의 동요 상태 확인
+          const booksWithSongStatus = await Promise.all(
+            books.map(async (book) => {
+              try {
+                const status = await checkSongStatus(
+                  book.sessionId,
+                  book.storybookId
+                );
+                if (status.status === "SAVED" && status.details.songId) {
+                  const songDetail = await fetchSongDetail(
+                    status.details.songId
+                  );
+                  return {
+                    ...book,
+                    favorite: songDetail.isLiked || false,
+                    songInfo: {
+                      title: songDetail.title,
+                      artist: `${songDetail.themeKo}${
+                        songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+                      }`,
+                      imageUrl: { uri: songDetail.bookCover },
+                      favorite: songDetail.isLiked || false,
+                    },
+                  };
+                }
+                return {
+                  ...book,
+                  favorite: false,
+                };
+              } catch (error) {
+                console.error(
+                  `[동요 상태 확인 실패] storybookId: ${book.storybookId}`,
+                  error
+                );
+                return {
+                  ...book,
+                  favorite: false,
+                };
+              }
+            })
+          );
+
+          setStorybooks(booksWithSongStatus);
         }
       } catch (error) {
         if (axios.isAxiosError(error)) {
@@ -279,13 +315,7 @@ const SongScreen: React.FC = () => {
     };
 
     lockOrientation();
-    setSongs(mockSongs);
     fetchStorybooks();
-
-    // 첫번째 노래를 기본 선택
-    if (mockSongs.length > 0) {
-      setCurrentSong(mockSongs[0]);
-    }
 
     return () => {
       ScreenOrientation.unlockAsync();
@@ -298,6 +328,7 @@ const SongScreen: React.FC = () => {
       currentSongStatus?.status === "REQUESTED" ||
       currentSongStatus?.status === "IN_PROGRESS"
     ) {
+      console.log("[애니메이션 시작]", currentSongStatus.status);
       Animated.loop(
         Animated.timing(spinValue, {
           toValue: 1,
@@ -306,6 +337,7 @@ const SongScreen: React.FC = () => {
         })
       ).start();
     } else {
+      console.log("[애니메이션 중지]", currentSongStatus?.status);
       spinValue.setValue(0);
     }
   }, [currentSongStatus?.status]);
@@ -328,10 +360,8 @@ const SongScreen: React.FC = () => {
         throw new Error("선택된 자녀 ID가 없습니다.");
       }
 
-      console.log("[동요 상태 확인]", { sessionId, storybookId });
-
       const response = await axios.get<SongStatusResponse>(
-        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/storybook/${storybookId}/status`,
+        `https://www.aieng.co.kr/api/songs/sessions/${sessionId}/status`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -344,7 +374,12 @@ const SongScreen: React.FC = () => {
       );
 
       if (response.data.success) {
-        console.log("[동요 상태]", response.data);
+        const { details } = response.data.data;
+        const { lyricsEn, lyricsKo, ...detailsWithoutLyrics } = details;
+        console.log("[동요 상태]", {
+          status: response.data.data.status,
+          details: detailsWithoutLyrics,
+        });
         return response.data.data;
       } else {
         throw new Error(
@@ -364,27 +399,110 @@ const SongScreen: React.FC = () => {
     }
   };
 
+  const fetchSongDetail = async (songId: number) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      const response = await axios.get<SongDetailResponse>(
+        `https://www.aieng.co.kr/api/songs/${songId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const { lyric, description, ...songDetailWithoutLyrics } =
+          response.data.data;
+        console.log("[동요 상세 정보]", {
+          ...songDetailWithoutLyrics,
+          hasLyrics: !!lyric,
+          hasDescription: !!description,
+        });
+        return response.data.data;
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 상세 정보 조회에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 상세 정보 조회 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      } else {
+        console.error("알 수 없는 에러:", error);
+      }
+      throw error;
+    }
+  };
+
   const handleSongPress = async (song: Song) => {
     try {
-      const sessionId = await AsyncStorage.getItem("currentSessionId");
+      const storybook = storybooks.find(
+        (book) => book.storybookId.toString() === song.id
+      );
 
-      if (!sessionId) {
-        console.error("현재 세션 ID가 없습니다.");
+      if (!storybook) {
+        console.error("해당하는 동화책을 찾을 수 없습니다.");
         return;
       }
 
-      const storybookId = parseInt(song.id);
-
       console.log("[동요 상태 확인]", {
-        sessionId,
-        storybookId,
-        songId: song.id,
+        sessionId: storybook.sessionId,
+        storybookId: storybook.storybookId,
       });
 
-      const status = await checkSongStatus(parseInt(sessionId), storybookId);
+      const status = await checkSongStatus(
+        storybook.sessionId,
+        storybook.storybookId
+      );
       console.log("동화/동요 상태:", status);
 
-      setCurrentSong(song);
+      if (status.status === "SAVED" && status.details.songId) {
+        const songDetail = await fetchSongDetail(status.details.songId);
+        const artistText = `${songDetail.themeKo}${
+          songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+        }`;
+        setCurrentSong({
+          id: storybook.storybookId.toString(),
+          title: songDetail.title,
+          artist: artistText,
+          imageUrl: { uri: songDetail.bookCover },
+          audioUrl: { uri: songDetail.songUrl },
+          duration: songDetail.duration,
+          lyrics: songDetail.lyric,
+          favorite: songDetail.isLiked,
+          themeKo: songDetail.themeKo,
+          themeEn: songDetail.themeEn,
+          songUrl: songDetail.songUrl,
+          isLiked: songDetail.isLiked,
+          bookCover: songDetail.bookCover,
+          status: songDetail.status,
+          createdAt: songDetail.createdAt,
+          moodId: songDetail.moodId,
+          moodName: songDetail.moodName,
+        });
+        setIsPlaying(false);
+      } else {
+        setCurrentSong(song);
+        setIsPlaying(false);
+      }
       setCurrentSongStatus(status);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -402,7 +520,38 @@ const SongScreen: React.FC = () => {
   };
 
   const handleNavigateToStory = (song: Song) => {
-    navigation.navigate("FairytaleScreen", { songId: song.id });
+    // 현재 선택된 동화책의 세션 ID를 찾습니다
+    const currentStorybook = storybooks.find(
+      (book) => book.storybookId.toString() === song.id
+    );
+
+    if (!currentStorybook) {
+      console.error("현재 선택된 동화책을 찾을 수 없습니다.");
+      return;
+    }
+
+    // 동요 상태 확인
+    checkSongStatus(currentStorybook.sessionId, currentStorybook.storybookId)
+      .then((status) => {
+        if (status.status === "SAVED" && status.details.songId) {
+          navigation.navigate("FairytaleScreen", {
+            storybookId: song.id,
+            songId: status.details.songId.toString(),
+          });
+        } else {
+          // 동요가 없는 경우
+          navigation.navigate("FairytaleScreen", {
+            storybookId: song.id,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("동요 상태 확인 실패:", error);
+        // 에러 발생 시 동화책 ID만 전달
+        navigation.navigate("FairytaleScreen", {
+          storybookId: song.id,
+        });
+      });
   };
 
   const handlePlayPause = () => {
@@ -411,19 +560,53 @@ const SongScreen: React.FC = () => {
 
   const handlePrevious = () => {
     if (currentSong) {
-      const currentIndex = songs.findIndex((s) => s.id === currentSong.id);
+      const currentIndex = storybooks.findIndex(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
       const previousIndex =
-        currentIndex === 0 ? songs.length - 1 : currentIndex - 1;
-      setCurrentSong(songs[previousIndex]);
+        currentIndex === 0 ? storybooks.length - 1 : currentIndex - 1;
+      const previousBook = storybooks[previousIndex];
+      const artistText = previousBook.themeKo
+        ? `${previousBook.themeKo}${
+            previousBook.themeEn ? ` (${previousBook.themeEn})` : ""
+          }`
+        : "동화";
+      handleSongPress({
+        id: previousBook.storybookId.toString(),
+        title: previousBook.title,
+        artist: artistText,
+        imageUrl: { uri: previousBook.coverUrl },
+        audioUrl: require("../assets/sounds/sample.mp3"),
+        duration: 228,
+        lyrics: previousBook.description,
+        favorite: false,
+      });
     }
   };
 
   const handleNext = () => {
     if (currentSong) {
-      const currentIndex = songs.findIndex((s) => s.id === currentSong.id);
+      const currentIndex = storybooks.findIndex(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
       const nextIndex =
-        currentIndex === songs.length - 1 ? 0 : currentIndex + 1;
-      setCurrentSong(songs[nextIndex]);
+        currentIndex === storybooks.length - 1 ? 0 : currentIndex + 1;
+      const nextBook = storybooks[nextIndex];
+      const artistText = nextBook.themeKo
+        ? `${nextBook.themeKo}${
+            nextBook.themeEn ? ` (${nextBook.themeEn})` : ""
+          }`
+        : "동화";
+      handleSongPress({
+        id: nextBook.storybookId.toString(),
+        title: nextBook.title,
+        artist: artistText,
+        imageUrl: { uri: nextBook.coverUrl },
+        audioUrl: require("../assets/sounds/sample.mp3"),
+        duration: 228,
+        lyrics: nextBook.description,
+        favorite: false,
+      });
     }
   };
 
@@ -435,60 +618,130 @@ const SongScreen: React.FC = () => {
     navigation.navigate("SongSettingScreen");
   };
 
-  const handleToggleFavorite = () => {
-    if (!currentSong) return;
+  const handleToggleFavorite = async () => {
+    if (!currentSong || !currentSongStatus?.details.songId) return;
 
-    // 즐겨찾기 상태 토글
-    setSongs((prevSongs) =>
-      prevSongs.map((song) =>
-        song.id === currentSong.id
-          ? { ...song, favorite: !song.favorite }
-          : song
-      )
-    );
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-    // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
-    setCurrentSong((prevSong) =>
-      prevSong ? { ...prevSong, favorite: !prevSong.favorite } : null
-    );
+      if (!token || !selectedChildId) {
+        throw new Error("필요한 정보가 없습니다.");
+      }
+
+      console.log("[동요 즐겨찾기 토글 요청]", {
+        songId: currentSongStatus.details.songId,
+      });
+
+      const response = await axios.post(
+        `https://www.aieng.co.kr/api/songs/${currentSongStatus.details.songId}/like-toggle`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        console.log("[동요 즐겨찾기 토글 성공]", response.data.data);
+
+        // 즐겨찾기 상태 업데이트
+        setSongs((prevSongs) =>
+          prevSongs.map((song) =>
+            song.id === currentSong.id
+              ? { ...song, favorite: response.data.data }
+              : song
+          )
+        );
+
+        // 현재 선택된 노래의 즐겨찾기 상태도 업데이트
+        setCurrentSong((prevSong) =>
+          prevSong ? { ...prevSong, favorite: response.data.data } : null
+        );
+      } else {
+        throw new Error(
+          response.data.error?.message || "즐겨찾기 토글에 실패했습니다."
+        );
+      }
+    } catch (error) {
+      console.error("즐겨찾기 토글 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[즐겨찾기 토글 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
+    }
   };
 
   const handleCreateSong = async () => {
     if (!currentSong) return;
 
     try {
-      const sessionId = await AsyncStorage.getItem("currentSessionId");
       const token = await AsyncStorage.getItem("accessToken");
       const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-      if (!sessionId || !token || !selectedChildId) {
+      if (!token || !selectedChildId) {
         throw new Error("필요한 정보가 없습니다.");
       }
 
+      // 현재 선택된 동화책의 세션 ID를 찾습니다
+      const currentStorybook = storybooks.find(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
+
+      if (!currentStorybook) {
+        throw new Error("현재 선택된 동화책을 찾을 수 없습니다.");
+      }
+
       console.log("[동요 생성 요청]", {
-        sessionId,
+        sessionId: currentStorybook.sessionId,
         storybookId: currentSong.id,
       });
 
-      // TODO: 동요 생성 API 호출
-      // const response = await axios.post(...);
+      const response = await axios.post(
+        `https://www.aieng.co.kr/api/songs/sessions/${currentStorybook.sessionId}/generate-song`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-      // 임시로 상태만 업데이트
-      setCurrentSongStatus({
-        status: "REQUESTED",
-        details: {
-          songId: null,
-          sessionId: parseInt(sessionId),
-          storybookId: parseInt(currentSong.id),
-          redisKeyExists: false,
-          rdbSaved: false,
-          songUrl: null,
-          lyricsKo: null,
-          lyricsEn: null,
-        },
-      });
+      if (response.data.success) {
+        console.log("[동요 생성 요청 성공]");
+        setCurrentSongStatus({
+          status: "REQUESTED",
+          details: {
+            songId: null,
+            sessionId: currentStorybook.sessionId,
+            storybookId: parseInt(currentSong.id),
+            redisKeyExists: false,
+            rdbSaved: false,
+            songUrl: null,
+            lyricsKo: null,
+            lyricsEn: null,
+          },
+        });
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 생성에 실패했습니다."
+        );
+      }
     } catch (error) {
       console.error("동요 생성 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 생성 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
     }
   };
 
@@ -496,41 +749,70 @@ const SongScreen: React.FC = () => {
     if (!currentSong) return;
 
     try {
-      const sessionId = await AsyncStorage.getItem("currentSessionId");
       const token = await AsyncStorage.getItem("accessToken");
       const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-      if (!sessionId || !token || !selectedChildId) {
+      if (!token || !selectedChildId) {
         throw new Error("필요한 정보가 없습니다.");
       }
 
+      // 현재 선택된 동화책의 세션 ID를 찾습니다
+      const currentStorybook = storybooks.find(
+        (book) => book.storybookId.toString() === currentSong.id
+      );
+
+      if (!currentStorybook) {
+        throw new Error("현재 선택된 동화책을 찾을 수 없습니다.");
+      }
+
       console.log("[동요 저장 요청]", {
-        sessionId,
+        sessionId: currentStorybook.sessionId,
         storybookId: currentSong.id,
       });
 
-      // TODO: 동요 저장 API 호출
-      // const response = await axios.post(...);
-
-      // 임시로 상태만 업데이트
-      setCurrentSongStatus((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          status: "SAVED",
-          details: {
-            ...prev.details,
-            rdbSaved: true,
+      const response = await axios.get(
+        `https://www.aieng.co.kr/api/songs/sessions/${currentStorybook.sessionId}/save-song`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
           },
-        };
-      });
+        }
+      );
+
+      if (response.data.success) {
+        console.log("[동요 저장 성공]", response.data.data);
+        setCurrentSongStatus((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: "SAVED",
+            details: {
+              ...prev.details,
+              songId: response.data.data.song_id,
+              songUrl: response.data.data.song_url,
+              lyricsKo: response.data.data.description,
+              lyricsEn: response.data.data.lyric,
+              rdbSaved: true,
+            },
+          };
+        });
+      } else {
+        throw new Error(
+          response.data.error?.message || "동요 저장에 실패했습니다."
+        );
+      }
     } catch (error) {
       console.error("동요 저장 실패:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("[동요 저장 실패]", {
+          message: error.response?.data?.error?.message || error.message,
+          status: error.response?.status,
+        });
+      }
     }
   };
-
-  const filteredSongs =
-    activeTab === "all" ? songs : songs.filter((song) => song.favorite);
 
   // 동적 스타일 생성
   const dynamicStyles = {
@@ -555,6 +837,98 @@ const SongScreen: React.FC = () => {
       width: songCardWidth,
       height: songCardWidth * 1.3, // 높이도 비율에 맞게 설정
     },
+  };
+
+  const SongCardItem: React.FC<{
+    item: StorybookWithSong;
+    isActive: boolean;
+    isPlaying: boolean;
+    onPress: (song: Song) => void;
+    onStoryPress: (song: Song) => void;
+    style: any;
+    scaleFactor: number;
+    isStoryButtonEnabled: boolean;
+  }> = ({
+    item,
+    isActive,
+    isPlaying,
+    onPress,
+    onStoryPress,
+    style,
+    scaleFactor,
+    isStoryButtonEnabled,
+  }) => {
+    const [songInfo, setSongInfo] = useState<SongInfo | null>(null);
+    const artistText = item.themeKo
+      ? `${item.themeKo}${item.themeEn ? ` (${item.themeEn})` : ""}`
+      : "동화";
+
+    useEffect(() => {
+      const checkAndGetSongInfo = async () => {
+        try {
+          const status = await checkSongStatus(
+            item.sessionId,
+            item.storybookId
+          );
+          if (status.status === "SAVED" && status.details.songId) {
+            const songDetail = await fetchSongDetail(status.details.songId);
+            setSongInfo({
+              title: songDetail.title,
+              artist: `${songDetail.themeKo}${
+                songDetail.themeEn ? ` (${songDetail.themeEn})` : ""
+              }`,
+              imageUrl: { uri: songDetail.bookCover },
+              favorite: songDetail.isLiked || false,
+            });
+          }
+        } catch (error) {
+          console.error("동요 정보 조회 실패:", error);
+        }
+      };
+
+      checkAndGetSongInfo();
+    }, [item.storybookId]);
+
+    return (
+      <SongCard
+        song={{
+          id: item.storybookId.toString(),
+          title: item.songInfo?.title || "동요 생성🎶",
+          artist: item.songInfo?.artist || "",
+          imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
+          audioUrl: require("../assets/sounds/sample.mp3"),
+          duration: 228,
+          favorite: item.songInfo?.favorite || item.favorite || false,
+        }}
+        isActive={isActive}
+        isPlaying={isPlaying}
+        onPress={() =>
+          onPress({
+            id: item.storybookId.toString(),
+            title: item.songInfo?.title || "동요 생성🎶",
+            artist: item.songInfo?.artist || "",
+            imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
+            audioUrl: require("../assets/sounds/sample.mp3"),
+            duration: 228,
+            favorite: item.songInfo?.favorite || item.favorite || false,
+          })
+        }
+        onStoryPress={() =>
+          onStoryPress({
+            id: item.storybookId.toString(),
+            title: item.songInfo?.title || "동요 생성🎶",
+            artist: item.songInfo?.artist || "",
+            imageUrl: item.songInfo?.imageUrl || { uri: item.coverUrl },
+            audioUrl: require("../assets/sounds/sample.mp3"),
+            duration: 228,
+            favorite: item.songInfo?.favorite || item.favorite || false,
+          })
+        }
+        style={style}
+        scaleFactor={scaleFactor}
+        isStoryButtonEnabled={isStoryButtonEnabled}
+      />
+    );
   };
 
   return (
@@ -617,7 +991,7 @@ const SongScreen: React.FC = () => {
             scaleFactor={scaleFactor}
           />
           {/* 테스트용 상태 변경 버튼들 */}
-          <View style={styles.testButtonsContainer}>
+          {/* <View style={styles.testButtonsContainer}>
             <TouchableOpacity
               style={styles.testButton}
               onPress={() => {
@@ -738,7 +1112,7 @@ const SongScreen: React.FC = () => {
             >
               <Text style={styles.testButtonText}>FAILED</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </View>
       </View>
 
@@ -747,56 +1121,32 @@ const SongScreen: React.FC = () => {
         {/* 왼쪽 - 노래 그리드 */}
         <View style={[styles.leftContainer, dynamicStyles.contentPadding]}>
           <FlatList
-            data={storybooks}
+            data={filteredStorybooks}
             keyExtractor={(item) => item.storybookId.toString()}
             numColumns={numColumns}
             columnWrapperStyle={{ justifyContent: "flex-start" }}
-            renderItem={({ item }) => (
-              <SongCard
-                song={{
-                  id: item.storybookId.toString(),
-                  title: item.title,
-                  artist: "동화",
-                  imageUrl: { uri: item.coverUrl },
-                  audioUrl: require("../assets/sounds/sample.mp3"),
-                  duration: 228,
-                  lyrics: item.description,
-                  favorite: false,
-                }}
-                isActive={currentSong?.id === item.storybookId.toString()}
-                isPlaying={false}
-                onPress={() =>
-                  handleSongPress({
-                    id: item.storybookId.toString(),
-                    title: item.title,
-                    artist: "동화",
-                    imageUrl: { uri: item.coverUrl },
-                    audioUrl: require("../assets/sounds/sample.mp3"),
-                    duration: 228,
-                    lyrics: item.description,
-                    favorite: false,
-                  })
-                }
-                onStoryPress={() =>
-                  handleNavigateToStory({
-                    id: item.storybookId.toString(),
-                    title: item.title,
-                    artist: "동화",
-                    imageUrl: { uri: item.coverUrl },
-                    audioUrl: require("../assets/sounds/sample.mp3"),
-                    duration: 228,
-                    lyrics: item.description,
-                    favorite: false,
-                  })
-                }
-                style={dynamicStyles.songCardSize}
-                scaleFactor={scaleFactor}
-                isStoryButtonEnabled={
-                  currentSongStatus?.status === "SAVED" &&
-                  currentSong?.id === item.storybookId.toString()
-                }
-              />
-            )}
+            renderItem={({ item }) => {
+              const isActive = currentSong?.id === item.storybookId.toString();
+              const artistText = item.themeKo
+                ? `${item.themeKo}${item.themeEn ? ` (${item.themeEn})` : ""}`
+                : "동화";
+
+              return (
+                <SongCardItem
+                  item={item}
+                  isActive={isActive}
+                  isPlaying={isActive && isPlaying}
+                  onPress={handleSongPress}
+                  onStoryPress={handleNavigateToStory}
+                  style={dynamicStyles.songCardSize}
+                  scaleFactor={scaleFactor}
+                  isStoryButtonEnabled={
+                    currentSongStatus?.status === "SAVED" &&
+                    currentSong?.id === item.storybookId.toString()
+                  }
+                />
+              );
+            }}
             contentContainerStyle={styles.songGrid}
           />
         </View>
@@ -845,8 +1195,13 @@ const SongScreen: React.FC = () => {
 
               {/* 가사 */}
               <SongLyrics
-                lyrics={currentSong.lyrics || "가사가 없습니다"}
+                lyrics={
+                  currentSongStatus?.status === "SAVED"
+                    ? currentSong.lyrics || "가사가 없습니다"
+                    : "동요를 생성하면 가사가 표시됩니다"
+                }
                 scaleFactor={scaleFactor}
+                variant="song"
               />
 
               {/* 동요 상태에 따른 UI 표시 */}
@@ -904,6 +1259,21 @@ const SongScreen: React.FC = () => {
                         />
                         <Text style={styles.createSongButtonText}>
                           저장하기
+                        </Text>
+                      </TouchableOpacity>
+                    ) : currentSongStatus?.status === "FAILED" ? (
+                      <TouchableOpacity
+                        style={styles.createSongButton}
+                        onPress={handleCreateSong}
+                      >
+                        <FontAwesome5
+                          name="redo"
+                          size={40 * scaleFactor}
+                          color="white"
+                          style={styles.buttonIcon}
+                        />
+                        <Text style={styles.createSongButtonText}>
+                          다시 생성하기
                         </Text>
                       </TouchableOpacity>
                     ) : (
@@ -1086,7 +1456,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.borderRadius.medium,
     minWidth: 200,

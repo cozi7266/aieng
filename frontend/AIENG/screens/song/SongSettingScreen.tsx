@@ -22,6 +22,8 @@ import VoiceItem from "../../components/songs/VoiceItem";
 import { theme } from "../../Theme";
 import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
 import { CommonActions } from "@react-navigation/native";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type SongSettingScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -30,7 +32,7 @@ type SongSettingScreenNavigationProp = NativeStackNavigationProp<
 
 // 분위기 인터페이스
 interface Mood {
-  id: string;
+  moodId: number;
   name: string;
   emoji: string;
   selected: boolean;
@@ -38,11 +40,85 @@ interface Mood {
 
 // 목소리 인터페이스
 interface Voice {
-  id: string;
+  voiceId: number;
+  childId: number | null;
   name: string;
-  gender: "male" | "female" | "custom";
+  description: string;
+  audioUrl: string;
   selected: boolean;
 }
+
+// TTS 목소리 인터페이스
+interface TTSVoice {
+  voiceId: number;
+  childId: number | null;
+  name: string;
+  description: string;
+  audioUrl: string;
+  selected: boolean;
+}
+
+// API 응답 타입
+interface SongSettingResponse {
+  success: boolean;
+  data: {
+    moods: {
+      moodId: number;
+      name: string;
+    }[];
+    voices: {
+      voiceId: number;
+      childId: number | null;
+      name: string;
+      description: string;
+      audioUrl: string;
+    }[];
+  };
+  error: null | string;
+}
+
+// TTS API 응답 타입
+interface TTSVoiceResponse {
+  success: boolean;
+  data: {
+    defaultVoices: {
+      voiceId: number;
+      childId: number | null;
+      name: string;
+      description: string;
+      audioUrl: string;
+    }[];
+    customVoices: {
+      voiceId: number;
+      childId: number | null;
+      name: string;
+      description: string;
+      audioUrl: string;
+    }[];
+  };
+  error: null | string;
+}
+
+// API 응답 타입 추가
+interface SaveSettingsResponse {
+  success: boolean;
+  data: null;
+  error: null | string;
+}
+
+// 분위기별 이모지 매핑
+const MOOD_EMOJIS: { [key: string]: string } = {
+  "nursery rhyme": "🎵",
+  children: "👶",
+  kids: "👧",
+  happy: "😊",
+  playful: "🎈",
+  slow: "🐢",
+  educational: "📚",
+  repetitive: "🔄",
+  brighton: "✨",
+  "easy listening": "🎧",
+};
 
 const SongSettingScreen: React.FC = () => {
   const navigation = useNavigation<SongSettingScreenNavigationProp>();
@@ -51,34 +127,25 @@ const SongSettingScreen: React.FC = () => {
   // 반응형 스케일링
   const scaleFactor = Math.min(width / 2000, height / 1200);
 
+  // 동적 스타일 생성
+  const dynamicStyles = {
+    tabButton: {
+      paddingVertical: theme.spacing.s * scaleFactor,
+      paddingHorizontal: theme.spacing.l * scaleFactor,
+    },
+    tabText: {
+      fontSize: theme.typography.button.fontSize * scaleFactor,
+    },
+  };
+
   // 상태 관리
-  const [moods, setMoods] = useState<Mood[]>([
-    { id: "1", name: "행복", emoji: "😊", selected: false },
-    { id: "2", name: "슬픔", emoji: "😢", selected: false },
-    { id: "3", name: "신남", emoji: "🎉", selected: false },
-    { id: "4", name: "화남", emoji: "😡", selected: false },
-    { id: "5", name: "사랑", emoji: "❤️", selected: false },
-    { id: "6", name: "놀람", emoji: "😲", selected: false },
-    { id: "7", name: "평온", emoji: "😌", selected: false },
-    { id: "8", name: "설렘", emoji: "🥰", selected: false },
-  ]);
-
-  const [voices, setVoices] = useState<Voice[]>([
-    {
-      id: "1",
-      name: "남자 목소리",
-      gender: "male",
-      selected: false,
-    },
-    {
-      id: "2",
-      name: "여자 목소리",
-      gender: "female",
-      selected: false,
-    },
-  ]);
-
-  const [isRecording, setIsRecording] = useState(false);
+  const [activeTab, setActiveTab] = useState<"song" | "tts">("song");
+  const [moods, setMoods] = useState<Mood[]>([]);
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [ttsVoices, setTTSVoices] = useState<TTSVoice[]>([]);
+  const [isTTSRecording, setIsTTSRecording] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 화면 가로 모드 고정
   useEffect(() => {
@@ -95,72 +162,351 @@ const SongSettingScreen: React.FC = () => {
     };
   }, []);
 
+  // 동요 설정 조회
+  const fetchSongSettings = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/song-settings");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+
+      const response = await axios.get<SongSettingResponse>(
+        "https://www.aieng.co.kr/api/voice/song-settings",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        const { moods: apiMoods, voices: apiVoices } = response.data.data;
+
+        // 분위기에 이모지 추가
+        const moodsWithEmoji = apiMoods.map((mood) => ({
+          ...mood,
+          emoji: MOOD_EMOJIS[mood.name] || "😊", // 기본 이모지 설정
+          selected: false,
+        }));
+
+        // 목소리 상태 업데이트
+        const voicesWithSelected = apiVoices.map((voice) => ({
+          ...voice,
+          selected: false,
+        }));
+
+        setMoods(moodsWithEmoji);
+        setVoices(voicesWithSelected);
+      } else {
+        throw new Error(
+          response.data.error || "동요 설정을 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 동요 설정 조회
+  useEffect(() => {
+    fetchSongSettings();
+  }, []);
+
   // 분위기 선택 처리
-  const handleMoodSelect = (moodId: string) => {
+  const handleMoodSelect = (moodId: number) => {
     setMoods((prevMoods) =>
       prevMoods.map((mood) => ({
         ...mood,
-        selected: mood.id === moodId,
+        selected: mood.moodId === moodId,
       }))
     );
   };
 
   // 목소리 선택 처리
-  const handleVoiceSelect = (voiceId: string) => {
+  const handleVoiceSelect = (voiceId: number) => {
     setVoices((prevVoices) =>
       prevVoices.map((voice) => ({
         ...voice,
-        selected: voice.id === voiceId,
+        selected: voice.voiceId === voiceId,
       }))
     );
   };
 
-  // 목소리 추가 처리
-  const handleAddVoice = () => {
-    setIsRecording(true);
+  // TTS 목소리 설정 조회
+  const fetchTTSVoices = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/tts-settings");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+
+      const response = await axios.get<TTSVoiceResponse>(
+        "https://www.aieng.co.kr/api/voice/tts-settings",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        const { defaultVoices, customVoices } = response.data.data;
+
+        // 기본 목소리와 커스텀 목소리를 합쳐서 상태 업데이트
+        const allVoices = [
+          ...defaultVoices.map((voice) => ({ ...voice, selected: false })),
+          ...customVoices.map((voice) => ({ ...voice, selected: false })),
+        ];
+
+        setTTSVoices(allVoices);
+      } else {
+        throw new Error(
+          response.data.error || "목소리 설정을 불러오는데 실패했습니다."
+        );
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 TTS 목소리 설정 조회
+  useEffect(() => {
+    fetchTTSVoices();
+  }, []);
+
+  // TTS 목소리 선택 처리
+  const handleTTSVoiceSelect = (voiceId: number) => {
+    setTTSVoices((prevVoices) =>
+      prevVoices.map((voice) => ({
+        ...voice,
+        selected: voice.voiceId === voiceId,
+      }))
+    );
+  };
+
+  // TTS 목소리 추가 처리
+  const handleAddTTSVoice = () => {
+    setIsTTSRecording(true);
 
     // 녹음 과정 시뮬레이션 (실제 녹음 기능으로 대체 필요)
     setTimeout(() => {
-      setIsRecording(false);
-
-      // 새 목소리 추가
-      const newVoice: Voice = {
-        id: `custom-${Date.now()}`,
-        name: "내 목소리",
-        gender: "custom",
-        selected: false,
-      };
-
-      setVoices((prev) => [...prev, newVoice]);
+      setIsTTSRecording(false);
+      fetchTTSVoices(); // 목소리 추가 후 목록 새로고침
     }, 2000);
   };
 
-  // 목소리 삭제 처리
-  const handleDeleteVoice = (voiceId: string) => {
-    setVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
+  // TTS 목소리 삭제 처리
+  const handleDeleteTTSVoice = async (voiceId: number) => {
+    try {
+      // TODO: 목소리 삭제 API 호출
+      await fetchTTSVoices(); // 삭제 후 목록 새로고침
+    } catch (err) {
+      console.error("목소리 삭제 실패:", err);
+    }
   };
 
   // 설정 저장 및 다음 단계로 진행
-  const handleSaveSettings = () => {
-    const selectedMood = moods.find((mood) => mood.selected);
-    const selectedVoice = voices.find((voice) => voice.selected);
+  const handleSaveSettings = async () => {
+    try {
+      const selectedTTSVoice = ttsVoices.find((voice) => voice.selected);
+      const selectedVoice = voices.find((voice) => voice.selected);
+      const selectedMood = moods.find((mood) => mood.selected);
 
-    // 선택 검증
-    if (!selectedMood || !selectedVoice) {
-      console.log("분위기와 목소리를 모두 선택해 주세요.");
-      return;
+      // 선택된 설정이 하나도 없는 경우
+      if (!selectedTTSVoice && !selectedVoice && !selectedMood) {
+        console.log("최소 하나 이상의 설정을 선택해주세요.");
+        return;
+      }
+
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      if (!selectedChildId) {
+        throw new Error("선택된 자녀 ID가 없습니다.");
+      }
+
+      // 선택된 설정만 포함하는 요청 본문 생성
+      const requestBody: {
+        ttsVoiceId?: number;
+        songVoiceId?: number;
+        moodId?: number;
+      } = {};
+
+      if (selectedTTSVoice) {
+        requestBody.ttsVoiceId = selectedTTSVoice.voiceId;
+      }
+      if (selectedVoice) {
+        requestBody.songVoiceId = selectedVoice.voiceId;
+      }
+      if (selectedMood) {
+        requestBody.moodId = selectedMood.moodId;
+      }
+
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", "https://www.aieng.co.kr/api/voice/settings");
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "X-Child-Id": selectedChildId,
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      });
+      console.log("Body:", requestBody);
+
+      const response = await axios.patch<SaveSettingsResponse>(
+        "https://www.aieng.co.kr/api/voice/settings",
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
+      if (response.data.success) {
+        // Home 화면으로 이동
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: "Home" }],
+          })
+        );
+      } else {
+        throw new Error(response.data.error || "설정 저장에 실패했습니다.");
+      }
+    } catch (error: any) {
+      // 에러 정보 로깅
+      console.log("[API 에러]");
+      console.log("Message:", error.message);
+
+      if (error.response) {
+        console.log("Status:", error.response.status);
+        console.log("Data:", JSON.stringify(error.response.data, null, 2));
+        setError(
+          `서버 오류: ${error.response.status} - ${
+            error.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (error.request) {
+        console.log("Request:", error.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", error.config);
+        setError(error.message || "요청 처리 중 오류가 발생했습니다.");
+      }
     }
-
-    console.log("Selected mood:", selectedMood);
-    console.log("Selected voice:", selectedVoice);
-
-    // Home 화면으로 이동
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
-      })
-    );
   };
 
   return (
@@ -172,78 +518,180 @@ const SongSettingScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           />
-          <Text style={styles.headerTitle}>
-            동요 분위기 및 학습 목소리 설정
-          </Text>
+          <Text style={styles.headerTitle}>설정</Text>
         </View>
+
+        {/* 탭 선택기 */}
+        <View style={styles.tabSelector}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              dynamicStyles.tabButton,
+              activeTab === "song" && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab("song")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                dynamicStyles.tabText,
+                activeTab === "song" && styles.activeTabText,
+              ]}
+            >
+              동요
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              dynamicStyles.tabButton,
+              activeTab === "tts" && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab("tts")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                dynamicStyles.tabText,
+                activeTab === "tts" && styles.activeTabText,
+              ]}
+            >
+              TTS 설정
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.headerRight} />
       </View>
 
       {/* 메인 콘텐츠 */}
       <View style={styles.contentContainer}>
-        {/* 좌측 - 분위기 설정 */}
-        <View style={styles.leftContainer}>
-          <Text style={styles.sectionTitle}>동요 분위기 설정</Text>
-          <Text style={styles.sectionSubtitle}>
-            생성될 동요의 분위기를 선택해주세요
-          </Text>
+        {activeTab === "song" ? (
+          <>
+            {/* 좌측 - 목소리 설정 */}
+            <View style={styles.leftContainer}>
+              <Text style={styles.sectionTitle}>동요 목소리 설정</Text>
+              <Text style={styles.sectionSubtitle}>
+                동요를 부를 텍스트를 목소리를 선택해주세요{"\n"}(가수의 성별을
+                선택 가능)
+              </Text>
 
-          <View style={styles.moodGrid}>
-            {moods.map((mood) => (
-              <MoodItem
-                key={mood.id}
-                id={mood.id}
-                name={mood.name}
-                emoji={mood.emoji}
-                isSelected={mood.selected}
-                onPress={() => handleMoodSelect(mood.id)}
-                style={styles.moodItem}
-                scaleFactor={scaleFactor}
-              />
-            ))}
-          </View>
-        </View>
+              {isLoading ? (
+                <Text>로딩 중...</Text>
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <ScrollView contentContainerStyle={styles.voiceGrid}>
+                  {voices.map((voice) => (
+                    <VoiceItem
+                      key={voice.voiceId}
+                      id={voice.voiceId.toString()}
+                      name={voice.name}
+                      gender={voice.voiceId === 1 ? "male" : "female"}
+                      isSelected={voice.selected}
+                      onPress={() => handleVoiceSelect(voice.voiceId)}
+                      style={styles.voiceItem}
+                      scaleFactor={scaleFactor}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+            </View>
 
-        {/* 우측 - 목소리 설정 */}
-        <View style={styles.rightContainer}>
-          <Text style={styles.sectionTitle}>학습 목소리 설정</Text>
-          <Text style={styles.sectionSubtitle}>
-            학습에서 텍스트를 읽어줄 목소리를 선택해주세요{"\n"}(1초 이상 눌러
-            내 목소리 변경)
-          </Text>
+            {/* 우측 - 분위기 설정 */}
+            <View style={styles.rightContainer}>
+              <Text style={styles.sectionTitle}>동요 분위기 설정</Text>
+              <Text style={styles.sectionSubtitle}>
+                생성될 동요의 분위기를 선택해주세요
+              </Text>
 
-          <ScrollView contentContainerStyle={styles.voiceGrid}>
-            {voices.map((voice) => (
-              <VoiceItem
-                key={voice.id}
-                id={voice.id}
-                name={voice.name}
-                gender={voice.gender}
-                isSelected={voice.selected}
-                onPress={() => handleVoiceSelect(voice.id)}
-                onDelete={
-                  voice.gender === "custom"
-                    ? () => handleDeleteVoice(voice.id)
-                    : undefined
-                }
-                style={styles.voiceItem}
-                scaleFactor={scaleFactor}
-              />
-            ))}
+              {isLoading ? (
+                <Text>로딩 중...</Text>
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <View style={styles.moodGrid}>
+                  {moods.map((mood) => (
+                    <MoodItem
+                      key={mood.moodId}
+                      id={mood.moodId.toString()}
+                      name={mood.name}
+                      emoji={mood.emoji}
+                      isSelected={mood.selected}
+                      onPress={() => handleMoodSelect(mood.moodId)}
+                      style={styles.moodItem}
+                      scaleFactor={scaleFactor}
+                    />
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* 좌측 - TTS 목소리 설정 */}
+            <View style={styles.leftContainer}>
+              <Text style={styles.sectionTitle}>TTS 목소리 설정</Text>
+              <Text style={styles.sectionSubtitle}>
+                학습에서 텍스트를 읽어줄 TTS 목소리를 선택해주세요{"\n"}(1초
+                이상 눌러 내 목소리 변경)
+              </Text>
 
-            {/* 목소리 추가 버튼 */}
-            <VoiceItem
-              id="add-voice"
-              name={isRecording ? "녹음 중..." : "내 목소리 추가"}
-              gender="custom"
-              isSelected={false}
-              isAddButton={true}
-              onPress={handleAddVoice}
-              disabled={isRecording}
-              style={styles.voiceItem}
-              scaleFactor={scaleFactor}
-            />
-          </ScrollView>
-        </View>
+              {isLoading ? (
+                <Text>로딩 중...</Text>
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <ScrollView contentContainerStyle={styles.voiceGrid}>
+                  {ttsVoices.map((voice) => (
+                    <VoiceItem
+                      key={voice.voiceId}
+                      id={voice.voiceId.toString()}
+                      name={voice.name}
+                      gender={
+                        voice.voiceId <= 2
+                          ? voice.voiceId === 1
+                            ? "male"
+                            : "female"
+                          : "custom"
+                      }
+                      isSelected={voice.selected}
+                      onPress={() => handleTTSVoiceSelect(voice.voiceId)}
+                      onDelete={
+                        voice.voiceId > 2
+                          ? () => handleDeleteTTSVoice(voice.voiceId)
+                          : undefined
+                      }
+                      style={styles.voiceItem}
+                      scaleFactor={scaleFactor}
+                    />
+                  ))}
+
+                  {/* TTS 목소리 추가 버튼 */}
+                  <VoiceItem
+                    id="add-tts-voice"
+                    name={isTTSRecording ? "녹음 중..." : "내 목소리 추가"}
+                    gender="custom"
+                    isSelected={false}
+                    isAddButton={true}
+                    onPress={handleAddTTSVoice}
+                    disabled={isTTSRecording}
+                    style={styles.voiceItem}
+                    scaleFactor={scaleFactor}
+                  />
+                </ScrollView>
+              )}
+            </View>
+
+            {/* 우측 - 추후 추가될 내용 */}
+            <View style={styles.rightContainer}>
+              <Text style={styles.sectionTitle}>추가 설정</Text>
+              <Text style={styles.sectionSubtitle}>
+                추후 추가될 설정 내용이 들어갈 자리입니다.
+              </Text>
+            </View>
+          </>
+        )}
       </View>
 
       {/* 하단 버튼 */}
@@ -277,6 +725,10 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
+    width: 100,
+  },
+  headerRight: {
+    width: 100,
   },
   backButton: {
     marginRight: theme.spacing.m,
@@ -284,6 +736,28 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...theme.typography.title,
     color: theme.colors.primary,
+  },
+  tabSelector: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.pill,
+    padding: 4,
+    position: "absolute",
+    left: "50%",
+    transform: [{ translateX: -65 }], // 탭 선택기의 절반 너비만큼 왼쪽으로 이동
+  },
+  tab: {
+    borderRadius: theme.borderRadius.pill,
+  },
+  activeTab: {
+    backgroundColor: theme.colors.primary,
+  },
+  tabText: {
+    ...theme.typography.button,
+    color: theme.colors.text,
+  },
+  activeTabText: {
+    color: "white",
   },
   contentContainer: {
     flex: 1,
@@ -296,6 +770,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing.l,
   },
   rightContainer: {
+    flex: 1,
+    padding: theme.spacing.l,
+  },
+  ttsContainer: {
     flex: 1,
     padding: theme.spacing.l,
   },
@@ -334,6 +812,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: theme.spacing.l,
     marginTop: theme.spacing.xl,
+  },
+  errorText: {
+    color: "#FF3B30", // 직접 에러 색상 지정
+    ...theme.typography.body,
+    textAlign: "center",
+    marginTop: theme.spacing.l,
   },
 });
 
