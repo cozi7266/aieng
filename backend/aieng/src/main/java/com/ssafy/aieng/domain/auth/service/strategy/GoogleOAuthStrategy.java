@@ -25,7 +25,7 @@ public class GoogleOAuthStrategy implements OAuthStrategy {
         return OAuthUserInfo.builder()
                 .id(userResponse.getId())
                 .email(userResponse.getEmail())
-                .nickname(userResponse.getName()) // Google의 name을 nickname으로 사용
+                .nickname(userResponse.getName())
                 .build();
     }
 }

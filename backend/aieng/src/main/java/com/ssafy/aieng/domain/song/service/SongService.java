@@ -21,6 +21,7 @@ import com.ssafy.aieng.domain.session.entity.Session;
 import com.ssafy.aieng.domain.session.repository.SessionRepository;
 import com.ssafy.aieng.domain.voice.entity.Voice;
 import com.ssafy.aieng.domain.voice.repository.VoiceRepository;
+import com.ssafy.aieng.global.common.CustomAuthentication;
 import com.ssafy.aieng.global.common.util.RedisKeyUtil;
 import com.ssafy.aieng.global.error.ErrorCode;
 import com.ssafy.aieng.global.error.exception.CustomException;
@@ -59,10 +60,10 @@ public class SongService {
     private final StringRedisTemplate stringRedisTemplate;
     private final SessionService sessionService;
 
-
     // 동요 생성
     @Transactional
     public void generateSong(Integer userId, Integer childId, Integer sessionId) {
+
         // 1. 자녀 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -155,8 +156,7 @@ public class SongService {
         }
     }
 
-
-    // 동요 저장(Redis -> RDB)
+    // 동요 저장 (Redis -> RDB)
     @Transactional
     public SongGenerateResponseDto getGeneratedSong(Integer userId, Integer childId, Integer sessionId) {
         // 1. 자녀 검증
@@ -282,6 +282,7 @@ public class SongService {
     // 동요 삭제(Soft Delete)
     @Transactional
     public void deleteSong(Integer userId, Integer childId, Integer songId) {
+
         // 1. 자녀 소유자 검증
         Child child = childRepository.findById(childId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CHILD_NOT_FOUND));
@@ -293,11 +294,9 @@ public class SongService {
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SONG_NOT_FOUND));
 
-
         // 3. Soft Delete 처리
         song.softDelete();
     }
-
 
     // 동요 생성 상태 조회
     @Transactional(readOnly = true)

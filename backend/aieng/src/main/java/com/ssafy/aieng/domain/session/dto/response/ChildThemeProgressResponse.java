@@ -17,13 +17,13 @@ public class ChildThemeProgressResponse {
     private String themeKo;
     private String themeEn;
     private String themeImgUrl;
-    private Integer sessionId;          // 세션이 있으면 세션 ID
-    private LocalDateTime startedAt;    // 세션 시작 시간
-    private LocalDateTime finishedAt;   // 세션 종료 시간
-    private Integer totalWordCount;     // 항상 6으로 고정
-    private Integer learnedWordCount;   // 학습한 단어 수
-    private Integer progressRate;       // 퍼센트로 계산
-    private boolean isFinished;         // 세션 종료 여부
+    private Integer sessionId;
+    private LocalDateTime startedAt;
+    private LocalDateTime finishedAt;
+    private Integer totalWordCount;
+    private Integer learnedWordCount;
+    private Integer progressRate;
+    private boolean isFinished;
 
     // 세션이 있을 경우, 정적 팩토리 메서드
     public static ChildThemeProgressResponse fromSession(Session session) {

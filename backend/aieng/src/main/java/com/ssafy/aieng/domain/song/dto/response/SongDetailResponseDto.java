@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 @Builder
 public class SongDetailResponseDto {
 
-    // 동요 정보
     private Integer sessionId;
     private Integer songId;
     private String title;
@@ -20,7 +19,7 @@ public class SongDetailResponseDto {
     private String bookCover;
     private String themeEn;
     private String themeKo;
-    private Boolean isLiked;    
+    private Boolean isLiked;
     private String songUrl;
     private SongStatus status;
     private Integer duration;

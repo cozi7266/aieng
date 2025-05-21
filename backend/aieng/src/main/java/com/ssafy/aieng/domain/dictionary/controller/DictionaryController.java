@@ -34,8 +34,6 @@ public class DictionaryController {
         return ApiResponse.success(response);
     }
 
-
-
     // 단어도감의 특정 테마의 단어 목록 조회 (자녀 기준)
     @GetMapping("/themes/{themeId}/words")
     public ResponseEntity<ApiResponse<List<DictionaryDetailResponse>>> getWordsByTheme(
@@ -49,5 +47,4 @@ public class DictionaryController {
 
         return ApiResponse.success(response);
     }
-
 }

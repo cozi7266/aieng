@@ -9,7 +9,10 @@ import java.util.Optional;
 
 @Repository
 public interface QuizRepository extends JpaRepository<Quiz, Integer> {
+
+    // sessionId로 Quiz 조회
     Optional<Quiz> findBySessionId(Integer sessionId);
 
+    // 특정 Session으로 Quiz 존재 여부 확인
     boolean existsBySession(Session session);
 } 

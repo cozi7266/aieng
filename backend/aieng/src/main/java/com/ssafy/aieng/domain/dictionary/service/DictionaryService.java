@@ -30,21 +30,22 @@ public class DictionaryService {
     private final ThemeRepository themeRepository;
     private final WordRepository wordRepository;
 
-    // ✅ 단어도감 내의 테마 목록 조회 (각 테마별 총 단어 수 + 학습한 단어 수 포함)
+    // 단어도감 내의 테마 목록 조회 (각 테마별 총 단어 수 + 학습한 단어 수 포함)
     @Transactional(readOnly = true)
     public List<DictionaryThemesResponse> getThemesWithProgress(Integer childId, Integer userId) {
-        // 1️⃣ 자녀 소유 검증
+
+        // 자녀 소유 검증
         if (!childRepository.existsByIdAndUserId(childId, userId)) {
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);
         }
 
-        // 2️⃣ 전체 테마 조회
+        // 전체 테마 조회
         List<Theme> themes = themeRepository.findAll();
 
-        // 3️⃣ 자녀가 학습한 단어 목록 조회
+        // 자녀가 학습한 단어 목록 조회
         List<Learning> learnings = learningRepository.findAllBySession_Child_IdAndLearnedTrue(childId);
 
-        // 4️⃣ 테마별 응답 생성
+        // 테마별 응답 생성
         return themes.stream()
                 .map(theme -> {
                     int totalWords = theme.getTotalWords();
@@ -64,23 +65,23 @@ public class DictionaryService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ 단어도감 특정 테마의 전체 단어 조회 (단어별 학습 여부 포함)
+    // 단어도감 특정 테마의 전체 단어 조회 (단어별 학습 여부 포함)
     @Transactional(readOnly = true)
     public List<DictionaryDetailResponse> getWordsByTheme(Integer childId, Integer themeId, Integer userId) {
-        // 1️⃣ 자녀 소유 검증
+        // 자녀 소유 검증
         if (!childRepository.existsByIdAndUserId(childId, userId)) {
             throw new CustomException(ErrorCode.DICTIONARY_INVALID_CHILD);
         }
 
-        // 2️⃣ 해당 테마의 단어 목록 조회
+        //  해당 테마의 단어 목록 조회
         List<Word> words = wordRepository.findAllByThemeId(themeId);
 
-        // 3️⃣ 자녀가 학습한 단어 ID 목록 조회
+        // 자녀가 학습한 단어 ID 목록 조회
         Set<Integer> learnedWordIds = learningRepository.findAllBySession_Child_IdAndLearnedTrue(childId).stream()
                 .map(learning -> learning.getWord().getId())
                 .collect(Collectors.toSet());
 
-        // 4️⃣ 응답 생성
+        // 응답 생성
         return words.stream()
                 .map(word -> DictionaryDetailResponse.of(word, learnedWordIds.contains(word.getId())))
                 .collect(Collectors.toList());

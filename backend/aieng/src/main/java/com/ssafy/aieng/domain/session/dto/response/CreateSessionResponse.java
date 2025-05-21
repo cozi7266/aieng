@@ -9,6 +9,7 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class CreateSessionResponse {
+
     private Integer sessionId;
     private boolean isNew;
     private String themeEn;
