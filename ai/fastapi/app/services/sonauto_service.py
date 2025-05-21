@@ -100,7 +100,8 @@ class SonautoService:
         audio_data = requests.get(song_url)
         audio_data.raise_for_status()
 
-        filename = f"song_{session_id}_{uuid.uuid4().hex}.ogg"
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        filename = f"users/{user_id}/sessions/{session_id}/song/song_{timestamp}.ogg"   
 
         try:
             s3_url = self.s3.upload(audio_data.content, filename)

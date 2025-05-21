@@ -18,7 +18,7 @@ class GoogleTTSService:
             logger.error(f"Google TTS 클라이언트 초기화 실패: {e}")
             raise RuntimeError("Google TTS 클라이언트 초기화 중 오류 발생") from e
 
-    async def generate_audio(self, text: str, is_male: bool = False) -> bytes:
+    async def generate_audio(self, text: str, gender: str = False) -> bytes:
         logger.info(f"[TTSService] TTS 생성 요청: '{text[:50]}'... (길이: {len(text)}자)")
 
         ssml_text = f'''
@@ -32,8 +32,8 @@ class GoogleTTSService:
 
         voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
-            name="en-US-Wavenet-D" if is_male else "en-US-Wavenet-F",
-            ssml_gender=texttospeech.SsmlVoiceGender.MALE if is_male else texttospeech.SsmlVoiceGender.FEMALE
+            name="en-US-Wavenet-D" if gender == "MALE" else "en-US-Wavenet-F",
+            ssml_gender=texttospeech.SsmlVoiceGender.MALE if gender == "MALE" else texttospeech.SsmlVoiceGender.FEMALE
         )
 
         audio_config = texttospeech.AudioConfig(

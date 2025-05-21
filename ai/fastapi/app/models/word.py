@@ -6,8 +6,7 @@ class WordRequest(BaseModel):
     sessionId: int
     wordEn: str
     theme: str
-    voiceGender: Optional[Literal["male", "female"]] = None  # Google TTS
-    voiceUrl: Optional[str] = None  # Zonos (커스텀 보이스)
+    ttsVoiceUrl: Optional[str] = None  # Zonos (커스텀 보이스)
 
 class WordResponse(BaseModel):
     wordEn: str

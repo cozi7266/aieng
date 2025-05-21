@@ -54,15 +54,20 @@ class WordService:
             logger.info("[이미지 생성 완료]")
 
             # 3. 오디오 생성 (분기)
-            if request.voiceUrl:
-                # Zonos TTS (커스텀 보이스)
-                audio_bytes = await self.zonos_tts.generate_audio(sentence, voice_url=request.voiceUrl)
+            voice_url = request.ttsVoiceUrl
 
+            if voice_url and voice_url.startswith("http"):
+                # zonos (custom voice)
+                audio_bytes = await self.zonos_tts.generate_audio(sentence, voice_url=voice_url)
+            elif voice_url == "male vocal":
+                audio_bytes = await self.google_tts.generate_audio(sentence, gender="MALE")
+            elif voice_url == "female vocal":
+                audio_bytes = await self.google_tts.generate_audio(sentence, gender="FEMALE")
             else:
-                # Google TTS
-                is_male = request.voiceGender == "male"
-                audio_bytes = await self.google_tts.generate_audio(sentence, is_male=is_male)
-            logger.info("[TTS 생성 완료]")
+                raise ValueError("유효하지 않은 voiceUrl 값입니다.")
+
+            timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+            base_path = f"users/{request.userId}/sessions/{request.sessionId}/words/{request.wordEn}_{timestamp}"
 
             # 4. S3 업로드
             try:
