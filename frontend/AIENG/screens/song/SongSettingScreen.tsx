@@ -107,6 +107,13 @@ interface SaveSettingsResponse {
   error: null | string;
 }
 
+// API 응답 타입 추가
+interface DeleteVoiceResponse {
+  success: boolean;
+  data: null;
+  error: null | string;
+}
+
 // 분위기별 이모지 매핑
 const MOOD_EMOJIS: { [key: string]: string } = {
   happy: "😊",
@@ -920,32 +927,59 @@ const SongSettingScreen: React.FC = () => {
   const handleDeleteTTSVoice = async (voiceId: number) => {
     try {
       const token = await AsyncStorage.getItem("accessToken");
-      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-      if (!token || !selectedChildId) {
-        throw new Error("인증 정보가 없습니다.");
+      if (!token) {
+        throw new Error("인증 토큰이 없습니다.");
       }
 
-      const response = await axios.delete(
-        `https://www.aieng.co.kr/api/voice/tts/${voiceId}`,
+      // API 요청 정보 로깅
+      console.log("[API 요청]");
+      console.log("URL:", `https://www.aieng.co.kr/api/voice/${voiceId}`);
+      console.log("Headers:", {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      });
+
+      const response = await axios.delete<DeleteVoiceResponse>(
+        `https://www.aieng.co.kr/api/voice/${voiceId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Child-Id": selectedChildId,
+            "Content-Type": "application/json",
           },
         }
       );
 
+      // API 응답 정보 로깅
+      console.log("[API 응답]");
+      console.log("Status:", response.status);
+      console.log("Data:", JSON.stringify(response.data, null, 2));
+
       if (response.data.success) {
-        fetchTTSVoices(); // 목소리 목록 새로고침
+        // 목소리 목록 새로고침
+        await fetchTTSVoices();
       } else {
         throw new Error(response.data.error || "목소리 삭제에 실패했습니다.");
       }
     } catch (err: any) {
       console.error("목소리 삭제 실패:", err);
-      setError(
-        err.message || "목소리를 삭제할 수 없습니다. 다시 시도해주세요."
-      );
+      if (err.response) {
+        console.log("Status:", err.response.status);
+        console.log("Data:", JSON.stringify(err.response.data, null, 2));
+        setError(
+          `서버 오류: ${err.response.status} - ${
+            err.response.data.error?.message || "알 수 없는 오류"
+          }`
+        );
+      } else if (err.request) {
+        console.log("Request:", err.request);
+        setError("서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.");
+      } else {
+        console.log("Config:", err.config);
+        setError(
+          err.message || "목소리를 삭제할 수 없습니다. 다시 시도해주세요."
+        );
+      }
     }
   };
 
