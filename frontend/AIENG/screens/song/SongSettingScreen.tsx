@@ -1104,11 +1104,13 @@ const SongSettingScreen: React.FC = () => {
 
       {/* 하단 버튼 */}
       <View style={styles.buttonContainer}>
-        <Button
-          title="저장하기"
+        <TouchableOpacity
+          style={[styles.recordButton]}
           onPress={handleSaveSettings}
-          variant="primary"
-        />
+        >
+          <FontAwesome5 name="save" size={24} color="white" />
+          <Text style={styles.recordButtonText}>저장하기</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -1250,6 +1252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.borderRadius.pill,
     minWidth: 200,
+    ...theme.shadows.default,
   },
   stopButton: {
     backgroundColor: "#FF3B30",
