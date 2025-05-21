@@ -30,10 +30,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // Android 설정
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/adaptive-icon.png",
+      foregroundImage: "./assets/images/brandlogo.png",
       backgroundColor: "#ffffff",
     },
     package: "com.ssafy.aieng",
+    icon: "./assets/images/brandlogo.png",
+    appName: "aieng",
   },
 
   // 웹 설정
