@@ -436,10 +436,6 @@ const SongSettingScreen: React.FC = () => {
   };
 
   // 저장된 녹음 불러오기
-  useEffect(() => {
-    loadSavedRecordings();
-  }, []);
-
   const loadSavedRecordings = async () => {
     try {
       const savedData = await AsyncStorage.getItem("savedRecordings");
@@ -448,30 +444,6 @@ const SongSettingScreen: React.FC = () => {
       }
     } catch (err) {
       console.error("저장된 녹음 불러오기 실패:", err);
-    }
-  };
-
-  // 파일을 Blob으로 변환하는 함수
-  const prepareAudioFile = async (recordedUri: string): Promise<Blob> => {
-    try {
-      console.log("[파일 변환 시작]");
-      console.log("Recorded URI:", recordedUri);
-
-      const response = await fetch(recordedUri);
-      if (!response.ok) {
-        throw new Error(`파일 변환 실패: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      console.log("[파일 변환 성공]");
-      console.log("Blob size:", blob.size);
-      console.log("Blob type:", blob.type);
-
-      return blob;
-    } catch (error) {
-      console.error("[파일 변환 실패]");
-      console.log("Error:", error);
-      throw error;
     }
   };
 
@@ -558,60 +530,32 @@ const SongSettingScreen: React.FC = () => {
       console.log("Recorded URI:", recordedUri);
       console.log("Content Type:", contentType);
 
-      // 방법 1: Blob으로 변환 후 업로드
-      try {
-        const fileBlob = await prepareAudioFile(recordedUri);
-        console.log("[S3 업로드 요청 - Blob 방식]");
+      // 파일 데이터 가져오기
+      const response = await fetch(recordedUri);
+      const fileBlob = await response.blob();
 
-        const response = await axios.put(presignedUrl, fileBlob, {
-          headers: {
-            "Content-Type": contentType,
-          },
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-        });
-
-        console.log("[S3 업로드 응답 - Blob 방식]");
-        console.log("Status:", response.status);
-        console.log("Headers:", response.headers);
-
-        if (response.status === 200) {
-          console.log("[S3 업로드 성공 - Blob 방식]");
-          return true;
-        }
-      } catch (blobError) {
-        console.error("[Blob 방식 업로드 실패]", blobError);
-        console.log("FormData 방식으로 재시도합니다.");
-      }
-
-      // 방법 2: FormData로 직접 전송
-      console.log("[S3 업로드 요청 - FormData 방식]");
-      const formData = new FormData();
-      const file = {
-        uri: recordedUri,
-        type: contentType,
-        name: recordedUri.split("/").pop() || "recording.m4a",
-      } as any; // React Native의 FormData 타입 문제로 인한 임시 해결책
-
-      formData.append("file", file);
-
-      const response = await axios.put(presignedUrl, formData, {
+      // S3에 직접 업로드
+      const uploadResponse = await fetch(presignedUrl, {
+        method: "PUT",
+        body: fileBlob,
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": contentType,
         },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
       });
 
-      console.log("[S3 업로드 응답 - FormData 방식]");
-      console.log("Status:", response.status);
-      console.log("Headers:", response.headers);
+      console.log("[S3 업로드 응답]");
+      console.log("Status:", uploadResponse.status);
 
-      if (response.status === 200) {
-        console.log("[S3 업로드 성공 - FormData 방식]");
+      if (uploadResponse.ok) {
+        console.log("[S3 업로드 성공]");
         return true;
       } else {
-        throw new Error(`S3 업로드 실패: ${response.status}`);
+        const errorText = await uploadResponse.text();
+        console.error("[S3 업로드 실패]");
+        console.log("Error Response:", errorText);
+        throw new Error(
+          `S3 업로드 실패: ${uploadResponse.status} - ${errorText}`
+        );
       }
     } catch (error: any) {
       console.error("[S3 업로드 실패]");
