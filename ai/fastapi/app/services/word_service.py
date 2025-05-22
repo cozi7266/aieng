@@ -1,6 +1,7 @@
-from app.utils.logger import logger
+import asyncio
 import json
 from datetime import datetime
+from app.utils.logger import logger
 from app.services.gpt_service import GPTService
 from app.services.diffusion_service import DiffusionService
 from app.services.tts_service_google import GoogleTTSService
@@ -49,23 +50,14 @@ class WordService:
             )
             logger.info(f"[GPT 완료] 예문: '{sentence}'")
 
-            # 2. 이미지 생성
-            image_bytes = await DiffusionService().generate_image(image_prompt)
-            logger.info("[이미지 생성 완료]")
+            # 2. 이미지 + TTS 병렬 생성
+            image_task = DiffusionService().generate_image(image_prompt)
+            audio_task = self._generate_audio(sentence, request.ttsVoiceUrl)
 
-            # 3. 오디오 생성 (분기)
-            voice_url = request.ttsVoiceUrl
+            image_bytes, audio_bytes = await asyncio.gather(image_task, audio_task)
+            logger.info("[이미지 + 오디오 생성 완료]")
 
-            if voice_url and voice_url.startswith("http"):
-                # zonos (custom voice)
-                audio_bytes = await self.zonos_tts.generate_audio(sentence, voice_url=voice_url)
-            elif voice_url == "male vocal":
-                audio_bytes = await self.google_tts.generate_audio(sentence, gender="MALE")
-            elif voice_url == "female vocal":
-                audio_bytes = await self.google_tts.generate_audio(sentence, gender="FEMALE")
-            else:
-                raise ValueError("유효하지 않은 voiceUrl 값입니다.")
-
+            # 3. 파일명 설정
             timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
             base_path = f"users/{request.userId}/sessions/{request.sessionId}/words/{request.wordEn}_{timestamp}"
 
@@ -106,4 +98,20 @@ class WordService:
 
         except Exception as e:
             logger.error(f"[WordService 실패] session={request.sessionId}, word='{request.wordEn}', 오류: {e}")
+            raise
+
+
+    async def _generate_audio(self, sentence: str, voice_url: str) -> bytes:
+        """TTS 분기 처리"""
+        try:
+            if voice_url and voice_url.startswith("http"):
+                return await self.zonos_tts.generate_audio(sentence, voice_url=voice_url)
+            elif voice_url == "male vocal":
+                return await self.google_tts.generate_audio(sentence, gender="MALE")
+            elif voice_url == "female vocal":
+                return await self.google_tts.generate_audio(sentence, gender="FEMALE")
+            else:
+                raise ValueError("유효하지 않은 voiceUrl 값입니다.")
+        except Exception as e:
+            logger.error(f"[TTS 생성 실패] voice_url={voice_url}, 오류: {e}")
             raise
