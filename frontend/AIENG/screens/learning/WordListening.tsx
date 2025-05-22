@@ -29,6 +29,7 @@ import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NavigationAlert } from "../../components/navigation/NavigationAlert";
 
 // 라우트 파라미터 타입 정의
 type WordListeningParams = {
@@ -80,6 +81,9 @@ const WordListeningScreen: React.FC = () => {
   const [hasListened, setHasListened] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   // 진행 단계 (1/2 표시를 위한 변수)
   const currentStep = 1;
@@ -368,6 +372,119 @@ const WordListeningScreen: React.FC = () => {
     }
   }, [hasListened]);
 
+  // 발음 평가 시작
+  const startPronunciationTest = async () => {
+    try {
+      setIsRecording(true);
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        setIsRecording(false);
+        NavigationAlert.show({
+          title: "마이크 권한 필요",
+          message: "마이크 권한이 필요합니다.",
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch {}
+      }
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+    } catch (err) {
+      setIsRecording(false);
+      NavigationAlert.show({
+        title: "녹음 오류",
+        message: "녹음을 시작할 수 없습니다.",
+        confirmText: "확인",
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  // 발음 평가 중지 및 평가
+  const stopPronunciationTest = async () => {
+    if (!recording) return;
+    try {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+      if (uri) await evaluatePronunciation(uri);
+    } catch {
+      NavigationAlert.show({
+        title: "녹음 오류",
+        message: "녹음을 중지할 수 없습니다.",
+        confirmText: "확인",
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  // 발음 평가 API 호출
+  const evaluatePronunciation = async (audioUri: string) => {
+    try {
+      setIsEvaluating(true);
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+      if (!token || !selectedChildId || !word)
+        throw new Error("인증 정보가 없습니다.");
+      const formData = new FormData();
+      formData.append("audio_file", {
+        uri: audioUri,
+        type: "audio/m4a",
+        name: "recording.m4a",
+      } as any);
+      const apiResponse = await axios.post(
+        `https://www.aieng.co.kr/api/voice/pronounce-test?expectedText=${encodeURIComponent(
+          word.english
+        )}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 10000,
+        }
+      );
+      if (apiResponse.data) {
+        const data = apiResponse.data.data;
+        NavigationAlert.show({
+          title: "발음 평가 결과",
+          message: `인식된 단어: ${
+            data.recognized_text || "인식되지 않음"
+          }\n\n정확도: ${data.accuracy}%\n\n${data.feedback}`,
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+      }
+    } catch (err: any) {
+      NavigationAlert.show({
+        title: "발음 평가 실패",
+        message: err.message || "발음 평가에 실패했습니다.",
+        confirmText: "확인",
+        onConfirm: () => {},
+      });
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
   // 로딩 화면 표시
   if (isLoading || !word) {
     return <LoadingScreen message="단어를 불러오는 중..." />;
@@ -454,15 +571,36 @@ const WordListeningScreen: React.FC = () => {
               />
             </View>
             <View style={styles.wordInfo}>
-              <TouchableOpacity onPress={handleCardPlay} style={styles.wordRow}>
-                <FontAwesome5
-                  name="volume-up"
-                  size={27}
-                  color={theme.colors.primary}
+              <View style={styles.wordRow}>
+                <TouchableOpacity
+                  onPress={handleCardPlay}
                   style={styles.soundIcon}
-                />
+                >
+                  <FontAwesome5
+                    name="volume-up"
+                    size={27}
+                    color={theme.colors.primary}
+                  />
+                </TouchableOpacity>
                 <Text style={styles.englishWord}>{word?.english}</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={
+                    isRecording ? stopPronunciationTest : startPronunciationTest
+                  }
+                  style={[
+                    styles.playButton,
+                    isRecording && styles.recordingButton,
+                    { marginLeft: 8 },
+                  ]}
+                  disabled={isEvaluating}
+                >
+                  <FontAwesome5
+                    name={isRecording ? "stop" : "microphone"}
+                    size={27}
+                    color={isRecording ? "#FF3B30" : theme.colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
               <Text style={styles.koreanWord}>({word?.korean})</Text>
             </View>
           </View>
@@ -768,6 +906,12 @@ const styles = StyleSheet.create({
   },
   soundIcon: {
     padding: theme.spacing.s,
+  },
+  playButton: {
+    padding: theme.spacing.s,
+  },
+  recordingButton: {
+    backgroundColor: "#FF3B30",
   },
 });
 

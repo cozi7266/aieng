@@ -562,7 +562,7 @@ const WordSentenceScreen: React.FC = () => {
       console.log(
         "URL:",
         `https://www.aieng.co.kr/api/voice/pronounce-test?expectedText=${encodeURIComponent(
-          sentence?.word || ""
+          sentence?.sentence || ""
         )}`
       );
       console.log("Headers:", {
@@ -581,31 +581,42 @@ const WordSentenceScreen: React.FC = () => {
 
       // API 호출
       console.log("[API 호출 시작]");
-      const apiResponse = await axios.post(
-        `https://www.aieng.co.kr/api/voice/pronounce-test?expectedText=${encodeURIComponent(
-          sentence?.word || ""
-        )}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "X-Child-Id": selectedChildId,
-            "Content-Type": "multipart/form-data",
-          },
-          timeout: 10000,
-        }
-      );
+      const expectedText = sentence?.sentence || "";
+      const apiUrl = `https://www.aieng.co.kr/api/voice/pronounce-test`;
+
+      const apiResponse = await axios.post(apiUrl, formData, {
+        params: {
+          expectedText: expectedText,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Child-Id": selectedChildId,
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 10000,
+      });
 
       console.log("[API 응답]");
       console.log("Status:", apiResponse.status);
       console.log("Data:", JSON.stringify(apiResponse.data, null, 2));
 
       if (apiResponse.data) {
-        setPronunciationFeedback(apiResponse.data.data);
+        const responseData = apiResponse.data.data;
+        // 서버 응답 형식(snake_case)에 맞게 처리
+        setPronunciationFeedback({
+          recognized_text: responseData.recognized_text || "",
+          expected_text: decodeURIComponent(responseData.expected_text || ""),
+          accuracy: responseData.accuracy,
+          confidence: responseData.confidence,
+          feedback: responseData.feedback,
+        });
+
         // 모달로 결과 표시
         NavigationAlert.show({
           title: "발음 평가 결과",
-          message: `인식된 단어: ${apiResponse.data.data.recognized_text}\n\n정확도: ${apiResponse.data.data.accuracy}%\n신뢰도: ${apiResponse.data.data.confidence}%\n\n${apiResponse.data.data.feedback}`,
+          message: `인식된 문장: ${
+            responseData.recognized_text || "인식되지 않음"
+          }\n\n정확도: ${responseData.accuracy}%\n\n${responseData.feedback}`,
           confirmText: "확인",
           onConfirm: () => {
             setPronunciationFeedback(null);
