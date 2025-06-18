@@ -19,6 +19,7 @@ import LearningThemeCard from "../components/common/learning/LearningThemeCard";
 import BGMToggleButton from "../components/common/BGMToggleButton";
 import ProfileButton from "../components/common/ProfileButton";
 import { useProfile } from "../contexts/ProfileContext";
+import NavigationWarningAlert from "../components/navigation/NavigationWarningAlert";
 
 type LearningScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -33,72 +34,14 @@ const LearningScreen: React.FC = () => {
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
   const [numColumns, setNumColumns] = useState(3);
 
-  // 프로필 모달 상태에 따른 애니메이션
-  useEffect(() => {
-    if (isProfileModalOpen) {
-      // 스케일 애니메이션 (네이티브 드라이버)
-      Animated.timing(scaleAnim, {
-        toValue: 0.9,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      // 테두리 라운드 애니메이션 (JS 드라이버)
-      Animated.timing(borderRadiusAnim, {
-        toValue: 20,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    } else {
-      // 스케일 애니메이션 (네이티브 드라이버)
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-
-      // 테두리 라운드 애니메이션 (JS 드라이버)
-      Animated.timing(borderRadiusAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [isProfileModalOpen]);
-
-  // 가로 모드로 화면 고정 (태블릿용)
-  useEffect(() => {
-    const lockOrientation = async () => {
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE
-      );
-    };
-
-    lockOrientation();
-
-    // 화면 크기 변경 감지
-    const subscription = Dimensions.addEventListener("change", ({ window }) => {
-      setDimensions(window);
-    });
-
-    return () => {
-      subscription.remove();
-      ScreenOrientation.unlockAsync();
-    };
-  }, []);
-
-  // 로고 크기를 화면 크기에 따라 계산
-  const logoHeight = dimensions.height * 0.08;
-  const logoWidth = logoHeight * 4;
-
-  // 테마 데이터 (실제 앱에서는 API나 데이터베이스에서 가져옴)
-  const learningThemes = [
+  // 테마 데이터 상태 관리 (업데이트할 수 있도록 useState 사용)
+  const [learningThemes, setLearningThemes] = useState([
     {
       id: "1",
       title: "동물 (Animals)",
-      imageUrl: require("../assets/images/themes/animals.png"),
+      imageUrl: require("../assets/icon.png"),
       progress: {
-        completed: 0,
+        completed: 5, // 예시: 완료된 테마
         total: 5,
       },
     },
@@ -147,25 +90,126 @@ const LearningScreen: React.FC = () => {
         total: 5,
       },
     },
-  ];
+  ]);
+
+  // 프로필 모달 상태에 따른 애니메이션
+  useEffect(() => {
+    if (isProfileModalOpen) {
+      Animated.timing(scaleAnim, {
+        toValue: 0.9,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      Animated.timing(borderRadiusAnim, {
+        toValue: 20,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      Animated.timing(borderRadiusAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [isProfileModalOpen]);
+
+  // 가로 모드로 화면 고정 (태블릿용)
+  useEffect(() => {
+    const lockOrientation = async () => {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE
+      );
+    };
+
+    lockOrientation();
+
+    // 화면 크기 변경 감지
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions(window);
+    });
+
+    return () => {
+      subscription.remove();
+      ScreenOrientation.unlockAsync();
+    };
+  }, []);
+
+  // 로고 크기를 화면 크기에 따라 계산
+  const logoHeight = dimensions.height * 0.08;
+  const logoWidth = logoHeight * 4;
+
+  // 테마 선택 처리 및 완료 상태 확인
+  const handleThemeSelection = (item) => {
+    // 완료 여부 확인 (5/5)
+    const isCompleted = item.progress.completed === 5;
+
+    if (isCompleted) {
+      // 완료된 테마는 퀴즈 이동 알림 표시
+      NavigationWarningAlert.show({
+        title: "퀴즈 도전",
+        message: `${item.title} 테마의 학습을 완료했어요! 퀴즈를 풀고 동요를 만들어 볼까요?`,
+        confirmText: "퀴즈 풀기",
+        cancelText: "취소",
+        onConfirm: () => {
+          console.log(`퀴즈 화면으로 이동: ${item.title}`);
+
+          // 테마 진행도 초기화
+          resetThemeProgress(item.id);
+
+          // WordQuiz 화면으로 이동 - 첫 번째 단어 ID를 기본값으로 사용
+          navigation.navigate("WordQuiz", {
+            wordId: "1", // 첫 번째 단어로 시작
+            themeId: item.id,
+            theme: item.title,
+          });
+        },
+        onCancel: () => {
+          console.log("퀴즈 탐색 취소됨");
+        },
+      });
+    } else {
+      // 미완료 테마는 단어 선택 화면으로 이동
+      navigation.navigate("WordSelect", {
+        theme: item.title,
+        themeId: item.id,
+      });
+    }
+  };
+
+  // 테마 진행도 초기화 함수
+  const resetThemeProgress = (themeId) => {
+    setLearningThemes((prevThemes) =>
+      prevThemes.map((theme) =>
+        theme.id === themeId
+          ? { ...theme, progress: { ...theme.progress, completed: 0 } }
+          : theme
+      )
+    );
+  };
 
   // 카드 렌더링 함수
-  const renderCard = ({ item }) => (
-    <LearningThemeCard
-      title={item.title}
-      imageSource={item.imageUrl}
-      completed={item.progress.completed}
-      total={item.progress.total}
-      onPress={() => {
-        console.log(`선택한 테마: ${item.title}`);
+  const renderCard = ({ item }) => {
+    const isCompleted = item.progress.completed === 5;
 
-        navigation.navigate("WordSelect", {
-          theme: item.title,
-          themeId: item.id,
-        });
-      }}
-    />
-  );
+    return (
+      <LearningThemeCard
+        title={item.title}
+        imageSource={item.imageUrl}
+        completed={item.progress.completed}
+        total={item.progress.total}
+        isCompleted={isCompleted}
+        onPress={() => handleThemeSelection(item)}
+      />
+    );
+  };
 
   return (
     <View style={styles.outerContainer}>

@@ -17,10 +17,12 @@ import HomeScreen from "./screens/HomeScreen";
 import ProfileSelectScreen from "./screens/ProfileSelectScreen";
 import LearningScreen from "./screens/LearningScreen";
 import SongScreen from "./screens/SongScreen";
+import SongSettingScreen from "./screens/song/SongSettingScreen";
 import WordcardScreen from "./screens/WordcardScreen";
 import WordSelectScreen from "./screens/learning/WordSelect";
 import WordListeningScreen from "./screens/learning/WordListening";
 import WordSentenceScreen from "./screens/learning/WordSentence";
+import WordQuizScreen from "./screens/learning/WordQuiz";
 import { theme } from "./Theme";
 import * as Font from "expo-font";
 import { AlertProvider } from "./components/navigation/NavigationWarningAlert";
@@ -36,6 +38,7 @@ export type RootStackParamList = {
   ProfileSelect: undefined;
   LearningScreen: undefined;
   SongScreen: undefined;
+  SongSettingScreen: undefined;
   WordcardScreen: undefined;
   WordSelect: { theme: string; themeId: string };
   WordListening: {
@@ -44,6 +47,11 @@ export type RootStackParamList = {
     theme: string;
   };
   WordSentence: {
+    wordId: string;
+    themeId: string;
+    theme: string;
+  };
+  WordQuiz: {
     wordId: string;
     themeId: string;
     theme: string;
@@ -163,6 +171,10 @@ export default function App() {
                   />
                   <Stack.Screen name="SongScreen" component={SongScreen} />
                   <Stack.Screen
+                    name="SongSettingScreen"
+                    component={SongSettingScreen}
+                  />
+                  <Stack.Screen
                     name="WordcardScreen"
                     component={WordcardScreen}
                   />
@@ -178,6 +190,7 @@ export default function App() {
                     name="WordSentence"
                     component={WordSentenceScreen}
                   />
+                  <Stack.Screen name="WordQuiz" component={WordQuizScreen} />
                 </>
               )}
             </Stack.Navigator>

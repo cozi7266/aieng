@@ -1,4 +1,4 @@
-package com.ssafy.ieng
+package com.ssafy.aieng
 
 import android.os.Build
 import android.os.Bundle
