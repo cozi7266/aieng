@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "quick-elixir-433404-m1",
+  "private_key_id": "d4965f8a6144d7d278514a120b59281c7774768b",
+  "private_key": "***REMOVED***\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCy8FaVDpgWWPv4\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\nGLChAsy0E+BxuFeQ7FSdGIB7UClrqpuUTg1/Nr67FQKBgQD4mHTP5GX4AArpo4fs\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\n***REMOVED***\nHnrdCDgbCA/Jm6aw4UNzopDq/89h5t2a7nw3FoUCgYBnxpyYOGnemRW78fFGk07s\nLBGgHWFpxWYOq8LNQ8JlMPKfysB26g8LIILGlxMGZt/ivxVsct9fejjx4bEpXafo\nrK+JhT4bUNhyNJk3PPOM+OWgwrKBiKBhgySNNEF/vMaQCoSfVAQ7FFR4CHGTNNET\nqTNC2cPvmLYc27KZtWGU+Q==\n***REMOVED***\n",
+  "client_email": "ssafy-355@quick-elixir-433404-m1.iam.gserviceaccount.com",
+  "client_id": "117074850761188139681",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ssafy-355%40quick-elixir-433404-m1.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
