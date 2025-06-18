@@ -26,7 +26,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="ieng"/>
+        <data android:scheme="aieng"/>
+        <data android:scheme="exp+snack-2821173a-cc06-41ba-91fd-e370f061b94b"/>
       </intent-filter>
     </activity>
     <activity android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity" android:exported="true">
