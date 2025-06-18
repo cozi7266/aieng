@@ -24,10 +24,22 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<
   "Home"
 >;
 
-const HomeScreenContent: React.FC = () => {
+// HomeScreen 컴포넌트 Props 타입 정의
+type HomeScreenProps = {
+  setIsAuthenticated: (value: boolean) => void;
+};
+
+// HomeScreenContent 컴포넌트 Props 타입 정의
+type HomeScreenContentProps = {
+  setIsAuthenticated: (value: boolean) => void; // 필수 속성으로 변경
+};
+
+const HomeScreenContent: React.FC<HomeScreenContentProps> = ({
+  setIsAuthenticated,
+}) => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [dimensions, setDimensions] = useState(Dimensions.get("window"));
-  const { isProfileModalOpen, setProfileModalOpen } = useProfile(); // setProfileModalOpen 추가
+  const { isProfileModalOpen, setProfileModalOpen } = useProfile();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const borderRadiusAnim = useRef(new Animated.Value(0)).current;
 
@@ -165,26 +177,28 @@ const HomeScreenContent: React.FC = () => {
           </View>
         </Animated.View>
       </Animated.View>
+
+      {/* 프로필 바텀시트 - setIsAuthenticated 함수 전달 */}
       {isProfileModalOpen && (
         <ProfileBottomSheet
           visible={isProfileModalOpen}
           onClose={() => {
-            // delay를 추가하여 안정성 향상
             setTimeout(() => {
               setProfileModalOpen(false);
             }, 100);
           }}
+          setIsAuthenticated={setIsAuthenticated}
         />
       )}
     </View>
   );
 };
 
-// HomeScreen에 ProfileProvider 감싸기
-const HomeScreen: React.FC = () => {
+// HomeScreen 컴포넌트 수정 - props 전달 추가
+const HomeScreen: React.FC<HomeScreenProps> = ({ setIsAuthenticated }) => {
   return (
     <ProfileProvider>
-      <HomeScreenContent />
+      <HomeScreenContent setIsAuthenticated={setIsAuthenticated} />
     </ProfileProvider>
   );
 };
@@ -201,7 +215,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    overflow: "hidden", // 라운드 모서리를 위해 필요
+    overflow: "hidden",
   },
   gradientOverlay: {
     position: "absolute",

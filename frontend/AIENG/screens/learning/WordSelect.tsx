@@ -275,6 +275,12 @@ const WordSelectScreen: React.FC = () => {
 
       setWords(updatedWords);
       setSelectedCardId(null); // 선택 초기화
+
+      navigation.navigate("WordListening", {
+        wordId: selectedWord.id,
+        themeId: themeId,
+        theme: selectedTheme,
+      });
     } catch (error) {
       console.error("학습 시작 실패:", error);
     }
@@ -334,7 +340,9 @@ const WordSelectScreen: React.FC = () => {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <BackButton onPress={() => navigation.goBack()} />
+              <BackButton
+                onPress={() => navigation.navigate("LearningScreen")}
+              />
             </View>
 
             <View style={styles.headerCenter}>

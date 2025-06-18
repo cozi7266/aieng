@@ -7,11 +7,21 @@ import * as ScreenOrientation from "expo-screen-orientation";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import KakaoLoginButton from "../components/common/auth/KaKaoLoginButton";
+import { login, getProfile } from "@react-native-seoul/kakao-login";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { Alert } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { theme } from "../Theme";
 import { RootStackParamList } from "../App";
 
 const { width, height } = Dimensions.get("window");
 const isLandscape = width > height;
+
+type LoginScreenProps = {
+  setIsAuthenticated: (value: boolean) => void;
+};
 
 // 네비게이션 타입 정의
 type LoginScreenNavigationProp = NativeStackNavigationProp<
@@ -27,7 +37,7 @@ const DividerWithText: React.FC<{ text: string }> = ({ text }) => (
   </View>
 );
 
-const LoginScreen: React.FC = () => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ setIsAuthenticated }) => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   // 가로 모드로 화면 고정 (태블릿용)
@@ -45,27 +55,67 @@ const LoginScreen: React.FC = () => {
     };
   }, []);
 
-  const handleKakaoLogin = () => {
+  const handleKakaoLogin = async () => {
     console.log("카카오 로그인 시도");
-    // 카카오 로그인 SDK 연동 로직 구현
-    // 로그인 성공 시 회원가입 화면으로 이동
-    navigation.navigate("Signup");
+    try {
+      // 네이티브 카카오 로그인 실행
+      const loginResult = await login();
+      console.log("로그인 성공:", loginResult);
+
+      // 액세스 토큰 획득
+      const { accessToken } = loginResult;
+
+      // 사용자 프로필 정보 획득 (선택적)
+      const profileResult = await getProfile();
+      // console.log("사용자 프로필:", profileResult);
+      console.log("accessToken: ", accessToken);
+
+      // 백엔드 서버에 토큰 전송
+      const response = await axios.post(
+        "https://www.aieng.co.kr/api/oauth/kakao/token",
+        { token: accessToken }
+      );
+
+      const { success, data, error } = response.data;
+
+      // 응답 데이터 상세 로깅
+      console.log("=== 로그인 응답 데이터 ===");
+      console.log("성공 여부:", success);
+      console.log("서버 액세스 토큰:", data.accessToken);
+      console.log("사용자 정보:", {
+        id: data.user.id,
+        nickname: data.user.nickname,
+        isNew: data.user.isNew,
+      });
+      console.log("에러:", error);
+      console.log("======================");
+
+      if (success && data) {
+        // 액세스 토큰 저장
+        await AsyncStorage.setItem("accessToken", data.accessToken);
+
+        // isNew 값에 따라 다른 처리
+        if (data.user.isNew) {
+          // 회원가입이 필요한 경우
+          navigation.navigate("Signup");
+        } else {
+          // 이미 가입된 사용자 - 인증 상태 직접 업데이트
+          console.log("기존 사용자 로그인 - 인증 상태 업데이트");
+          setIsAuthenticated(true); // 여기가 핵심! 직접 상태 업데이트
+        }
+      } else {
+        Alert.alert("로그인 오류", error || "로그인 중 오류가 발생했습니다.");
+      }
+    } catch (error) {
+      console.error("카카오 로그인 에러:", error);
+      Alert.alert("로그인 실패", "카카오 로그인 처리 중 오류가 발생했습니다.");
+    }
   };
 
   // 임시 홈스크린 이동 함수 추가
-  const handleTempHomeNavigation = () => {
-    navigation.navigate("Home");
-  };
-
-  const handleLogout = () => {
-    handleTempHomeNavigation(); // onClose 대신 handleTempHomeNavigation 호출
-    // 로그아웃 처리
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "Login" }],
-      })
-    );
+  const handleTempHomeNavigation = async () => {
+    await AsyncStorage.setItem("accessToken", "temp_token");
+    setIsAuthenticated(true); // 직접 상태 업데이트
   };
 
   return (
