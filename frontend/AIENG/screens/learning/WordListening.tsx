@@ -11,7 +11,12 @@ import {
   SafeAreaView,
   ScrollView,
 } from "react-native";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  RouteProp,
+  CommonActions,
+} from "@react-navigation/native";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { Audio } from "expo-av";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -19,17 +24,19 @@ import { RootStackParamList } from "../../App";
 import { theme } from "../../Theme";
 import BackButton from "../../components/navigation/BackButton";
 import NavigationWarningAlert from "../../components/navigation/NavigationWarningAlert";
-import BGMToggleButton from "../../components/common/BGMToggleButton";
-import ProfileButton from "../../components/common/ProfileButton";
 import HelpButton from "../../components/common/HelpButton";
 import LoadingScreen from "../../components/common/LoadingScreen";
 import { useAudio } from "../../contexts/AudioContext";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NavigationAlert } from "../../components/navigation/NavigationAlert";
 
 // 라우트 파라미터 타입 정의
 type WordListeningParams = {
   wordId: string;
   themeId: string;
   theme: string;
+  sessionId: number;
 };
 
 type WordListeningScreenRouteProp = RouteProp<
@@ -37,19 +44,34 @@ type WordListeningScreenRouteProp = RouteProp<
   "WordListening"
 >;
 
+// API 응답 타입 정의
+interface WordApiResponse {
+  success: boolean;
+  data: {
+    wordId: number;
+    wordEn: string;
+    wordKo: string;
+    wordImgUrl: string;
+    wordTtsUrl: string;
+    isLearned: boolean;
+  };
+  error: null | string;
+}
+
 // 단어 데이터 타입 정의
 interface WordData {
   id: string;
   english: string;
   korean: string;
-  imageUrl: any;
+  imageUrl: string;
   audioUrl: string;
+  isLearned: boolean;
 }
 
 const WordListeningScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<WordListeningScreenRouteProp>();
-  const { wordId, themeId, theme: themeName } = route.params;
+  const { wordId, themeId, theme: themeName, sessionId } = route.params;
   const { stopBgm } = useAudio();
 
   const [word, setWord] = useState<WordData | null>(null);
@@ -57,11 +79,15 @@ const WordListeningScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasListened, setHasListened] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [helpModalVisible, setHelpModalVisible] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
-  // 진행 단계 (1/3 표시를 위한 변수)
+  // 진행 단계 (1/2 표시를 위한 변수)
   const currentStep = 1;
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   // 애니메이션 값
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -120,35 +146,47 @@ const WordListeningScreen: React.FC = () => {
     const fetchWordData = async () => {
       try {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        const token = await AsyncStorage.getItem("accessToken");
+        const selectedChildId = await AsyncStorage.getItem("selectedChildId");
 
-        // 목업 데이터
-        const mockData = {
-          id: wordId,
-          english:
-            ["cat", "dog", "rabbit", "bird", "fish", "lion"][
-              parseInt(wordId) - 1
-            ] || "cat",
-          korean:
-            ["고양이", "강아지", "토끼", "새", "물고기", "사자"][
-              parseInt(wordId) - 1
-            ] || "고양이",
-          image_url: require("../../assets/images/main_mascot.png"),
-          audio_url: require("../../assets/sounds/background-music.mp3"),
-        };
+        if (!token) {
+          throw new Error("인증 토큰이 없습니다.");
+        }
 
-        setWord({
-          id: mockData.id,
-          english: mockData.english,
-          korean: mockData.korean,
-          imageUrl: mockData.image_url,
-          audioUrl: mockData.audio_url,
-        });
+        if (!selectedChildId) {
+          throw new Error("선택된 자녀 ID가 없습니다.");
+        }
 
-        setIsLoading(false);
+        const response = await axios.get<WordApiResponse>(
+          `https://www.aieng.co.kr/api/words/${wordId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Child-Id": selectedChildId,
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          }
+        );
+
+        if (response.data.success) {
+          const wordData = response.data.data;
+          setWord({
+            id: wordData.wordId.toString(),
+            english: wordData.wordEn,
+            korean: wordData.wordKo,
+            imageUrl: wordData.wordImgUrl,
+            audioUrl: wordData.wordTtsUrl,
+            isLearned: wordData.isLearned,
+          });
+        } else {
+          setError("단어 데이터를 불러오는데 실패했습니다");
+        }
       } catch (error) {
         console.error("API 요청 실패:", error);
         setError("단어 데이터를 불러오는데 실패했습니다");
+      } finally {
         setIsLoading(false);
       }
     };
@@ -208,6 +246,13 @@ const WordListeningScreen: React.FC = () => {
     }
   }, [hasListened]);
 
+  // 세션 ID를 AsyncStorage에 저장
+  useEffect(() => {
+    if (sessionId) {
+      AsyncStorage.setItem("currentSessionId", sessionId.toString());
+    }
+  }, [sessionId]);
+
   // 가로 모드 고정
   useEffect(() => {
     const lockOrientation = async () => {
@@ -223,7 +268,8 @@ const WordListeningScreen: React.FC = () => {
       // 다음 학습 단계로 이동 시에는 경고 표시 안 함
       if (
         e.data.action.type === "NAVIGATE" &&
-        e.data.action.payload?.name === "WordPractice"
+        (e.data.action.payload?.name === "WordSentence" ||
+          e.data.action.payload?.name === "WordSelect")
       ) {
         return;
       }
@@ -240,7 +286,7 @@ const WordListeningScreen: React.FC = () => {
     });
 
     return unsubscribe;
-  }, [navigation, themeId, themeName]);
+  }, [navigation]);
 
   // 오디오 재생/정지 처리
   const handlePlayAudio = async () => {
@@ -248,28 +294,65 @@ const WordListeningScreen: React.FC = () => {
       if (isPlaying && sound.current) {
         await sound.current.pauseAsync();
         setIsPlaying(false);
-        setHasListened(true); // 멈추기 버튼을 눌렀을 때 다음 단계로 이동 가능하게 설정
         return;
+      }
+
+      if (!word?.audioUrl) {
+        throw new Error("오디오 URL이 없습니다");
       }
 
       setIsPlaying(true);
 
+      // 기존 사운드가 있다면 해제
       if (sound.current) {
-        await sound.current.playAsync();
-      } else {
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          word.audioUrl,
-          { shouldPlay: true }
-        );
-
-        sound.current = newSound;
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            setHasListened(true);
-          }
-        });
+        await sound.current.unloadAsync();
+        sound.current = null;
       }
+
+      // 새로운 사운드 로드 및 재생
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: word.audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.current = newSound;
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+          setIsCompleted(true);
+        }
+      });
+    } catch (error) {
+      console.error("오디오 재생 실패:", error);
+      setIsPlaying(false);
+    }
+  };
+
+  // 카드 재생 처리 (단순 재생만)
+  const handleCardPlay = async () => {
+    try {
+      if (!word?.audioUrl) {
+        throw new Error("오디오 URL이 없습니다");
+      }
+
+      // 기존 사운드가 있다면 해제
+      if (sound.current) {
+        await sound.current.unloadAsync();
+        sound.current = null;
+      }
+
+      // 새로운 사운드 로드 및 재생
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: word.audioUrl },
+        { shouldPlay: true }
+      );
+
+      sound.current = newSound;
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
     } catch (error) {
       console.error("오디오 재생 실패:", error);
       setIsPlaying(false);
@@ -289,6 +372,119 @@ const WordListeningScreen: React.FC = () => {
     }
   }, [hasListened]);
 
+  // 발음 평가 시작
+  const startPronunciationTest = async () => {
+    try {
+      setIsRecording(true);
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        setIsRecording(false);
+        NavigationAlert.show({
+          title: "마이크 권한 필요",
+          message: "마이크 권한이 필요합니다.",
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      if (recording) {
+        try {
+          await recording.stopAndUnloadAsync();
+        } catch {}
+      }
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+    } catch (err) {
+      setIsRecording(false);
+      NavigationAlert.show({
+        title: "녹음 오류",
+        message: "녹음을 시작할 수 없습니다.",
+        confirmText: "확인",
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  // 발음 평가 중지 및 평가
+  const stopPronunciationTest = async () => {
+    if (!recording) return;
+    try {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+      if (uri) await evaluatePronunciation(uri);
+    } catch {
+      NavigationAlert.show({
+        title: "녹음 오류",
+        message: "녹음을 중지할 수 없습니다.",
+        confirmText: "확인",
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  // 발음 평가 API 호출
+  const evaluatePronunciation = async (audioUri: string) => {
+    try {
+      setIsEvaluating(true);
+      const token = await AsyncStorage.getItem("accessToken");
+      const selectedChildId = await AsyncStorage.getItem("selectedChildId");
+      if (!token || !selectedChildId || !word)
+        throw new Error("인증 정보가 없습니다.");
+      const formData = new FormData();
+      formData.append("audio_file", {
+        uri: audioUri,
+        type: "audio/m4a",
+        name: "recording.m4a",
+      } as any);
+      const apiResponse = await axios.post(
+        `https://www.aieng.co.kr/api/voice/pronounce-test?expectedText=${encodeURIComponent(
+          word.english
+        )}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Child-Id": selectedChildId,
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 10000,
+        }
+      );
+      if (apiResponse.data) {
+        const data = apiResponse.data.data;
+        NavigationAlert.show({
+          title: "발음 평가 결과",
+          message: `인식된 단어: ${
+            data.recognized_text || "인식되지 않음"
+          }\n\n정확도: ${data.accuracy}%\n\n${data.feedback}`,
+          confirmText: "확인",
+          onConfirm: () => {},
+        });
+      }
+    } catch (err: any) {
+      NavigationAlert.show({
+        title: "발음 평가 실패",
+        message: err.message || "발음 평가에 실패했습니다.",
+        confirmText: "확인",
+        onConfirm: () => {},
+      });
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
   // 로딩 화면 표시
   if (isLoading || !word) {
     return <LoadingScreen message="단어를 불러오는 중..." />;
@@ -303,10 +499,15 @@ const WordListeningScreen: React.FC = () => {
             onPress={() =>
               NavigationWarningAlert.show({
                 onConfirm: () =>
-                  navigation.navigate("WordSelect", {
-                    themeId: themeId,
-                    theme: themeName,
-                  }),
+                  navigation.dispatch(
+                    CommonActions.navigate({
+                      name: "WordSelect",
+                      params: {
+                        themeId: themeId,
+                        theme: themeName,
+                      },
+                    })
+                  ),
               })
             }
           />
@@ -323,8 +524,6 @@ const WordListeningScreen: React.FC = () => {
             onPress={() => setHelpModalVisible(true)}
             style={styles.headerButton}
           />
-          <BGMToggleButton style={styles.headerButton} />
-          <ProfileButton style={styles.headerButton} />
         </View>
       </View>
 
@@ -355,7 +554,6 @@ const WordListeningScreen: React.FC = () => {
 
       {/* 메인 콘텐츠 */}
       <View style={styles.mainContainer}>
-        {/* 중앙 단어 카드 */}
         <Animated.View
           style={[
             styles.cardContainer,
@@ -367,19 +565,47 @@ const WordListeningScreen: React.FC = () => {
           <View style={styles.card}>
             <View style={styles.imageContainer}>
               <Image
-                source={word.imageUrl}
+                source={{ uri: word?.imageUrl }}
                 style={styles.image}
                 resizeMode="contain"
               />
             </View>
             <View style={styles.wordInfo}>
-              <Text style={styles.englishWord}>{word.english}</Text>
-              <Text style={styles.koreanWord}>({word.korean})</Text>
+              <View style={styles.wordRow}>
+                <TouchableOpacity
+                  onPress={handleCardPlay}
+                  style={styles.soundIcon}
+                >
+                  <FontAwesome5
+                    name="volume-up"
+                    size={27}
+                    color={theme.colors.primary}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.englishWord}>{word?.english}</Text>
+                <TouchableOpacity
+                  onPress={
+                    isRecording ? stopPronunciationTest : startPronunciationTest
+                  }
+                  style={[
+                    styles.playButton,
+                    isRecording && styles.recordingButton,
+                    { marginLeft: 8 },
+                  ]}
+                  disabled={isEvaluating}
+                >
+                  <FontAwesome5
+                    name={isRecording ? "stop" : "microphone"}
+                    size={27}
+                    color={isRecording ? "#FF3B30" : theme.colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.koreanWord}>({word?.korean})</Text>
             </View>
           </View>
         </Animated.View>
 
-        {/* 컨트롤 버튼 영역 */}
         <View style={styles.controlsContainer}>
           {!hasListened ? (
             <Animated.View
@@ -389,16 +615,21 @@ const WordListeningScreen: React.FC = () => {
               ]}
             >
               <TouchableOpacity
-                style={[styles.actionButton, isPlaying && styles.playingButton]}
-                onPress={handlePlayAudio}
+                style={[
+                  styles.actionButton,
+                  isCompleted && styles.playingButton,
+                ]}
+                onPress={
+                  isCompleted ? () => setHasListened(true) : handlePlayAudio
+                }
               >
                 <FontAwesome5
-                  name={isPlaying ? "check-circle" : "volume-up"}
+                  name={isCompleted ? "check-circle" : "volume-up"}
                   size={32}
                   color={theme.colors.buttonText}
                 />
                 <Text style={styles.buttonText}>
-                  {isPlaying ? "완료" : "단어 듣기"}
+                  {isCompleted ? "완료" : "단어 듣기"}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -419,6 +650,7 @@ const WordListeningScreen: React.FC = () => {
                     wordId: word.id,
                     themeId: themeId,
                     theme: themeName,
+                    sessionId: sessionId,
                   })
                 }
               >
@@ -469,8 +701,7 @@ const WordListeningScreen: React.FC = () => {
               <View style={styles.helpSection}>
                 <Text style={styles.helpSectionTitle}>학습 팁</Text>
                 <Text style={styles.helpText}>
-                  단어를 들으면 다음 단계로 넘어갈 수 있어요! 여러 번 들어보고
-                  발음을 따라해 보세요.
+                  단어를 눌러 여러 번 들어보고 발음을 따라해 보세요.
                 </Text>
               </View>
             </ScrollView>
@@ -540,6 +771,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.l,
+    paddingBottom: 0,
   },
   cardContainer: {
     width: "38%", // 원하는 너비로 조정
@@ -587,7 +819,6 @@ const styles = StyleSheet.create({
   controlsContainer: {
     alignItems: "center",
     justifyContent: "center",
-    height: 120,
   },
   buttonContainer: {
     marginBottom: theme.spacing.l,
@@ -667,6 +898,20 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "rgba(81, 75, 242, 0.15)",
     zIndex: 0, // 기존 요소들보다 낮은 z-index
+  },
+  wordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  soundIcon: {
+    padding: theme.spacing.s,
+  },
+  playButton: {
+    padding: theme.spacing.s,
+  },
+  recordingButton: {
+    backgroundColor: "#FF3B30",
   },
 });
 

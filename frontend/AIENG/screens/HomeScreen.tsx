@@ -99,11 +99,16 @@ const HomeScreenContent: React.FC<HomeScreenContentProps> = ({
   };
 
   const navigateToScreen = (screenName: keyof RootStackParamList) => {
-    navigation.navigate(screenName);
+    if (screenName === "Signup") {
+      // Signup으로 이동할 때 새로운 프로필 등록을 위한 상태 초기화
+      navigation.replace("Signup");
+    } else {
+      navigation.navigate(screenName);
+    }
   };
 
   // 화면 크기에 따른 로고 크기 계산
-  const logoHeight = dimensions.height * 0.08;
+  const logoHeight = dimensions.height * 0.11;
   const logoWidth = logoHeight * 4;
 
   return (
@@ -135,7 +140,7 @@ const HomeScreenContent: React.FC<HomeScreenContentProps> = ({
               resizeMode="contain"
             />
             <View style={styles.headerButtons}>
-              <BGMToggleButton style={styles.headerButton} />
+              {/* <BGMToggleButton style={styles.headerButton} /> */}
               <ProfileButton style={styles.headerButton} />
             </View>
           </View>
