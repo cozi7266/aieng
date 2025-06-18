@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "quick-elixir-433404-m1",
+  "private_key_id": "99ba633f3e55fb855e573c35105e15d1f823c38b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCzWQwQc+pX6IUQ\n7DYooKU+n9DZwyiys8pe6hZG6b3WqYJlVI8beyx324NWqCEY/0lLwlD3LSQseMGH\niTxG9uArue2zHHuDpHtD/4ju4APMHYsybh++K8ar40MiL3KxYW7UCMblaNNL/bo2\nOaOO1d9WLJkWuQwuqZ0Fs+OD/le9dIK5/0k5Wb4D6svNQDMjozDDneXwKbUOTUiE\n+6J48uF1M3YX0QHY4EnSEZe3yJeVK1Xy5+H3gxwuMmJFW7KSzOMRwKxPEz4CeDma\nawGS2FVwBB76fgwkCuyVNiYugrkqo7AT4UHOhg9pBxCnWhzJieT9sH9lY2Ke60/J\nd95GpcnHAgMBAAECggEAUQOUc4oo/XTHRxGslUWb32IJ0ZRauf6FF8LeNUI4wtLn\nWCaOTneharL57RcdfFE1JsesEzuM75nMshDH7bZvJNFkElh3YsvV8q1niaAflwBx\ndGJSbHER2WtbVAHi6UV97sHYNqDXcag3iW8X9tmdfSvAK4eDfUCY8Y6E44bs02Mf\nYhdE3SFvBRVbxAPAcxUsCxB9RzxBP8nRbjLjZQbT7BBhfrXadGUV3rkYf6/9Vc08\nt9sGLyBGZ9FwxaCFPel5SHcyMAakrxGHq/AR+KjuYlPQSwm2EV6yW/euBTXDWZwA\nfPOk8GeTgze42m4GfPfE7UN9UMFJB4Yso0/smS22oQKBgQDtUGRyaE7TeeME176V\n5La8y89s48n1AePI0iIS94HIhNQJb1JpamuEx+UBOzd4GfTwnmxO8aZDgbSXjZ4S\nLX4/8VIIycpDF39AvIgKx5Ko45r6AheOFasPearRZmJ/Duz7OENwtaQpBgxWHAAY\nn72GGFLMY2YrKomx4/0/iCA9WwKBgQDBeDakI43oKlEZuIdIcP7ue8MxjahrXzp7\nB2KF2xRjYtQDemRMCZiM+JyHDX6S7U1pMdNqQeO3bpyAqzU/jrjwYkCuLlp5/IZr\n1Lj0ku9G03B9Sc7FfgYspDD/7MsG9IdnZx3RVsJjpazml+IEEXZLabQVIyNsTQ84\n4YfnRQ51BQKBgDTuy5jhP0PYWhTIcpBIlaIC699j57Yol8BBbqxAXMh3KDx6gi1V\nOWpClAf0R2kYkRPiolHxgJ5qHff39JwlXZWxpBSlveG9KfsskkOlREc7jWPad5qP\nproq7zkJ10pz79QRNqm7OkSUPsguMq9LYiC46C8CtNVIBbKSIfi7ykUlAoGAORA9\n/ZfHCU1B8nYs4L8DUlAKuJjxrgm+c/8vng+KKe5CXmxBHPRPnHTPpj3isW9wv7BE\njTi186qaWpEk+YQdJDm2nilp4kULWM67ZtfX32oJ6cpVRIbxR0V+dl3fXEPPlD4j\n21TdrQp2vuTZcx27aG7bAMkGb7Ei5kIPFbWWmAkCgYBllaymZRHQNyqY5t2lwXGU\nhG+mV9anFWyUaVSskHZrZikLGesf0YIJQl9fsejccR/UnriOSFThFTx1ujsJWc0s\noGrAbqYkMpsGQ6natd7+e8M7juOtjFIjLb1ouRkwu5dGwQd9tEpP/mZpOy8UqGtb\nek7z4XRRyv5uOIMB+nLLrg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "ssafy-32@quick-elixir-433404-m1.iam.gserviceaccount.com",
+  "client_id": "102815172690088919060",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ssafy-32%40quick-elixir-433404-m1.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
