@@ -1,0 +1,16 @@
+package com.ssafy.aieng.domain.learning.dto.request;
+
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class SaveHistorytRequest {
+    private Integer userId;
+    private Integer sessionId;
+    private Integer childId;
+    private Integer wordId;
+    private String word;
+}
