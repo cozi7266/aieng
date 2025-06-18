@@ -1,0 +1,50 @@
+app:
+  domain: http://localhost:5173
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MariaDBDialect
+    defer-datasource-initialization: true
+    show-sql: true
+
+  datasource:
+    url: jdbc:mariadb://localhost:3306/aieng
+    username: aieng
+    password: b104B104
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  sql:
+    init:
+      mode: always
+      platform: mariadb
+      continue-on-error: true
+
+  main:
+    allow-bean-definition-overriding: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    root: info  # 전체 로그는 info 수준으로 제한
+    com.ssafy.aieng: debug  # 우리 프로젝트만 디버그 수준 유지
+
+    org.hibernate.SQL: warn  # SQL 로그 줄임
+    com.zaxxer.hikari.HikariConfig: off  # 커넥션 풀 로그 제거
+    com.zaxxer.hikari: off
+
+oauth:
+  kakao:
+    redirect-uri: http://localhost:8080/oauth/kakao/callback
+  google:
+    redirect-uri: http://localhost:5173/oauth/google/callback
+  naver:
+    redirect-uri: http://localhost:5173/oauth/naver/callback

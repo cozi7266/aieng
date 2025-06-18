@@ -1,0 +1,188 @@
+package com.ssafy.aieng.domain.auth.service;
+
+import com.ssafy.aieng.domain.auth.dto.LoginResult;
+import com.ssafy.aieng.domain.auth.dto.OAuthUserInfo;
+import com.ssafy.aieng.domain.auth.dto.TokenValidationResult;
+import com.ssafy.aieng.domain.auth.dto.response.OAuthLoginResponse;
+import com.ssafy.aieng.domain.auth.dto.response.TokenRefreshResponse;
+import com.ssafy.aieng.domain.auth.dto.response.UserInfoResponse;
+import com.ssafy.aieng.domain.auth.service.strategy.NaverOAuthStrategy;
+import com.ssafy.aieng.domain.auth.service.strategy.OAuthStrategy;
+import com.ssafy.aieng.domain.user.entity.User;
+import com.ssafy.aieng.domain.user.enums.Provider;
+import com.ssafy.aieng.domain.user.repository.UserRepository;
+import com.ssafy.aieng.global.error.ErrorCode;
+import com.ssafy.aieng.global.error.exception.CustomException;
+import com.ssafy.aieng.global.infra.oauth.client.KaKaoOAuthClient;
+import com.ssafy.aieng.global.infra.oauth.dto.kakao.KakaoUserResponse;
+import com.ssafy.aieng.global.security.jwt.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.io.IOException;
+
+
+import java.util.Map;
+
+@Slf4j
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class OAuthService {
+
+    private final Map<Provider, OAuthStrategy> oAuthStrategyMap;
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthRedisService authRedisService;
+    private final KaKaoOAuthClient kakaoOAuthClient;
+
+    public LoginResult handleOAuthLogin(Provider provider, String code) {
+        OAuthStrategy strategy = oAuthStrategyMap.get(provider);
+        if (strategy == null) {
+            log.error("❌ 잘못된 OAuth Provider: {}", provider);
+            throw new CustomException(ErrorCode.INVALID_OAUTH_PROVIDER);
+        }
+
+        try {
+            OAuthUserInfo userInfo = strategy.getUserInfo(code);
+            log.info("✅ OAuth 사용자 정보 수신: id={}, email={}", userInfo.getId(), userInfo.getEmail());
+
+            User user = findOrCreateUser(provider, userInfo);
+            String userId = user.getId().toString();
+
+            String accessToken = jwtTokenProvider.createAccessToken(userId);
+            String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+            authRedisService.saveRefreshToken(userId, refreshToken);
+
+            return LoginResult.of(
+                    OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user)),
+                    refreshToken
+            );
+        } catch (Exception e) {
+            log.error("[{}] {} - {}", ErrorCode.OAUTH_SERVER_ERROR.name(),
+                    ErrorCode.OAUTH_SERVER_ERROR.getMessage(), e.getMessage(), e);
+            throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
+        }
+    }
+
+    private User findOrCreateUser(Provider provider, OAuthUserInfo userInfo) {
+        return userRepository.findByProviderAndProviderId(provider, userInfo.getId())
+                .map(user -> {
+                    if (user.isAlreadyDeleted()) {
+                        user.reactivate(); // 탈퇴했던 유저 복구
+                    }
+                    return user;
+                })
+                .orElseGet(() -> createUser(userInfo, provider));
+
+    }
+
+    private User createUser(OAuthUserInfo userInfo, Provider provider) {
+        String nickname = userInfo.getNickname();
+        if (nickname == null || nickname.isBlank()) {
+            nickname = "카카오 사용자";
+        }
+
+        User user = User.builder()
+                .provider(provider)
+                .providerId(userInfo.getId())
+                .nickname(nickname)
+                .build();
+
+        log.debug("🕵️ 생성 직후 user.getCreatedAt(): {}", user.getCreatedAt());
+
+        User savedUser = userRepository.save(user);
+
+        log.info("✅ 사용자 저장 완료 - ID: {}, createdAt: {}", savedUser.getId(), savedUser.getCreatedAt());
+
+        return savedUser;
+    }
+
+
+
+    public TokenRefreshResponse refreshToken(String refreshToken) {
+        TokenValidationResult validationResult = jwtTokenProvider.validateToken(refreshToken);
+        if (!validationResult.isValid()) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        String userId = jwtTokenProvider.getUserId(refreshToken).toString();
+        String savedRefreshToken = authRedisService.getRefreshToken(userId);
+
+        if (savedRefreshToken == null || !savedRefreshToken.equals(refreshToken)) {
+            throw new CustomException(ErrorCode.REFRESH_TOKEN_MISMATCH);
+        }
+
+        String newAccessToken = jwtTokenProvider.createAccessToken(userId);
+        return new TokenRefreshResponse(newAccessToken);
+    }
+
+    public LoginResult handleNaverOAuthLogin(String code, String state) {
+        OAuthStrategy strategy = oAuthStrategyMap.get(Provider.NAVER);
+        if (!(strategy instanceof NaverOAuthStrategy naverStrategy)) {
+            log.error("❌ NAVER 전략이 아님");
+            throw new CustomException(ErrorCode.INVALID_OAUTH_PROVIDER);
+        }
+
+        try {
+            OAuthUserInfo userInfo = naverStrategy.getUserInfo(code, state);
+            User user = findOrCreateUser(Provider.NAVER, userInfo);
+            String userId = user.getId().toString();
+
+            String accessToken = jwtTokenProvider.createAccessToken(userId);
+            String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+            authRedisService.saveRefreshToken(userId, refreshToken);
+
+            return LoginResult.of(
+                    OAuthLoginResponse.of(accessToken, UserInfoResponse.of(user)),
+                    refreshToken
+            );
+        } catch (Exception e) {
+            log.error("[{}] {} - {}", ErrorCode.OAUTH_SERVER_ERROR.name(),
+                    ErrorCode.OAUTH_SERVER_ERROR.getMessage(), e.getMessage(), e);
+            throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
+        }
+    }
+
+    // 안드로이드 앱 OAuth 로그인 (바로 access token 받아오기)
+    public LoginResult handleKakaoLoginWithAccessToken(String accessToken) {
+        try {
+            KakaoUserResponse userResponse = kakaoOAuthClient.getUserInfo(accessToken); // <- 여기 IOException 발생 가능
+
+            if (userResponse == null || userResponse.getId() == null || userResponse.getKakaoAccount() == null) {
+                log.error("❌ 카카오 사용자 정보가 불완전함");
+                throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
+            }
+
+            OAuthUserInfo userInfo = OAuthUserInfo.builder()
+                    .id(String.valueOf(userResponse.getId()))
+                    .email("no-email@kakao.com")
+                    .nickname(userResponse.getKakaoAccount().getProfile() != null
+                            ? userResponse.getKakaoAccount().getProfile().getNickname()
+                            : "카카오 사용자")
+                    .build();
+
+            User user = findOrCreateUser(Provider.KAKAO, userInfo);
+            String userId = user.getId().toString();
+
+            String newAccessToken = jwtTokenProvider.createAccessToken(userId);
+            String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+            authRedisService.saveRefreshToken(userId, newRefreshToken);
+
+            return LoginResult.of(
+                    OAuthLoginResponse.of(newAccessToken, UserInfoResponse.of(user)),
+                    newRefreshToken
+            );
+
+        } catch (IOException e) {
+            log.error("[Kakao OAuth Error]", e);
+            throw new CustomException(ErrorCode.OAUTH_SERVER_ERROR);
+        }
+    }
+
+
+
+}
